@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import './stock/enums/interval.enum';
 import { AuthModule } from './auth/auth.module';
 import { MarketDataModule } from './market-data/market-data.module';
 import { OrderModule } from './order/order.module';
@@ -10,6 +11,8 @@ import { StockGateway } from './common/gateway/stock/stock.gateway';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { join } from 'path';
 import { AppResolver } from './app.resolver';
+import { StockModule } from './stock/stock.module';
+import { PrismaModule } from 'prisma/prisma.module';
 
 @Module({
   imports: [
@@ -19,10 +22,12 @@ import { AppResolver } from './app.resolver';
       sortSchema: true,
       playground: true,
     }),
+    PrismaModule,
     AuthModule,
     MarketDataModule,
     OrderModule,
     PortfolioModule,
+    StockModule,
   ],
   controllers: [AppController],
   providers: [AppService, StockGateway, AppResolver],

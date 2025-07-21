@@ -1,0 +1,273 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Stock {
+  ticker               String              @id
+  companyName          String
+  exchange             String
+  sector               String?
+  industry             String?
+  marketCap            BigInt?
+  outstandingShares    BigInt?
+  insiderHolding       Float?
+  institutionalHolding Float?
+  ipoDate              DateTime?
+  country              String?
+  currency             String?
+  status               String?             @default("active")
+
+  marketData           MarketData[]
+  technicalIndicators  TechnicalIndicator[]
+  earnings             Earnings[]
+  dividends            Dividend[]
+  insiderTransactions  InsiderTransaction[]
+  news                 News[]
+  portfolios           Portfolio[]
+  transactions         Transaction[]
+  forecastModels       ForecastModel[]
+  tagLinks             StockTagLink[]
+
+  // ✅ THÊM các quan hệ ngược sau:
+  watchlistItems       WatchlistItem[]
+  alertRules           AlertRule[]
+  alertsSent           AlertSent[]
+}
+
+
+model MarketData {
+  id         String   @id @default(uuid())
+  ticker     String
+  timestamp  DateTime
+  interval   String
+  open       Float
+  high       Float
+  low        Float
+  close      Float
+  volume     BigInt
+  afterHours Float?
+
+  stock Stock @relation(fields: [ticker], references: [ticker])
+
+  @@index([ticker, timestamp])
+}
+
+model TechnicalIndicator {
+  id            String   @id @default(uuid())
+  ticker        String
+  interval      String
+  timestamp     DateTime
+  indicatorType String
+  value         Float
+
+  stock Stock @relation(fields: [ticker], references: [ticker])
+}
+
+model Earnings {
+  ticker        String
+  reportDate    DateTime
+  fiscalPeriod  String
+  fiscalYear    Int
+  epsEstimate   Float?
+  epsActual     Float?
+  revenue       BigInt?
+  netIncome     BigInt?
+  surprisePct   Float?
+  guidance      String?
+
+  stock Stock @relation(fields: [ticker], references: [ticker])
+
+  @@id([ticker, reportDate])
+}
+
+model Dividend {
+  ticker     String
+  exDate     DateTime
+  payDate    DateTime
+  amount     Float
+  frequency  String
+
+  stock Stock @relation(fields: [ticker], references: [ticker])
+
+  @@id([ticker, exDate])
+}
+
+model InsiderTransaction {
+  id             String   @id @default(uuid())
+  ticker         String
+  personName     String
+  role           String
+  transactionType String
+  shares         BigInt
+  price          Float
+  transactionDate DateTime
+
+  stock Stock @relation(fields: [ticker], references: [ticker])
+}
+
+model News {
+  id             String   @id @default(uuid())
+  ticker         String
+  headline       String
+  summary        String?
+  url            String?
+  source         String?
+  sentimentScore Float?
+  type           String?
+  publishedAt    DateTime
+
+  stock Stock @relation(fields: [ticker], references: [ticker])
+}
+
+model Index {
+  indexTicker String   @id
+  name        String
+  exchange    String
+}
+
+model User {
+  id              String            @id @default(uuid())
+  email           String            @unique
+  passwordHash    String
+  createdAt       DateTime          @default(now())
+
+  portfolios      Portfolio[]
+  transactions    Transaction[]
+  watchlists      Watchlist[]
+  alertRules      AlertRule[]
+  alertsSent      AlertSent[]
+  socketSubs      SocketSubscription[]
+  notificationLog NotificationLog[]
+}
+
+model Portfolio {
+  id           String   @id @default(uuid())
+  userId       String
+  ticker       String
+  quantity     Float
+  averagePrice Float
+  positionType String
+  updatedAt    DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id])
+  stock Stock @relation(fields: [ticker], references: [ticker])
+}
+
+model Transaction {
+  id        String   @id @default(uuid())
+  userId    String
+  ticker    String
+  action    String
+  price     Float
+  shares    Float
+  timestamp DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id])
+  stock Stock @relation(fields: [ticker], references: [ticker])
+}
+
+model Watchlist {
+  id        String   @id @default(uuid())
+  userId    String
+  name      String
+  createdAt DateTime @default(now())
+
+  user  User           @relation(fields: [userId], references: [id])
+  items WatchlistItem[]
+}
+
+model WatchlistItem {
+  id          String   @id @default(uuid())
+  watchlistId String
+  ticker      String
+
+  watchlist Watchlist @relation(fields: [watchlistId], references: [id])
+  stock     Stock     @relation(fields: [ticker], references: [ticker])
+}
+
+model AlertRule {
+  id          String   @id @default(uuid())
+  userId      String
+  ticker      String
+  ruleType    String
+  targetValue Float
+  createdAt   DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id])
+  stock Stock @relation(fields: [ticker], references: [ticker])
+  alerts AlertSent[]
+}
+
+model AlertSent {
+  id            String   @id @default(uuid())
+  userId        String
+  ticker        String
+  ruleId        String
+  sentAt        DateTime @default(now())
+  deliveryMethod String
+
+  user  User      @relation(fields: [userId], references: [id])
+  stock Stock     @relation(fields: [ticker], references: [ticker])
+  rule  AlertRule @relation(fields: [ruleId], references: [id])
+}
+
+model SocketSubscription {
+  id           String   @id @default(uuid())
+  userId       String
+  ticker       String
+  subscribedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model NotificationLog {
+  id            String   @id @default(uuid())
+  userId        String
+  message       String
+  sentAt        DateTime @default(now())
+  deliveryMethod String
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model ForecastModel {
+  id              String   @id @default(uuid())
+  ticker          String
+  modelType       String
+  prediction      Float
+  confidenceScore Float
+  trainedAt       DateTime
+
+  stock Stock @relation(fields: [ticker], references: [ticker])
+}
+
+model StockTag {
+  id     String   @id @default(uuid())
+  name   String   @unique
+  links  StockTagLink[]
+}
+
+model StockTagLink {
+  id     String   @id @default(uuid())
+  tagId  String
+  ticker String
+
+  tag   StockTag @relation(fields: [tagId], references: [id])
+  stock Stock    @relation(fields: [ticker], references: [ticker])
+}
+
+model EconomicCalendarEvent {
+  id         String   @id @default(uuid())
+  eventName  String
+  country    String
+  date       DateTime
+  importance String
+  actual     String?
+  forecast   String?
+  previous   String?
+}
