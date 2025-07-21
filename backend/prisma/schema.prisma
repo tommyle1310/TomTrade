@@ -165,13 +165,18 @@ model Transaction {
   id        String   @id @default(uuid())
   userId    String
   ticker    String
-  action    String
+  action    TransactionAction
   price     Float
   shares    Float
   timestamp DateTime @default(now())
 
   user  User  @relation(fields: [userId], references: [id])
   stock Stock @relation(fields: [ticker], references: [ticker])
+}
+
+enum TransactionAction {
+  BUY
+  SELL
 }
 
 model Watchlist {

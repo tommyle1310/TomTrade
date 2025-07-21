@@ -1,9 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'prisma/prisma.service';
+import { StockGateway } from '../common/gateway/stock/stock.gateway';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { AlertDispatcherService } from 'src/alert-rule/alert-dispatcher.service';
 
 @Injectable()
 export class StockService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private alertDispatcherService: AlertDispatcherService,
+  ) {}
 
   async getStock(ticker: string) {
     return this.prisma.stock.findUnique({
@@ -36,5 +42,36 @@ export class StockService {
       orderBy: { exDate: 'desc' },
       take: limit,
     });
+  }
+
+  async processMarketDataUpdate(data: {
+    ticker: string;
+    price: number;
+    volume: number;
+  }) {
+    const { ticker, price, volume } = data;
+
+    // 1. Save the new market data
+    const marketData = await this.prisma.marketData.create({
+      data: {
+        ticker,
+        timestamp: new Date(),
+        interval: '1m', // Assuming 1-minute interval for real-time data
+        open: price, // Simplified: using price for open, high, low, close
+        high: price,
+        low: price,
+        close: price,
+        volume,
+      },
+    });
+    console.log('check even fall here', ticker, price)
+
+    // 2. Trigger alert evaluation
+    await this.alertDispatcherService.handleStockPriceUpdate(ticker, price);
+
+    
+    
+
+    return marketData;
   }
 }

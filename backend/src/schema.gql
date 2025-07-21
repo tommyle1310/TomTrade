@@ -2,9 +2,34 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
 # ------------------------------------------------------
 
+type AlertRule {
+  createdAt: DateTime!
+  id: ID!
+  ruleType: String!
+  targetValue: Float!
+  ticker: String!
+}
+
 type AuthPayload {
   accessToken: String!
   user: User!
+}
+
+input BuyStockInput {
+  price: Float!
+  shares: Float!
+  ticker: String!
+}
+
+type BuyStockPayload {
+  portfolio: Portfolio!
+  transaction: Transaction!
+}
+
+input CreateAlertRuleInput {
+  ruleType: String!
+  targetValue: Float!
+  ticker: String!
 }
 
 """
@@ -64,7 +89,11 @@ type MarketData {
 }
 
 type Mutation {
+  buyStock(input: BuyStockInput!): BuyStockPayload!
+  createAlertRule(input: CreateAlertRuleInput!): AlertRule!
+  deleteAlertRule(id: ID!): Boolean!
   login(input: LoginInput!): AuthPayload!
+  sellStock(input: SellStockInput!): SellStockPayload!
   signUp(input: SignUpInput!): AuthPayload!
 }
 
@@ -80,11 +109,31 @@ type News {
   url: String
 }
 
+type Portfolio {
+  averagePrice: Float!
+  quantity: Float!
+  ticker: String!
+}
+
 type Query {
+  getMyAlertRules: [AlertRule!]!
   me: User!
+  myPortfolio: [Portfolio!]!
+  myTransactions: [Transaction!]!
   sayHello: Hello!
   stock(ticker: String!): Stock
   stocks: [Stock!]!
+}
+
+input SellStockInput {
+  price: Float!
+  shares: Float!
+  ticker: String!
+}
+
+type SellStockPayload {
+  portfolio: Portfolio!
+  transaction: Transaction!
 }
 
 input SignUpInput {
@@ -110,6 +159,20 @@ type Stock {
   sector: String
   status: String
   ticker: String!
+}
+
+type Transaction {
+  action: TransactionAction!
+  id: ID!
+  price: Float!
+  shares: Float!
+  ticker: String!
+  timestamp: DateTime!
+}
+
+enum TransactionAction {
+  BUY
+  SELL
 }
 
 type User {
