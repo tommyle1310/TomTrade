@@ -131,10 +131,10 @@ model Index {
 }
 
 model User {
-  id              String            @id @default(uuid())
-  email           String            @unique
-  passwordHash    String
-  createdAt       DateTime          @default(now())
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
 
   portfolios      Portfolio[]
   transactions    Transaction[]
@@ -143,7 +143,10 @@ model User {
   alertsSent      AlertSent[]
   socketSubs      SocketSubscription[]
   notificationLog NotificationLog[]
+
+  @@index([email])
 }
+
 
 model Portfolio {
   id           String   @id @default(uuid())

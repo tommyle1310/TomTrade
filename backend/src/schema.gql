@@ -2,6 +2,11 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
 # ------------------------------------------------------
 
+type AuthPayload {
+  accessToken: String!
+  user: User!
+}
+
 """
 A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
 """
@@ -40,6 +45,11 @@ enum Interval {
   _5m
 }
 
+input LoginInput {
+  email: String!
+  password: String!
+}
+
 type MarketData {
   afterHours: Float
   close: Float!
@@ -51,6 +61,11 @@ type MarketData {
   ticker: String!
   timestamp: String!
   volume: String!
+}
+
+type Mutation {
+  login(input: LoginInput!): AuthPayload!
+  signUp(input: SignUpInput!): AuthPayload!
 }
 
 type News {
@@ -66,9 +81,15 @@ type News {
 }
 
 type Query {
+  me: User!
   sayHello: Hello!
   stock(ticker: String!): Stock
   stocks: [Stock!]!
+}
+
+input SignUpInput {
+  email: String!
+  password: String!
 }
 
 type Stock {
@@ -89,4 +110,10 @@ type Stock {
   sector: String
   status: String
   ticker: String!
+}
+
+type User {
+  createdAt: DateTime!
+  email: String!
+  id: ID!
 }
