@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'prisma/prisma.service';
 import { Prisma } from '@prisma/client';
 
@@ -55,25 +55,24 @@ export class PortfolioService {
     ticker: string,
     shares: number,
   ) {
-    const existingPortfolio = await tx.portfolio.findFirst({
+    const existing = await tx.portfolio.findFirst({
       where: { userId, ticker },
     });
-
-    if (!existingPortfolio) {
-      // This case should be handled in the transaction service, but as a safeguard:
-      throw new Error('Portfolio not found for sell operation.');
-    }
-
-    const newQuantity = existingPortfolio.quantity - shares;
-
-    if (newQuantity > 0) {
-      return tx.portfolio.update({
-        where: { id: existingPortfolio.id },
-        data: { quantity: newQuantity },
+  
+    if (!existing) throw new NotFoundException('Portfolio not found');
+  
+    const remaining = existing.quantity - shares;
+  
+    if (remaining <= 0) {
+      await tx.portfolio.delete({
+        where: { id: existing.id },
       });
-    } else {
-      // If all shares are sold, remove the portfolio entry
-      return tx.portfolio.delete({ where: { id: existingPortfolio.id } });
+      return null;
     }
+  
+    return tx.portfolio.update({
+      where: { id: existing.id },
+      data: { quantity: remaining },
+    });
   }
 }

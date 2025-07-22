@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import './stock/enums/interval.enum';
@@ -39,6 +39,7 @@ import { CoreModule } from './core/core.module';
     TransactionModule,
     StockModule,
     AlertRuleModule,
+    forwardRef(() => OrderModule),
   ],
   controllers: [AppController],
   providers: [AppService, AppResolver, ConfigService, JwtService, SocketService],

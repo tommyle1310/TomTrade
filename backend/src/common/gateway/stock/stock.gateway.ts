@@ -10,11 +10,12 @@ import {
 import { Server, Socket } from 'socket.io';
 import { AlertRuleService } from '../../../alert-rule/alert-rule.service';
 import { PrismaService } from 'prisma/prisma.service';
-import { Logger } from '@nestjs/common';
+import { forwardRef, Inject, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { OnEvent, EventEmitter2 } from '@nestjs/event-emitter';
 import { SocketService } from 'src/core/socket-gateway.service';
+import { OrderService } from 'src/order/order.service';
 
 @WebSocketGateway({
   cors: {
@@ -36,6 +37,8 @@ export class StockGateway
     private readonly alertService: AlertRuleService,
     private readonly jwtService: JwtService,
     private readonly eventEmitter: EventEmitter2,
+    @Inject(forwardRef(() => OrderService))
+    private readonly orderService: OrderService,
   ) {}
 
   afterInit(server: Server) {
@@ -98,6 +101,7 @@ export class StockGateway
         payload.ticker,
         payload.price,
       );
+      await this.orderService.tryMatch(payload.ticker, payload.price);
       this.logger.log(`Found ${alerts.length} alerts to send.`);
 
       for (const alert of alerts) {

@@ -12,6 +12,9 @@ import { SocketService } from 'src/core/socket-gateway.service';
 import { StockGateway } from 'src/common/gateway/stock/stock.gateway';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
+import { OrderService } from 'src/order/order.service';
+import { TransactionService } from 'src/transaction/transaction.service';
+import { PortfolioService } from 'src/portfolio/portfolio.service';
 
 @Module({
   imports: [EventEmitterModule],
@@ -22,6 +25,9 @@ import { JwtService } from '@nestjs/jwt';
     MarketDataService,
     AlertRuleService,
     AlertDispatcherService,
+    TransactionService,
+    PortfolioService,
+    OrderService,
     StockGateway, // chỉ nên có ở đây
     // ❌ KHÔNG cần ConfigService, JwtService, SocketService ở đây nữa
   ],

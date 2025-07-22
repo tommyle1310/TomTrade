@@ -93,6 +93,7 @@ type Mutation {
   createAlertRule(input: CreateAlertRuleInput!): AlertRule!
   deleteAlertRule(id: ID!): Boolean!
   login(input: LoginInput!): AuthPayload!
+  placeOrder(input: PlaceOrderInput!): Order!
   sellStock(input: SellStockInput!): SellStockPayload!
   signUp(input: SignUpInput!): AuthPayload!
 }
@@ -109,6 +110,35 @@ type News {
   url: String
 }
 
+type Order {
+  createdAt: DateTime!
+  id: ID!
+  matchedAt: DateTime
+  price: Float!
+  quantity: Float!
+  side: OrderSide!
+  status: OrderStatus!
+  ticker: String!
+}
+
+enum OrderSide {
+  BUY
+  SELL
+}
+
+enum OrderStatus {
+  CANCELLED
+  FILLED
+  OPEN
+}
+
+input PlaceOrderInput {
+  price: Float!
+  quantity: Float!
+  side: OrderSide!
+  ticker: String!
+}
+
 type Portfolio {
   averagePrice: Float!
   quantity: Float!
@@ -118,6 +148,7 @@ type Portfolio {
 type Query {
   getMyAlertRules: [AlertRule!]!
   me: User!
+  myOrders: [Order!]!
   myPortfolio: [Portfolio!]!
   myTransactions: [Transaction!]!
   sayHello: Hello!
