@@ -2,6 +2,7 @@
 import { ObjectType, Field, Float, ID } from '@nestjs/graphql';
 import { OrderSide } from '../enums/order-side.enum';
 import { OrderStatus } from '../enums/order-side.enum';
+import { OrderType } from '@prisma/client';
 
 @ObjectType()
 export class Order {
@@ -13,6 +14,9 @@ export class Order {
 
   @Field(() => OrderSide)
   side: OrderSide;
+
+  @Field(() => OrderType) // 👈 QUAN TRỌNG: thêm dòng này
+  type: OrderType;
 
   @Field(() => Float)
   price: number;

@@ -1,18 +1,25 @@
-// src/order/dto/place-order.input.ts
-import { InputType, Field, Float } from '@nestjs/graphql';
-import { OrderSide } from '../enums/order-side.enum';
+import { InputType, Field, registerEnumType } from "@nestjs/graphql";
+import { OrderSide } from "../enums/order-side.enum";
+import { OrderType } from "@prisma/client";
+
+registerEnumType(OrderType, {
+  name: 'OrderType',
+});
 
 @InputType()
 export class PlaceOrderInput {
   @Field()
   ticker: string;
 
+  @Field()
+  price: number;
+
+  @Field()
+  quantity: number;
+
   @Field(() => OrderSide)
   side: OrderSide;
 
-  @Field(() => Float)
-  price: number;
-
-  @Field(() => Float)
-  quantity: number;
+  @Field(() => OrderType, { defaultValue: OrderType.LIMIT })
+  type: OrderType;
 }

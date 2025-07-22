@@ -101,7 +101,7 @@ export class StockGateway
         payload.ticker,
         payload.price,
       );
-      await this.orderService.tryMatch(payload.ticker, payload.price);
+      await this.orderService.tryMatchByPrice(payload.ticker, payload.price);
       this.logger.log(`Found ${alerts.length} alerts to send.`);
 
       for (const alert of alerts) {

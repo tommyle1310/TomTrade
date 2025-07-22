@@ -161,6 +161,8 @@ model Portfolio {
   positionType String
   updatedAt    DateTime @default(now())
 
+
+ @@unique([userId, ticker])
   user  User  @relation(fields: [userId], references: [id])
   stock Stock @relation(fields: [ticker], references: [ticker])
 }
@@ -284,6 +286,10 @@ model EconomicCalendarEvent {
   previous   String?
 }
 
+enum OrderType {
+  LIMIT
+  MARKET
+}
 
 model Order {
   id          String   @id @default(uuid())
@@ -295,6 +301,7 @@ model Order {
   status      OrderStatus   @default(OPEN)
   createdAt   DateTime      @default(now())
   matchedAt   DateTime?
+  type        OrderType     @default(LIMIT)
 
   // ───── RELATIONS ───────────────────────
   user  User  @relation(fields: [userId], references: [id])

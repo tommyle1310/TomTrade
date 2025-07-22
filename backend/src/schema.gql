@@ -119,6 +119,7 @@ type Order {
   side: OrderSide!
   status: OrderStatus!
   ticker: String!
+  type: OrderType!
 }
 
 enum OrderSide {
@@ -132,11 +133,17 @@ enum OrderStatus {
   OPEN
 }
 
+enum OrderType {
+  LIMIT
+  MARKET
+}
+
 input PlaceOrderInput {
   price: Float!
   quantity: Float!
   side: OrderSide!
   ticker: String!
+  type: OrderType! = LIMIT
 }
 
 type Portfolio {

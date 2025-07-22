@@ -85,56 +85,39 @@ export class TransactionService {
   }
 
   async executeMatchedOrder(
-    order: Order & { userId: string; quantity: number; side: 'BUY' | 'SELL' },
+    order: Order & { quantity: number; side: 'BUY' | 'SELL' },
     executedPrice: number,
     tx: Prisma.TransactionClient,
+    matchedAgainst: Order,
   ) {
-    const { userId, ticker, quantity: shares, side } = order;
-
-    // 1. Create the transaction record
-    const transaction = await tx.transaction.create({
-      data: {
-        userId,
-        ticker,
-        shares,
-        price: executedPrice,
-        action: side === 'BUY' ? TransactionAction.BUY : TransactionAction.SELL,
-      },
-    });
-
-    if (side === 'BUY') {
-      // 2. Find or create portfolio entry for a BUY order
-      const portfolio = await this.portfolioService.upsertPortfolio(
-        tx,
-        userId,
-        ticker,
-        shares,
-        executedPrice,
-      );
-      return { transaction, portfolio };
-    } else {
-      // 2. Check if user has enough shares to sell
-      const portfolio = await tx.portfolio.findFirst({
-        where: { userId, ticker },
-      });
-
-      if (!portfolio || portfolio.quantity < shares) {
-        // This should ideally not happen in a matched order scenario, but as a safeguard:
-        throw new NotFoundException(
-          'Insufficient shares to sell for matched order.',
-        );
-      }
-
-      // 3. Update portfolio for a SELL order
-      const updatedPortfolio =
-        await this.portfolioService.updatePortfolioOnSell(
-          tx,
-          userId,
+    const buyerId = order.side === 'BUY' ? order.userId : matchedAgainst.userId;
+    const sellerId = order.side === 'SELL' ? order.userId : matchedAgainst.userId;
+    const shares = order.quantity;
+    const ticker = order.ticker;
+  
+    // Record transaction cho cả 2 bên
+    await tx.transaction.createMany({
+      data: [
+        {
+          userId: buyerId,
           ticker,
           shares,
-        );
-
-      return { transaction, portfolio: updatedPortfolio };
-    }
+          price: executedPrice,
+          action: 'BUY',
+        },
+        {
+          userId: sellerId,
+          ticker,
+          shares,
+          price: executedPrice,
+          action: 'SELL',
+        },
+      ],
+    });
+  
+    // Update portfolio:
+    await this.portfolioService.upsertPortfolio(tx, buyerId, ticker, shares, executedPrice);
+    await this.portfolioService.updatePortfolioOnSell(tx, sellerId, ticker, shares);
   }
+  
 }
