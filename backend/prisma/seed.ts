@@ -1,4 +1,10 @@
-import { PrismaClient, OrderSide, OrderStatus, OrderType, TransactionAction } from '@prisma/client';
+import {
+  PrismaClient,
+  OrderSide,
+  OrderStatus,
+  OrderType,
+  TransactionAction,
+} from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
@@ -19,6 +25,15 @@ async function main() {
     },
   });
   console.log(`✅ Created test user: ${user.email} / ${plainPassword}`);
+  await prisma.balance.upsert({
+    where: { userId: user.id },
+    update: {},
+    create: {
+      userId: user.id,
+      amount: 100000, // 100k USD để test mua cổ phiếu
+    },
+  });
+  console.log(`✅ Seeded balance for ${user.email}`);
 
   await prisma.stock.upsert({
     where: { ticker },
@@ -41,7 +56,6 @@ async function main() {
       currency: 'USD',
     },
   });
-
 
   // 3. Seed MarketData
   for (let i = 0; i < 10; i++) {
@@ -153,6 +167,16 @@ async function main() {
     },
   });
 
+  await prisma.portfolio.create({
+    data: {
+      userId: user.id,
+      ticker,
+      quantity: 10,
+      averagePrice: 300,
+      positionType: 'LONG',
+    },
+  });
+
   // 9. Seed Portfolio sau MARKET BUY
   await prisma.portfolio.upsert({
     where: {
@@ -173,7 +197,6 @@ async function main() {
       positionType: 'LONG',
     },
   });
-  
 
   await prisma.order.createMany({
     data: [
@@ -197,10 +220,11 @@ async function main() {
       },
     ],
   });
-  
 
   console.log('✅ Seeded Stock, MarketData, News, Dividends, ForecastModels');
-  console.log('✅ Seeded User, Orders (LIMIT + MARKET), Transactions, Portfolio');
+  console.log(
+    '✅ Seeded User, Orders (LIMIT + MARKET), Transactions, Portfolio',
+  );
 }
 
 main()

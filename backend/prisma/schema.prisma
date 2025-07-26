@@ -137,6 +137,9 @@ model User {
   passwordHash String
   createdAt    DateTime @default(now())
 
+  // 👇 Giữ lại relation đơn giản
+  balance      Balance?
+
   portfolios      Portfolio[]
   transactions    Transaction[]
   watchlists      Watchlist[]
@@ -146,10 +149,17 @@ model User {
   notificationLog NotificationLog[]
   orders          Order[]
 
-  
-
   @@index([email])
 }
+
+model Balance {
+  userId String @id
+  amount Float  @default(0)
+
+  // 👇 Chỉ cần 1 bên có `fields` + `references`
+  user   User   @relation(fields: [userId], references: [id])
+}
+
 
 
 model Portfolio {

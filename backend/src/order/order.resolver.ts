@@ -20,6 +20,15 @@ export class OrderResolver {
     return this.orderService.placeOrder(user.id, input);
   }
 
+  @Mutation(() => Boolean)
+  @UseGuards(GqlAuthGuard)
+  async cancelOrder(
+    @CurrentUser() user: User,
+    @Args('orderId') orderId: string,
+  ) {
+    return this.orderService.cancelOrder(user.id, orderId);
+  }
+
   @UseGuards(GqlAuthGuard)
   @Query(() => [Order])
   myOrders(@CurrentUser() user: User) {

@@ -90,8 +90,11 @@ type MarketData {
 
 type Mutation {
   buyStock(input: BuyStockInput!): BuyStockPayload!
+  cancelOrder(orderId: String!): Boolean!
   createAlertRule(input: CreateAlertRuleInput!): AlertRule!
+  deduct(amount: Float!): Boolean!
   deleteAlertRule(id: ID!): Boolean!
+  deposit(amount: Float!): Boolean!
   login(input: LoginInput!): AuthPayload!
   placeOrder(input: PlaceOrderInput!): Order!
   sellStock(input: SellStockInput!): SellStockPayload!
@@ -153,7 +156,9 @@ type Portfolio {
 }
 
 type Query {
+  getBalance(userId: String!): Float!
   getMyAlertRules: [AlertRule!]!
+  getMyBalance: Float!
   me: User!
   myOrders: [Order!]!
   myPortfolio: [Portfolio!]!

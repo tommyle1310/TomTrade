@@ -1,6 +1,6 @@
-import { InputType, Field, registerEnumType } from "@nestjs/graphql";
-import { OrderSide } from "../enums/order-side.enum";
-import { OrderType } from "@prisma/client";
+import { InputType, Field, registerEnumType } from '@nestjs/graphql';
+import { OrderSide } from '../enums/order-side.enum';
+import { OrderType } from '@prisma/client';
 
 registerEnumType(OrderType, {
   name: 'OrderType',

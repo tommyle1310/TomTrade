@@ -26,7 +26,8 @@ export class PortfolioService {
     if (existingPortfolio) {
       const newQuantity = existingPortfolio.quantity + shares;
       const newAveragePrice =
-        (existingPortfolio.averagePrice * existingPortfolio.quantity + price * shares) /
+        (existingPortfolio.averagePrice * existingPortfolio.quantity +
+          price * shares) /
         newQuantity;
 
       return tx.portfolio.update({
@@ -58,21 +59,64 @@ export class PortfolioService {
     const existing = await tx.portfolio.findFirst({
       where: { userId, ticker },
     });
-  
+
     if (!existing) throw new NotFoundException('Portfolio not found');
-  
+
     const remaining = existing.quantity - shares;
-  
+
     if (remaining <= 0) {
       await tx.portfolio.delete({
         where: { id: existing.id },
       });
       return null;
     }
-  
+
     return tx.portfolio.update({
       where: { id: existing.id },
       data: { quantity: remaining },
+    });
+  }
+
+  async addStock(
+    userId: string,
+    ticker: string,
+    quantity: number,
+    executedPrice: number,
+  ) {
+    const existing = await this.prisma.portfolio.findUnique({
+      where: { userId_ticker: { userId, ticker } },
+    });
+
+    if (existing) {
+      const newTotalQty = existing.quantity + quantity;
+      const newAvgPrice =
+        (existing.averagePrice * existing.quantity + executedPrice * quantity) /
+        newTotalQty;
+
+      await this.prisma.portfolio.update({
+        where: { userId_ticker: { userId, ticker } },
+        data: {
+          quantity: { increment: quantity },
+          averagePrice: newAvgPrice,
+        },
+      });
+    } else {
+      await this.prisma.portfolio.create({
+        data: {
+          userId,
+          ticker,
+          quantity,
+          averagePrice: executedPrice,
+          positionType: 'LONG',
+        },
+      });
+    }
+  }
+
+  async removeStock(userId: string, ticker: string, quantity: number) {
+    await this.prisma.portfolio.update({
+      where: { userId_ticker: { userId, ticker } },
+      data: { quantity: { decrement: quantity } },
     });
   }
 }

@@ -3,7 +3,7 @@ import { PrismaService } from 'prisma/prisma.service';
 import { PortfolioService } from '../portfolio/portfolio.service';
 import { BuyStockInput, SellStockInput } from './dto/transaction.input';
 import { TransactionAction } from './enums/transaction-action';
-import { Prisma, Order, OrderStatus, OrderSide } from '@prisma/client';
+import { Prisma, Order } from '@prisma/client';
 
 @Injectable()
 export class TransactionService {
@@ -90,12 +90,25 @@ export class TransactionService {
     tx: Prisma.TransactionClient,
     matchedAgainst: Order,
   ) {
-    const buyerId = order.side === 'BUY' ? order.userId : matchedAgainst.userId;
-    const sellerId = order.side === 'SELL' ? order.userId : matchedAgainst.userId;
     const shares = order.quantity;
     const ticker = order.ticker;
-  
-    // Record transaction cho cả 2 bên
+
+    const buyerId = order.side === 'BUY' ? order.userId : matchedAgainst.userId;
+    const sellerId =
+      order.side === 'SELL' ? order.userId : matchedAgainst.userId;
+
+    const total = shares * executedPrice;
+
+    await tx.balance.update({
+      where: { userId: buyerId },
+      data: { amount: { decrement: total } },
+    });
+
+    await tx.balance.update({
+      where: { userId: sellerId },
+      data: { amount: { increment: total } },
+    });
+
     await tx.transaction.createMany({
       data: [
         {
@@ -114,10 +127,20 @@ export class TransactionService {
         },
       ],
     });
-  
-    // Update portfolio:
-    await this.portfolioService.upsertPortfolio(tx, buyerId, ticker, shares, executedPrice);
-    await this.portfolioService.updatePortfolioOnSell(tx, sellerId, ticker, shares);
+
+    await this.portfolioService.upsertPortfolio(
+      tx,
+      buyerId,
+      ticker,
+      shares,
+      executedPrice,
+    );
+
+    await this.portfolioService.updatePortfolioOnSell(
+      tx,
+      sellerId,
+      ticker,
+      shares,
+    );
   }
-  
 }

@@ -1,7 +1,7 @@
-import { Injectable } from "@nestjs/common";
-import { AlertRuleService } from "./alert-rule.service";
-import { StockGateway } from "src/common/gateway/stock/stock.gateway";
-import { SocketService } from "src/core/socket-gateway.service";
+import { Injectable } from '@nestjs/common';
+import { AlertRuleService } from './alert-rule.service';
+import { StockGateway } from 'src/common/gateway/stock/stock.gateway';
+import { SocketService } from 'src/core/socket-gateway.service';
 
 @Injectable()
 export class AlertDispatcherService {
@@ -14,8 +14,10 @@ export class AlertDispatcherService {
     const alerts = await this.alertRuleService.checkAndTrigger(ticker, price);
 
     for (const alert of alerts) {
-        await this.socketService.sendAlert({ userId: alert.userId, data: alert.data });
-
+      await this.socketService.sendAlert({
+        userId: alert.userId,
+        data: alert.data,
+      });
     }
   }
 }

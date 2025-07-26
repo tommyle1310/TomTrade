@@ -15,6 +15,7 @@ import { JwtService } from '@nestjs/jwt';
 import { OrderService } from 'src/order/order.service';
 import { TransactionService } from 'src/transaction/transaction.service';
 import { PortfolioService } from 'src/portfolio/portfolio.service';
+import { BalanceService } from 'src/balance/balance.service';
 
 @Module({
   imports: [EventEmitterModule],
@@ -26,6 +27,7 @@ import { PortfolioService } from 'src/portfolio/portfolio.service';
     AlertRuleService,
     AlertDispatcherService,
     TransactionService,
+    BalanceService,
     PortfolioService,
     OrderService,
     StockGateway, // chỉ nên có ở đây
@@ -34,4 +36,3 @@ import { PortfolioService } from 'src/portfolio/portfolio.service';
   exports: [StockService],
 })
 export class StockModule {}
-
