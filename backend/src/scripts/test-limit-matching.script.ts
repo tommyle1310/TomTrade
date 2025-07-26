@@ -1,150 +1,30 @@
 /* eslint-disable */
 // scripts/test-limit-matching.script.ts
 
-// Using require for compatibility
-const { request } = require('graphql-request');
-const gql = String.raw;
-const { PrismaClient } = require('@prisma/client');
-
-// NOTE: We define the payload types based on the schema.gql file.
-const endpoint = 'http://localhost:3000/graphql';
-
-// Create a Prisma client for direct database operations
-const prisma = new PrismaClient();
-
-// --- TYPE DEFINITIONS FOR API RESPONSES ---
-
-interface LoginPayload {
-  login: {
-    accessToken: string;
-    user: { id: string; email: string };
-  };
-}
-
-interface PlaceOrderInput {
-  side: 'BUY' | 'SELL';
-  type: 'LIMIT' | 'MARKET';
-  ticker: string;
-  quantity: number;
-  price: number;
-}
-
-// --- API FUNCTIONS ---
-
-async function login(email: string, password: string): Promise<string> {
-  const mutation = gql`
-    mutation Login($email: String!, $password: String!) {
-      login(input: { email: $email, password: $password }) {
-        accessToken
-        user {
-          id
-          email
-        }
-      }
-    }
-  `;
-  const data = await request(endpoint, mutation, {
-    email,
-    password,
-  });
-  return data.login.accessToken;
-}
-
-async function placeOrder(client: any, input: PlaceOrderInput): Promise<any> {
-  const mutation = gql`
-    mutation PlaceOrder($input: PlaceOrderInput!) {
-      placeOrder(input: $input) {
-        id
-        side
-        type
-        ticker
-        quantity
-        status
-        price
-      }
-    }
-  `;
-  return client.request(mutation, { input });
-}
-
-async function getPortfolio(client: any): Promise<any> {
-  const query = gql`
-    query GetMyPortfolio {
-      myPortfolio {
-        ticker
-        quantity
-        averagePrice
-      }
-    }
-  `;
-  return client.request(query);
-}
-
-async function getBalance(client: any): Promise<any> {
-  const query = gql`
-    query GetMyBalance {
-      getMyBalance
-    }
-  `;
-  return client.request(query);
-}
-
-async function getOrders(client: any): Promise<any> {
-  const query = gql`
-    query GetMyOrders {
-      myOrders {
-        id
-        side
-        quantity
-        price
-        status
-        ticker
-        createdAt
-      }
-    }
-  `;
-  return client.request(query);
-}
-
-async function getTransactions(client: any): Promise<any> {
-  const query = gql`
-    query GetMyTransactions {
-      myTransactions {
-        id
-        action
-        shares
-        price
-        ticker
-        timestamp
-      }
-    }
-  `;
-  return client.request(query);
-}
-
-async function clearOrders() {
-  await prisma.order.deleteMany();
-  console.log('All orders cleared.');
-}
+import { GraphQLClient } from 'graphql-request';
+import {
+  login,
+  placeOrder,
+  getOrders,
+  getBalance,
+  getPortfolio,
+  getTransactions,
+  clearOrders,
+  createClient,
+  prisma,
+} from './test-utils';
 
 async function main() {
   try {
     // Clear existing orders
     await clearOrders();
 
-    // Import GraphQLClient only when needed
-    const { GraphQLClient } = require('graphql-request');
-
     console.log('🔐 Logging in...');
     const buyerToken = await login('buyer@example.com', '123456');
     const sellerToken = await login('seller@example.com', '123456');
 
-    const buyerClient = new GraphQLClient(endpoint, {
-      headers: { Authorization: `Bearer ${buyerToken}` },
-    });
-    const sellerClient = new GraphQLClient(endpoint, {
-      headers: { Authorization: `Bearer ${sellerToken}` },
-    });
+    const buyerClient = createClient(buyerToken);
+    const sellerClient = createClient(sellerToken);
 
     console.log('\n💵 Checking balance BEFORE...');
     const buyerBalBefore = await getBalance(buyerClient);

@@ -6,11 +6,3 @@ export enum OrderSide {
   SELL = 'SELL',
 }
 registerEnumType(OrderSide, { name: 'OrderSide' });
-
-// src/order/enums/order-status.enum.ts
-export enum OrderStatus {
-  OPEN = 'OPEN',
-  FILLED = 'FILLED',
-  CANCELLED = 'CANCELLED',
-}
-registerEnumType(OrderStatus, { name: 'OrderStatus' });

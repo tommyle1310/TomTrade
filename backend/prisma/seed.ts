@@ -82,6 +82,28 @@ async function main() {
   });
   console.log(`✅ Seeded balance for ${buyer.email}`);
 
+  // Create buyer2 user
+  const buyer2 = await prisma.user.upsert({
+    where: { email: 'buyer2@example.com' },
+    update: {},
+    create: {
+      email: 'buyer2@example.com',
+      passwordHash,
+    },
+  });
+  console.log(`✅ Created buyer2 user: ${buyer2.email} / ${simplePassword}`);
+
+  // Create buyer2's balance
+  await prisma.balance.upsert({
+    where: { userId: buyer2.id },
+    update: {},
+    create: {
+      userId: buyer2.id,
+      amount: 50000, // 50k USD for buying stocks
+    },
+  });
+  console.log(`✅ Seeded balance for ${buyer2.email}`);
+
   // Create seller user
   const seller = await prisma.user.upsert({
     where: { email: 'seller@example.com' },
@@ -125,6 +147,50 @@ async function main() {
     },
   });
   console.log(`✅ Seeded portfolio for ${seller.email}`);
+
+  // Create seller2 user
+  const seller2 = await prisma.user.upsert({
+    where: { email: 'seller2@example.com' },
+    update: {},
+    create: {
+      email: 'seller2@example.com',
+      passwordHash,
+    },
+  });
+  console.log(`✅ Created seller2 user: ${seller2.email} / ${simplePassword}`);
+
+  // Create seller2's balance
+  await prisma.balance.upsert({
+    where: { userId: seller2.id },
+    update: {},
+    create: {
+      userId: seller2.id,
+      amount: 20000, // 20k USD initial balance
+    },
+  });
+  console.log(`✅ Seeded balance for ${seller2.email}`);
+
+  // Create seller2's portfolio with AAPL shares to sell
+  await prisma.portfolio.upsert({
+    where: {
+      userId_ticker: {
+        userId: seller2.id,
+        ticker,
+      },
+    },
+    update: {
+      quantity: 50, // Ensure seller2 has enough shares
+      averagePrice: 250, // Bought at a lower price
+    },
+    create: {
+      userId: seller2.id,
+      ticker,
+      quantity: 50, // Enough shares for multiple sell orders
+      averagePrice: 250,
+      positionType: 'LONG',
+    },
+  });
+  console.log(`✅ Seeded portfolio for ${seller2.email}`);
 
   // 4. Seed MarketData
   for (let i = 0; i < 10; i++) {
@@ -283,7 +349,7 @@ async function main() {
 
   console.log('✅ Seeded Stock, MarketData, News, Dividends, ForecastModels');
   console.log(
-    '✅ Seeded Users (demo, buyer, seller), Orders, Transactions, Portfolios',
+    '✅ Seeded Users (demo, buyer, buyer2, seller, seller2), Orders, Transactions, Portfolios',
   );
 }
 

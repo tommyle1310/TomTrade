@@ -327,6 +327,7 @@ enum OrderSide {
 
 enum OrderStatus {
   OPEN
+  PARTIAL
   FILLED
   CANCELLED
 }

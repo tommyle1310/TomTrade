@@ -10,9 +10,12 @@ import { PlaceOrderInput } from './dto/place-order.input';
 import { TransactionService } from 'src/transaction/transaction.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Order, OrderStatus, OrderType, OrderSide } from '@prisma/client';
+import { Order as OrderEntity } from './entities/order.entity';
 import { OrderSide as OrderSideEnum } from './enums/order-side.enum';
 import { BalanceService } from 'src/balance/balance.service'; // ✅ THÊM
 import { PortfolioService } from 'src/portfolio/portfolio.service';
+import { OrderBook } from 'src/order-book/entities/order-book.entity';
+import { OrderStatus as OrderStatusEnum } from './enums/order-status.enum';
 
 @Injectable()
 export class OrderService {
@@ -109,12 +112,6 @@ export class OrderService {
       `🔁 Matching order ${order.id} (${order.side}) → ${candidates.length} candidate(s)`,
     );
 
-    if (candidates.length > 0) {
-      this.logger.log(
-        `Found candidates: ${JSON.stringify(candidates.map((c) => ({ id: c.id, price: c.price, side: c.side })))}`,
-      );
-    }
-
     if (candidates.length === 0) return;
 
     let remainingQty = order.quantity;
@@ -122,7 +119,7 @@ export class OrderService {
     for (const matched of candidates) {
       if (remainingQty <= 0) break;
 
-      // Reload both orders
+      // Lấy lại dữ liệu mới nhất từ DB
       const freshOrder = await this.prisma.order.findUnique({
         where: { id: order.id },
       });
@@ -132,15 +129,15 @@ export class OrderService {
 
       if (
         !freshOrder ||
-        freshOrder.status !== OrderStatus.OPEN ||
         !freshMatched ||
+        freshOrder.status !== OrderStatus.OPEN ||
         freshMatched.status !== OrderStatus.OPEN
       )
         continue;
 
-      const availableQty = Math.min(remainingQty, matched.quantity);
+      const availableQty = Math.min(remainingQty, freshMatched.quantity);
 
-      // Check nếu SELL có đủ cổ phiếu
+      // Nếu là BUY: kiểm tra người SELL có đủ cổ phiếu để bán
       if (order.side === 'BUY') {
         const sellerPortfolio = await this.prisma.portfolio.findUnique({
           where: {
@@ -159,17 +156,42 @@ export class OrderService {
         }
       }
 
-      await this.executeTrade(
-        order,
-        matched,
-        availableQty,
-        matched.price, // lấy giá từ SELL order
-      );
+      // Tiến hành khớp lệnh
+      await this.executeTrade(order, matched, availableQty, matched.price);
 
       remainingQty -= availableQty;
+      order.quantity = remainingQty;
 
-      // Update lại remaining order quantity nếu còn
-      if (remainingQty <= 0) break;
+      // Cập nhật trạng thái của order gốc
+      const newStatus =
+        remainingQty === 0
+          ? OrderStatus.FILLED
+          : remainingQty < order.quantity
+            ? OrderStatus.PARTIAL
+            : OrderStatus.OPEN;
+
+      await this.prisma.order.update({
+        where: { id: order.id },
+        data: {
+          status: newStatus,
+          quantity: remainingQty,
+        },
+      });
+    }
+
+    // Nếu không khớp được gì
+    if (remainingQty === order.quantity) {
+      await this.prisma.order.update({
+        where: { id: order.id },
+        data: { status: OrderStatus.OPEN },
+      });
+    }
+    // Nếu khớp hết (quantity = 0) thì đảm bảo status là FILLED
+    if (remainingQty === 0) {
+      await this.prisma.order.update({
+        where: { id: order.id },
+        data: { status: OrderStatus.FILLED },
+      });
     }
   }
 
@@ -295,8 +317,7 @@ export class OrderService {
 
     if (!order)
       throw new NotFoundException('Order not found or not cancellable.');
-
-    await this.prisma.order.update({
+    const updatedOrder = await this.prisma.order.update({
       where: { id: orderId },
       data: { status: OrderStatus.CANCELLED },
     });
@@ -309,6 +330,41 @@ export class OrderService {
       });
     }
 
-    return true;
+    return updatedOrder;
+  }
+
+  async getOrderBook(ticker: string): Promise<OrderBook> {
+    const [buyOrdersRaw, sellOrdersRaw] = await Promise.all([
+      this.prisma.order.findMany({
+        where: {
+          ticker,
+          status: 'OPEN',
+          side: 'BUY',
+        },
+        orderBy: [{ price: 'desc' }, { createdAt: 'asc' }],
+      }),
+      this.prisma.order.findMany({
+        where: {
+          ticker,
+          status: 'OPEN',
+          side: 'SELL',
+        },
+        orderBy: [{ price: 'asc' }, { createdAt: 'asc' }],
+      }),
+    ]);
+
+    // Convert enums to internal enums
+    const mapOrder = (o: Order): OrderEntity => ({
+      ...o,
+      side: OrderSideEnum[o.side],
+      status: OrderStatus[o.status] as OrderStatusEnum,
+      type: OrderType[o.type],
+      matchedAt: o.matchedAt || undefined,
+    });
+
+    return {
+      buyOrders: buyOrdersRaw.map(mapOrder),
+      sellOrders: sellOrdersRaw.map(mapOrder),
+    };
   }
 }

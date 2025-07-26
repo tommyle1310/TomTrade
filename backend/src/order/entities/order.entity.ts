@@ -1,8 +1,8 @@
 // src/order/entities/order.entity.ts
 import { ObjectType, Field, Float, ID } from '@nestjs/graphql';
 import { OrderSide } from '../enums/order-side.enum';
-import { OrderStatus } from '../enums/order-side.enum';
 import { OrderType } from '@prisma/client';
+import { OrderStatus } from '../enums/order-status.enum';
 
 @ObjectType()
 export class Order {

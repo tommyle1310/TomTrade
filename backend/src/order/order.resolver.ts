@@ -6,6 +6,7 @@ import { UseGuards } from '@nestjs/common';
 import { GqlAuthGuard } from 'src/auth/gql-auth.guard';
 import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
 import { User } from '@prisma/client';
+import { OrderBook } from 'src/order-book/entities/order-book.entity';
 
 @Resolver(() => Order)
 export class OrderResolver {
@@ -20,7 +21,7 @@ export class OrderResolver {
     return this.orderService.placeOrder(user.id, input);
   }
 
-  @Mutation(() => Boolean)
+  @Mutation(() => Order)
   @UseGuards(GqlAuthGuard)
   async cancelOrder(
     @CurrentUser() user: User,
@@ -33,5 +34,10 @@ export class OrderResolver {
   @Query(() => [Order])
   myOrders(@CurrentUser() user: User) {
     return this.orderService.getUserOrders(user.id);
+  }
+
+  @Query(() => OrderBook)
+  async orderBook(@Args('ticker') ticker: string): Promise<OrderBook> {
+    return this.orderService.getOrderBook(ticker);
   }
 }

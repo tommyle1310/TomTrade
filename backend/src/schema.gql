@@ -90,7 +90,7 @@ type MarketData {
 
 type Mutation {
   buyStock(input: BuyStockInput!): BuyStockPayload!
-  cancelOrder(orderId: String!): Boolean!
+  cancelOrder(orderId: String!): Order!
   createAlertRule(input: CreateAlertRuleInput!): AlertRule!
   deduct(amount: Float!): Boolean!
   deleteAlertRule(id: ID!): Boolean!
@@ -125,6 +125,11 @@ type Order {
   type: OrderType!
 }
 
+type OrderBook {
+  buyOrders: [Order!]!
+  sellOrders: [Order!]!
+}
+
 enum OrderSide {
   BUY
   SELL
@@ -134,6 +139,7 @@ enum OrderStatus {
   CANCELLED
   FILLED
   OPEN
+  PARTIAL
 }
 
 enum OrderType {
@@ -163,6 +169,7 @@ type Query {
   myOrders: [Order!]!
   myPortfolio: [Portfolio!]!
   myTransactions: [Transaction!]!
+  orderBook(ticker: String!): OrderBook!
   sayHello: Hello!
   stock(ticker: String!): Stock
   stocks: [Stock!]!
