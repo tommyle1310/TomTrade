@@ -135,6 +135,12 @@ export class TransactionService {
       shares,
       executedPrice,
     );
+    console.log(
+      `[TX] Matched BUY: ${buyerId} gets ${shares} @ ${executedPrice}`,
+    );
+    console.log(
+      `[TX] Matched SELL: ${sellerId} sells ${shares} @ ${executedPrice}`,
+    );
 
     await this.portfolioService.updatePortfolioOnSell(
       tx,
@@ -142,5 +148,51 @@ export class TransactionService {
       ticker,
       shares,
     );
+  }
+
+  async recordTrade(
+    tx: Prisma.TransactionClient,
+    {
+      buyerId,
+      sellerId,
+      ticker,
+      price,
+      quantity,
+    }: {
+      buyerId: string;
+      sellerId: string;
+      ticker: string;
+      price: number;
+      quantity: number;
+    },
+  ) {
+    console.log(
+      `📝 Recording trade: Buyer ${buyerId}, Seller ${sellerId}, ${quantity} ${ticker} @ ${price}`,
+    );
+
+    const now = new Date();
+
+    await tx.transaction.createMany({
+      data: [
+        {
+          userId: buyerId,
+          ticker,
+          price,
+          shares: quantity,
+          action: 'BUY',
+          timestamp: now,
+        },
+        {
+          userId: sellerId,
+          ticker,
+          price,
+          shares: quantity,
+          action: 'SELL',
+          timestamp: now,
+        },
+      ],
+    });
+
+    console.log(`✅ Transactions recorded for both buyer and seller`);
   }
 }

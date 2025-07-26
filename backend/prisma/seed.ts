@@ -13,7 +13,28 @@ async function main() {
   const now = new Date();
   const ticker = 'AAPL';
 
-  // 1. Seed User demo
+  // 1. First, seed the Stock data (before creating portfolios that reference it)
+  await prisma.stock.upsert({
+    where: { ticker },
+    update: {},
+    create: {
+      ticker,
+      companyName: 'Apple Inc.',
+      exchange: 'NASDAQ',
+      sector: 'Technology',
+      industry: 'Consumer Electronics',
+      marketCap: BigInt(3_000_000_000_000),
+      outstandingShares: BigInt(16_000_000_000),
+      insiderHolding: 0.02,
+      institutionalHolding: 0.58,
+      ipoDate: new Date('1980-12-12'),
+      country: 'USA',
+      currency: 'USD',
+    },
+  });
+  console.log(`✅ Created stock: ${ticker}`);
+
+  // 2. Seed existing demo user
   const plainPassword = 'password123';
   const hash = await bcrypt.hash(plainPassword, 8);
   const user = await prisma.user.upsert({
@@ -35,29 +56,77 @@ async function main() {
   });
   console.log(`✅ Seeded balance for ${user.email}`);
 
-  await prisma.stock.upsert({
-    where: { ticker },
+  // 3. Add buyer and seller users for limit matching test
+  const simplePassword = '123456';
+  const passwordHash = await bcrypt.hash(simplePassword, 8);
+
+  // Create buyer user
+  const buyer = await prisma.user.upsert({
+    where: { email: 'buyer@example.com' },
     update: {},
-
     create: {
-      ticker,
-
-      companyName: 'Apple Inc.',
-
-      exchange: 'NASDAQ',
-      sector: 'Technology',
-      industry: 'Consumer Electronics',
-      marketCap: BigInt(3_000_000_000_000),
-      outstandingShares: BigInt(16_000_000_000),
-      insiderHolding: 0.02,
-      institutionalHolding: 0.58,
-      ipoDate: new Date('1980-12-12'),
-      country: 'USA',
-      currency: 'USD',
+      email: 'buyer@example.com',
+      passwordHash,
     },
   });
+  console.log(`✅ Created buyer user: ${buyer.email} / ${simplePassword}`);
 
-  // 3. Seed MarketData
+  // Create buyer's balance
+  await prisma.balance.upsert({
+    where: { userId: buyer.id },
+    update: {},
+    create: {
+      userId: buyer.id,
+      amount: 50000, // 50k USD for buying stocks
+    },
+  });
+  console.log(`✅ Seeded balance for ${buyer.email}`);
+
+  // Create seller user
+  const seller = await prisma.user.upsert({
+    where: { email: 'seller@example.com' },
+    update: {},
+    create: {
+      email: 'seller@example.com',
+      passwordHash,
+    },
+  });
+  console.log(`✅ Created seller user: ${seller.email} / ${simplePassword}`);
+
+  // Create seller's balance
+  await prisma.balance.upsert({
+    where: { userId: seller.id },
+    update: {},
+    create: {
+      userId: seller.id,
+      amount: 20000, // 20k USD initial balance
+    },
+  });
+  console.log(`✅ Seeded balance for ${seller.email}`);
+
+  // Create seller's portfolio with AAPL shares to sell
+  await prisma.portfolio.upsert({
+    where: {
+      userId_ticker: {
+        userId: seller.id,
+        ticker,
+      },
+    },
+    update: {
+      quantity: 50, // Ensure seller has enough shares
+      averagePrice: 250, // Bought at a lower price
+    },
+    create: {
+      userId: seller.id,
+      ticker,
+      quantity: 50, // Enough shares for multiple sell orders
+      averagePrice: 250,
+      positionType: 'LONG',
+    },
+  });
+  console.log(`✅ Seeded portfolio for ${seller.email}`);
+
+  // 4. Seed MarketData
   for (let i = 0; i < 10; i++) {
     await prisma.marketData.create({
       data: {
@@ -74,7 +143,7 @@ async function main() {
     });
   }
 
-  // 4. Seed News
+  // 5. Seed News
   for (let i = 0; i < 5; i++) {
     await prisma.news.create({
       data: {
@@ -90,7 +159,7 @@ async function main() {
     });
   }
 
-  // 5. Seed Dividends
+  // 6. Seed Dividends
   for (let i = 0; i < 4; i++) {
     const exDate = new Date(now.getTime() - i * 90 * 86400000);
     const payDate = new Date(exDate.getTime() + 15 * 86400000);
@@ -105,7 +174,7 @@ async function main() {
     });
   }
 
-  // 6. Seed Forecast Models
+  // 7. Seed Forecast Models
   for (let i = 0; i < 3; i++) {
     await prisma.forecastModel.create({
       data: {
@@ -118,7 +187,7 @@ async function main() {
     });
   }
 
-  // 7. Seed Orders: LIMIT và MARKET
+  // 8. Seed Orders for demo user: LIMIT và MARKET
   await prisma.order.createMany({
     data: [
       {
@@ -155,7 +224,7 @@ async function main() {
     ],
   });
 
-  // 8. Seed Transaction tương ứng với MARKET BUY
+  // 9. Seed Transaction for demo user
   await prisma.transaction.create({
     data: {
       userId: user.id,
@@ -167,17 +236,7 @@ async function main() {
     },
   });
 
-  await prisma.portfolio.create({
-    data: {
-      userId: user.id,
-      ticker,
-      quantity: 10,
-      averagePrice: 300,
-      positionType: 'LONG',
-    },
-  });
-
-  // 9. Seed Portfolio sau MARKET BUY
+  // 10. Seed Portfolio for demo user
   await prisma.portfolio.upsert({
     where: {
       userId_ticker: {
@@ -186,18 +245,19 @@ async function main() {
       },
     },
     update: {
-      quantity: { increment: 50 }, // 🆙 Tăng lên nhiều
+      quantity: { increment: 50 },
       averagePrice: 300,
     },
     create: {
       userId: user.id,
       ticker,
-      quantity: 50, // 🆙 Nhiều hơn số SELL LIMIT
+      quantity: 50,
       averagePrice: 300,
       positionType: 'LONG',
     },
   });
 
+  // 11. Add some additional orders for demo user
   await prisma.order.createMany({
     data: [
       {
@@ -223,7 +283,7 @@ async function main() {
 
   console.log('✅ Seeded Stock, MarketData, News, Dividends, ForecastModels');
   console.log(
-    '✅ Seeded User, Orders (LIMIT + MARKET), Transactions, Portfolio',
+    '✅ Seeded Users (demo, buyer, seller), Orders, Transactions, Portfolios',
   );
 }
 

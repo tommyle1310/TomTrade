@@ -46,7 +46,7 @@ export class StockGateway
     this.logger.log('✅ StockGateway initialized');
   }
 
-    async handleConnection(client: Socket) {
+  async handleConnection(client: Socket) {
     // Bypass token validation for the mock script
     if (client.handshake.query.isMockClient === 'true') {
       this.logger.log(`✅ Mock script client connected: ${client.id}`);
@@ -77,7 +77,10 @@ export class StockGateway
         secret: this.config.get<string>('JWT_SECRET'),
       });
     } catch (error: any) {
-      this.logger.error('[DriversGateway] Token validation error:', error.message);
+      this.logger.error(
+        '[DriversGateway] Token validation error:',
+        error.message,
+      );
       throw new WsException('Token validation failed');
     }
   }
@@ -87,16 +90,26 @@ export class StockGateway
   }
 
   @SubscribeMessage('mockMarketData')
-  async handleMockMarketData(client: Socket, payload: { ticker: string; price: number }) {
-    this.logger.log(`Received mock data from script: ${payload.ticker} @ ${payload.price}`);
+  async handleMockMarketData(
+    client: Socket,
+    payload: { ticker: string; price: number },
+  ) {
+    this.logger.log(
+      `Received mock data from script: ${payload.ticker} @ ${payload.price}`,
+    );
     this.eventEmitter.emit('stock.price.update', payload);
     return { event: 'mockDataReceived', data: payload };
   }
 
   @OnEvent('stock.price.update')
-  public async handleMarketDataUpdate(payload: { ticker: string; price: number }) {
+  public async handleMarketDataUpdate(payload: {
+    ticker: string;
+    price: number;
+  }) {
     try {
-      this.logger.log(`Handling stock.price.update event for ${payload.ticker}`);
+      this.logger.log(
+        `Handling stock.price.update event for ${payload.ticker}`,
+      );
       const alerts = await this.alertService.checkAndTrigger(
         payload.ticker,
         payload.price,
@@ -109,8 +122,10 @@ export class StockGateway
         this.logger.log(`Sent alert to user ${alert.userId}`);
       }
     } catch (error) {
-      this.logger.error('❌ CRITICAL ERROR in handleMarketDataUpdate:', error.stack);
+      this.logger.error(
+        '❌ CRITICAL ERROR in handleMarketDataUpdate:',
+        error.stack,
+      );
     }
   }
 }
-

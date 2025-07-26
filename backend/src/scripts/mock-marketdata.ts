@@ -9,7 +9,7 @@ const socket = io('http://localhost:3000', {
 
 socket.on('connect', () => {
   console.log('✅ Connected as mock client');
-  
+
   const payload = { ticker: 'AAPL', price: 300 };
   socket.emit('mockMarketData', payload, (response) => {
     console.log('✅ Server responded:', response);

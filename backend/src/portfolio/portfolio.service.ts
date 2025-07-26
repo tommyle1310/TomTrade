@@ -119,4 +119,57 @@ export class PortfolioService {
       data: { quantity: { decrement: quantity } },
     });
   }
+
+  async increase(
+    userId: string,
+    ticker: string,
+    quantity: number,
+    price: number,
+  ) {
+    const existing = await this.prisma.portfolio.findUnique({
+      where: { userId_ticker: { userId, ticker } },
+    });
+
+    if (!existing) {
+      return this.prisma.portfolio.create({
+        data: {
+          userId,
+          ticker,
+          quantity,
+          averagePrice: price,
+          positionType: 'LONG',
+        },
+      });
+    }
+
+    const totalCost =
+      existing.averagePrice * existing.quantity + price * quantity;
+    const newQuantity = existing.quantity + quantity;
+    const newAvg = totalCost / newQuantity;
+
+    return this.prisma.portfolio.update({
+      where: { userId_ticker: { userId, ticker } },
+      data: {
+        quantity: newQuantity,
+        averagePrice: newAvg,
+      },
+    });
+  }
+
+  async decrease(userId: string, ticker: string, quantity: number) {
+    const existing = await this.prisma.portfolio.findUnique({
+      where: { userId_ticker: { userId, ticker } },
+    });
+
+    if (!existing || existing.quantity < quantity) {
+      throw new Error('Not enough shares to sell.');
+    }
+
+    return this.prisma.portfolio.update({
+      where: { userId_ticker: { userId, ticker } },
+      data: {
+        quantity: { decrement: quantity },
+      },
+    });
+  }
 }
