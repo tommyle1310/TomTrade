@@ -131,6 +131,40 @@ export async function clearOrders() {
   console.log('🧹 Cleared all orders');
 }
 
+export async function seedPortfolio(
+  email: string,
+  ticker: string,
+  quantity: number,
+  averagePrice: number,
+) {
+  const user = await prisma.user.findUnique({ where: { email } });
+  const stock = await prisma.stock.findUnique({ where: { ticker } });
+
+  if (!user || !stock) {
+    throw new Error(`User or stock not found: ${email}, ${ticker}`);
+  }
+
+  await prisma.portfolio.upsert({
+    where: {
+      userId_ticker: {
+        userId: user.id,
+        ticker: stock.ticker,
+      },
+    },
+    update: {
+      quantity,
+      averagePrice,
+    },
+    create: {
+      userId: user.id,
+      ticker: stock.ticker,
+      quantity,
+      positionType: 'LONG',
+      averagePrice,
+    },
+  });
+}
+
 export function createClient(token: string) {
   return new GraphQLClient(endpoint, {
     headers: { Authorization: `Bearer ${token}` },

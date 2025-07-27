@@ -116,40 +116,37 @@ export class OrderService {
     if (!candidates.length) return;
 
     for (const matched of candidates) {
+      // ⚠️ Always fetch the fresh latest version of the taker
       const freshOrder = await this.prisma.order.findUnique({
         where: { id: order.id },
       });
+
+      if (!freshOrder || freshOrder.status !== OrderStatus.OPEN) break;
+
       const freshMatched = await this.prisma.order.findUnique({
         where: { id: matched.id },
       });
 
-      if (
-        !freshOrder ||
-        !freshMatched ||
-        freshOrder.status !== OrderStatus.OPEN ||
-        freshMatched.status !== OrderStatus.OPEN
-      )
-        continue;
+      if (!freshMatched || freshMatched.status !== OrderStatus.OPEN) continue;
 
       const availableQty = Math.min(freshOrder.quantity, freshMatched.quantity);
 
-      // ✅ Check SELLER có đủ cổ phiếu
-      if (freshOrder.side === 'BUY') {
-        const sellerPortfolio = await this.prisma.portfolio.findUnique({
-          where: {
-            userId_ticker: {
-              userId: freshMatched.userId,
-              ticker: order.ticker,
-            },
-          },
-        });
+      // ✅ Check SELLER has enough stock
+      const sellerId =
+        freshOrder.side === 'BUY' ? freshMatched.userId : freshOrder.userId;
 
-        if (!sellerPortfolio || sellerPortfolio.quantity < availableQty) {
-          this.logger.warn(
-            `⛔ Seller ${freshMatched.userId} không đủ cổ phiếu để bán`,
-          );
-          continue;
-        }
+      const sellerPortfolio = await this.prisma.portfolio.findUnique({
+        where: {
+          userId_ticker: {
+            userId: sellerId,
+            ticker: freshOrder.ticker,
+          },
+        },
+      });
+
+      if (!sellerPortfolio || sellerPortfolio.quantity < availableQty) {
+        this.logger.warn(`⛔ Seller ${sellerId} không đủ cổ phiếu để bán`);
+        continue;
       }
 
       await this.executeTrade(
@@ -262,7 +259,7 @@ export class OrderService {
       );
       await this.portfolioService.decrease(sellerId, ticker, quantity);
 
-      // Update seller balance (BUY đã trừ tiền khi đặt lệnh rồi)
+      // Update seller balance
       await tx.balance.update({
         where: { userId: sellerId },
         data: { amount: { increment: totalCost } },

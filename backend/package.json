@@ -18,6 +18,7 @@
     "test:sell-partial-fill": "ts-node --require tsconfig-paths/register src/scripts/test-sell-partial-fill.script.ts",
     "test:buy-partial-fill": "ts-node --require tsconfig-paths/register src/scripts/test-buy-partial-fill.script.ts",
     "test:buy-limit-multiple-sell": "ts-node --require tsconfig-paths/register src/scripts/test-buy-limit-multiple-sell.script.ts",
+    "test:sell-limit-multiple-buy": "ts-node --require tsconfig-paths/register src/scripts/test-sell-limit-multiple-buy.script.ts",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",

@@ -131,6 +131,77 @@ async function main() {
     console.log(`✅ Seeded portfolio for ${seller.email}`);
   }
 
+  // --- Create Buyers for test-sell-limit-multiple-buy ---
+  const buyersData = [
+    { email: 'buyer1@example.com', balance: 100000 },
+    { email: 'buyer2@example.com', balance: 100000 },
+    { email: 'buyer3@example.com', balance: 100000 },
+  ];
+
+  for (const buyerData of buyersData) {
+    const buyer = await prisma.user.upsert({
+      where: { email: buyerData.email },
+      update: {},
+      create: {
+        email: buyerData.email,
+        passwordHash,
+      },
+    });
+    console.log(`✅ Created buyer user: ${buyer.email} / ${simplePassword}`);
+
+    await prisma.balance.upsert({
+      where: { userId: buyer.id },
+      update: { amount: buyerData.balance },
+      create: {
+        userId: buyer.id,
+        amount: buyerData.balance,
+      },
+    });
+    console.log(`✅ Seeded balance for ${buyer.email}`);
+  }
+
+  // --- Create single Seller for test-sell-limit-multiple-buy ---
+  const sellerUser = await prisma.user.upsert({
+    where: { email: 'seller@example.com' },
+    update: {},
+    create: {
+      email: 'seller@example.com',
+      passwordHash,
+    },
+  });
+  console.log(`✅ Created seller user: ${sellerUser.email} / ${simplePassword}`);
+
+  await prisma.balance.upsert({
+    where: { userId: sellerUser.id },
+    update: { amount: 20000 },
+    create: {
+      userId: sellerUser.id,
+      amount: 20000,
+    },
+  });
+  console.log(`✅ Seeded balance for ${sellerUser.email}`);
+
+  await prisma.portfolio.upsert({
+    where: {
+      userId_ticker: {
+        userId: sellerUser.id,
+        ticker,
+      },
+    },
+    update: {
+      quantity: 50,
+      averagePrice: 180,
+    },
+    create: {
+      userId: sellerUser.id,
+      ticker,
+      quantity: 50,
+      averagePrice: 180,
+      positionType: 'LONG',
+    },
+  });
+  console.log(`✅ Seeded portfolio for ${sellerUser.email}`);
+
   // 4. Seed MarketData
   for (let i = 0; i < 10; i++) {
     await prisma.marketData.create({
@@ -288,7 +359,7 @@ async function main() {
 
   console.log('✅ Seeded Stock, MarketData, News, Dividends, ForecastModels');
   console.log(
-    '✅ Seeded Users (demo, buyer, seller1, seller2, seller3), Transactions, Portfolios',
+    '✅ Seeded Users (demo, buyer, buyer1, buyer2, buyer3, seller, seller1, seller2, seller3), Transactions, Portfolios',
   );
 }
 
