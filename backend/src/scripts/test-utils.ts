@@ -71,6 +71,18 @@ export async function placeOrder(client: any, input: PlaceOrderInput) {
   return client.request(mutation, { input });
 }
 
+export async function cancelOrder(client: any, orderId: string) {
+  const mutation = gql`
+    mutation CancelOrder($orderId: String!) {
+      cancelOrder(orderId: $orderId) {
+        id
+        status
+      }
+    }
+  `;
+  return client.request(mutation, { orderId });
+}
+
 export async function getOrders(client: any) {
   const query = gql`
     query {
@@ -131,6 +143,13 @@ export async function clearOrders() {
   console.log('🧹 Cleared all orders');
 }
 
+export function createClient(token: string) {
+  return new GraphQLClient(endpoint, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+// Additional utility functions
 export async function seedPortfolio(
   email: string,
   ticker: string,
@@ -138,17 +157,13 @@ export async function seedPortfolio(
   averagePrice: number,
 ) {
   const user = await prisma.user.findUnique({ where: { email } });
-  const stock = await prisma.stock.findUnique({ where: { ticker } });
-
-  if (!user || !stock) {
-    throw new Error(`User or stock not found: ${email}, ${ticker}`);
-  }
+  if (!user) throw new Error(`User with email ${email} not found`);
 
   await prisma.portfolio.upsert({
     where: {
       userId_ticker: {
         userId: user.id,
-        ticker: stock.ticker,
+        ticker,
       },
     },
     update: {
@@ -157,16 +172,56 @@ export async function seedPortfolio(
     },
     create: {
       userId: user.id,
-      ticker: stock.ticker,
+      ticker,
       quantity,
-      positionType: 'LONG',
       averagePrice,
+      positionType: 'LONG',
     },
   });
+  console.log(
+    `✅ Seeded portfolio for ${email}: ${quantity} ${ticker} @ ${averagePrice}`,
+  );
 }
 
-export function createClient(token: string) {
-  return new GraphQLClient(endpoint, {
-    headers: { Authorization: `Bearer ${token}` },
+export async function updateBalance(email: string, amount: number) {
+  const user = await prisma.user.findUnique({ where: { email } });
+  if (!user) throw new Error(`User with email ${email} not found`);
+
+  await prisma.balance.upsert({
+    where: { userId: user.id },
+    update: { amount },
+    create: {
+      userId: user.id,
+      amount,
+    },
   });
+  console.log(`✅ Updated balance for ${email}: $${amount}`);
+}
+
+export async function getOrderBook(client: any, ticker: string) {
+  const query = gql`
+    query OrderBook($ticker: String!) {
+      orderBook(ticker: $ticker) {
+        buyOrders {
+          id
+          price
+          quantity
+          createdAt
+        }
+        sellOrders {
+          id
+          price
+          quantity
+          createdAt
+        }
+      }
+    }
+  `;
+  const result = await client.request(query, { ticker });
+  return result.orderBook;
+}
+
+export async function resetOrderBook() {
+  await prisma.order.deleteMany();
+  console.log('🧹 Reset order book (deleted all orders)');
 }

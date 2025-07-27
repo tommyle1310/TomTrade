@@ -7,23 +7,23 @@ import {
   getOrders,
   getBalance,
   getPortfolio,
-  getTransactions,
-  clearOrders,
+  seedPortfolio,
   createClient,
   prisma,
 } from './test-utils';
 
 async function main() {
-  await clearOrders();
-
-  console.log('🔐 Logging in...');
-  const buyerToken = await login('buyer@example.com', '123456');
+  console.log('🔐 Logging in users...');
   const sellerToken = await login('seller@example.com', '123456');
+  const buyerToken = await login('buyer@example.com', '123456');
 
-  const buyerClient = createClient(buyerToken);
   const sellerClient = createClient(sellerToken);
+  const buyerClient = createClient(buyerToken);
 
-  console.log('📤 Seller places SELL LIMIT AAPL 10 @ 200...');
+  console.log('📦 Seed seller with 10 AAPL @ 180');
+  await seedPortfolio('seller@example.com', 'AAPL', 10, 180);
+
+  console.log('📤 SELL LIMIT AAPL 10 @ 200');
   await placeOrder(sellerClient, {
     side: 'SELL',
     type: 'LIMIT',
@@ -32,40 +32,25 @@ async function main() {
     price: 200,
   });
 
-  console.log('🛒 Buyer places BUY MARKET AAPL 10...');
+  console.log('📥 Placing BUY MARKET order (10 AAPL)...');
   await placeOrder(buyerClient, {
     side: 'BUY',
     type: 'MARKET',
     ticker: 'AAPL',
     quantity: 10,
-    price: 200,
+    price: 0, // Market order still needs price parameter but it's not used
   });
 
-  await new Promise((r) => setTimeout(r, 1000));
+  await new Promise((r) => setTimeout(r, 1000)); // Wait for matching
 
-  console.log('\n📄 Buyer Orders:');
-  console.dir((await getOrders(buyerClient)).myOrders, { depth: null });
+  console.log('📊 Getting portfolio, balance, orders...');
+  const buyerBalance = await getBalance(buyerClient);
+  const buyerPortfolio = await getPortfolio(buyerClient);
+  const buyerOrders = await getOrders(buyerClient);
 
-  console.log('\n📄 Seller Orders:');
-  console.dir((await getOrders(sellerClient)).myOrders, { depth: null });
-
-  console.log('\n💰 Final Balances:');
-  console.log('Buyer:', (await getBalance(buyerClient)).getMyBalance);
-  console.log('Seller:', (await getBalance(sellerClient)).getMyBalance);
-
-  console.log('\n📦 Final Portfolios:');
-  console.log('Buyer:', (await getPortfolio(buyerClient)).myPortfolio);
-  console.log('Seller:', (await getPortfolio(sellerClient)).myPortfolio);
-
-  console.log('\n🔁 Transactions (Buyer):');
-  console.dir((await getTransactions(buyerClient)).myTransactions, {
-    depth: null,
-  });
-
-  console.log('\n🔁 Transactions (Seller):');
-  console.dir((await getTransactions(sellerClient)).myTransactions, {
-    depth: null,
-  });
+  console.log('💰 Balance:', buyerBalance.getMyBalance);
+  console.log('📦 Portfolio:', buyerPortfolio.myPortfolio);
+  console.log('📄 Orders:', buyerOrders.myOrders);
 }
 
 main()
