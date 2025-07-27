@@ -56,11 +56,11 @@ async function main() {
   });
   console.log(`✅ Seeded balance for ${user.email}`);
 
-  // 3. Add buyer and seller users for limit matching test
+  // 3. Add users for the 'buy-limit-multiple-sell' test script
   const simplePassword = '123456';
   const passwordHash = await bcrypt.hash(simplePassword, 8);
 
-  // Create buyer user
+  // --- Create Buyer ---
   const buyer = await prisma.user.upsert({
     where: { email: 'buyer@example.com' },
     update: {},
@@ -71,126 +71,65 @@ async function main() {
   });
   console.log(`✅ Created buyer user: ${buyer.email} / ${simplePassword}`);
 
-  // Create buyer's balance
   await prisma.balance.upsert({
     where: { userId: buyer.id },
-    update: {},
+    update: { amount: 100000 },
     create: {
       userId: buyer.id,
-      amount: 50000, // 50k USD for buying stocks
+      amount: 100000, // 100k USD for buying stocks
     },
   });
   console.log(`✅ Seeded balance for ${buyer.email}`);
 
-  // Create buyer2 user
-  const buyer2 = await prisma.user.upsert({
-    where: { email: 'buyer2@example.com' },
-    update: {},
-    create: {
-      email: 'buyer2@example.com',
-      passwordHash,
-    },
-  });
-  console.log(`✅ Created buyer2 user: ${buyer2.email} / ${simplePassword}`);
+  // --- Create Sellers ---
+  const sellersData = [
+    { email: 'seller1@example.com', shares: 50 },
+    { email: 'seller2@example.com', shares: 50 },
+    { email: 'seller3@example.com', shares: 50 },
+  ];
 
-  // Create buyer2's balance
-  await prisma.balance.upsert({
-    where: { userId: buyer2.id },
-    update: {},
-    create: {
-      userId: buyer2.id,
-      amount: 50000, // 50k USD for buying stocks
-    },
-  });
-  console.log(`✅ Seeded balance for ${buyer2.email}`);
+  for (const sellerData of sellersData) {
+    const seller = await prisma.user.upsert({
+      where: { email: sellerData.email },
+      update: {},
+      create: {
+        email: sellerData.email,
+        passwordHash,
+      },
+    });
+    console.log(`✅ Created seller user: ${seller.email} / ${simplePassword}`);
 
-  // Create seller user
-  const seller = await prisma.user.upsert({
-    where: { email: 'seller@example.com' },
-    update: {},
-    create: {
-      email: 'seller@example.com',
-      passwordHash,
-    },
-  });
-  console.log(`✅ Created seller user: ${seller.email} / ${simplePassword}`);
+    await prisma.balance.upsert({
+      where: { userId: seller.id },
+      update: { amount: 20000 },
+      create: {
+        userId: seller.id,
+        amount: 20000, // 20k USD initial balance
+      },
+    });
+    console.log(`✅ Seeded balance for ${seller.email}`);
 
-  // Create seller's balance
-  await prisma.balance.upsert({
-    where: { userId: seller.id },
-    update: {},
-    create: {
-      userId: seller.id,
-      amount: 20000, // 20k USD initial balance
-    },
-  });
-  console.log(`✅ Seeded balance for ${seller.email}`);
-
-  // Create seller's portfolio with AAPL shares to sell
-  await prisma.portfolio.upsert({
-    where: {
-      userId_ticker: {
+    await prisma.portfolio.upsert({
+      where: {
+        userId_ticker: {
+          userId: seller.id,
+          ticker,
+        },
+      },
+      update: {
+        quantity: sellerData.shares,
+        averagePrice: 180, // Bought at a lower price
+      },
+      create: {
         userId: seller.id,
         ticker,
+        quantity: sellerData.shares,
+        averagePrice: 180,
+        positionType: 'LONG',
       },
-    },
-    update: {
-      quantity: 50, // Ensure seller has enough shares
-      averagePrice: 250, // Bought at a lower price
-    },
-    create: {
-      userId: seller.id,
-      ticker,
-      quantity: 50, // Enough shares for multiple sell orders
-      averagePrice: 250,
-      positionType: 'LONG',
-    },
-  });
-  console.log(`✅ Seeded portfolio for ${seller.email}`);
-
-  // Create seller2 user
-  const seller2 = await prisma.user.upsert({
-    where: { email: 'seller2@example.com' },
-    update: {},
-    create: {
-      email: 'seller2@example.com',
-      passwordHash,
-    },
-  });
-  console.log(`✅ Created seller2 user: ${seller2.email} / ${simplePassword}`);
-
-  // Create seller2's balance
-  await prisma.balance.upsert({
-    where: { userId: seller2.id },
-    update: {},
-    create: {
-      userId: seller2.id,
-      amount: 20000, // 20k USD initial balance
-    },
-  });
-  console.log(`✅ Seeded balance for ${seller2.email}`);
-
-  // Create seller2's portfolio with AAPL shares to sell
-  await prisma.portfolio.upsert({
-    where: {
-      userId_ticker: {
-        userId: seller2.id,
-        ticker,
-      },
-    },
-    update: {
-      quantity: 50, // Ensure seller2 has enough shares
-      averagePrice: 250, // Bought at a lower price
-    },
-    create: {
-      userId: seller2.id,
-      ticker,
-      quantity: 50, // Enough shares for multiple sell orders
-      averagePrice: 250,
-      positionType: 'LONG',
-    },
-  });
-  console.log(`✅ Seeded portfolio for ${seller2.email}`);
+    });
+    console.log(`✅ Seeded portfolio for ${seller.email}`);
+  }
 
   // 4. Seed MarketData
   for (let i = 0; i < 10; i++) {
@@ -349,7 +288,7 @@ async function main() {
 
   console.log('✅ Seeded Stock, MarketData, News, Dividends, ForecastModels');
   console.log(
-    '✅ Seeded Users (demo, buyer, buyer2, seller, seller2), Orders, Transactions, Portfolios',
+    '✅ Seeded Users (demo, buyer, seller1, seller2, seller3), Transactions, Portfolios',
   );
 }
 

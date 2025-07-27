@@ -90,12 +90,17 @@ export class OrderService {
 
   async tryMatchByOrder(order: Order) {
     const oppositeSide: OrderSide = order.side === 'BUY' ? 'SELL' : 'BUY';
-    const priceComparator = order.side === 'BUY' ? 'lte' : 'gte';
     const priceOrder = order.side === 'BUY' ? 'asc' : 'desc';
 
-    this.logger.log(
-      `🔎 Looking for ${oppositeSide} orders for ${order.ticker} with price ${priceComparator} ${order.price}`,
-    );
+    const priceFilter =
+      order.type === OrderType.MARKET
+        ? {}
+        : {
+            price:
+              order.side === 'BUY'
+                ? { lte: order.price }
+                : { gte: order.price },
+          };
 
     const candidates = await this.prisma.order.findMany({
       where: {
@@ -103,23 +108,14 @@ export class OrderService {
         status: OrderStatus.OPEN,
         side: oppositeSide,
         type: OrderType.LIMIT,
-        price: { [priceComparator]: order.price },
+        ...priceFilter,
       },
       orderBy: [{ price: priceOrder }, { createdAt: 'asc' }],
     });
 
-    this.logger.log(
-      `🔁 Matching order ${order.id} (${order.side}) → ${candidates.length} candidate(s)`,
-    );
-
-    if (candidates.length === 0) return;
-
-    let remainingQty = order.quantity;
+    if (!candidates.length) return;
 
     for (const matched of candidates) {
-      if (remainingQty <= 0) break;
-
-      // Lấy lại dữ liệu mới nhất từ DB
       const freshOrder = await this.prisma.order.findUnique({
         where: { id: order.id },
       });
@@ -135,63 +131,33 @@ export class OrderService {
       )
         continue;
 
-      const availableQty = Math.min(remainingQty, freshMatched.quantity);
+      const availableQty = Math.min(freshOrder.quantity, freshMatched.quantity);
 
-      // Nếu là BUY: kiểm tra người SELL có đủ cổ phiếu để bán
-      if (order.side === 'BUY') {
+      // ✅ Check SELLER có đủ cổ phiếu
+      if (freshOrder.side === 'BUY') {
         const sellerPortfolio = await this.prisma.portfolio.findUnique({
           where: {
             userId_ticker: {
-              userId: matched.userId,
-              ticker: matched.ticker,
+              userId: freshMatched.userId,
+              ticker: order.ticker,
             },
           },
         });
 
         if (!sellerPortfolio || sellerPortfolio.quantity < availableQty) {
           this.logger.warn(
-            `⛔ Seller ${matched.userId} không đủ cổ phiếu để bán`,
+            `⛔ Seller ${freshMatched.userId} không đủ cổ phiếu để bán`,
           );
           continue;
         }
       }
 
-      // Tiến hành khớp lệnh
-      await this.executeTrade(order, matched, availableQty, matched.price);
-
-      remainingQty -= availableQty;
-      order.quantity = remainingQty;
-
-      // Cập nhật trạng thái của order gốc
-      const newStatus =
-        remainingQty === 0
-          ? OrderStatus.FILLED
-          : remainingQty < order.quantity
-            ? OrderStatus.PARTIAL
-            : OrderStatus.OPEN;
-
-      await this.prisma.order.update({
-        where: { id: order.id },
-        data: {
-          status: newStatus,
-          quantity: remainingQty,
-        },
-      });
-    }
-
-    // Nếu không khớp được gì
-    if (remainingQty === order.quantity) {
-      await this.prisma.order.update({
-        where: { id: order.id },
-        data: { status: OrderStatus.OPEN },
-      });
-    }
-    // Nếu khớp hết (quantity = 0) thì đảm bảo status là FILLED
-    if (remainingQty === 0) {
-      await this.prisma.order.update({
-        where: { id: order.id },
-        data: { status: OrderStatus.FILLED },
-      });
+      await this.executeTrade(
+        freshOrder,
+        freshMatched,
+        availableQty,
+        freshMatched.price,
+      );
     }
   }
 
@@ -245,63 +211,70 @@ export class OrderService {
     );
 
     await this.prisma.$transaction(async (tx) => {
-      // Cập nhật order quantity còn lại
       const takerRemaining = taker.quantity - quantity;
       const makerRemaining = maker.quantity - quantity;
 
-      this.logger.log(
-        `Updating taker order ${taker.id} to status: ${takerRemaining === 0 ? OrderStatus.FILLED : OrderStatus.OPEN}`,
-      );
+      const takerStatus =
+        takerRemaining === 0
+          ? OrderStatus.FILLED
+          : takerRemaining < taker.quantity
+            ? OrderStatus.PARTIAL
+            : OrderStatus.OPEN;
+
+      const makerStatus =
+        makerRemaining === 0
+          ? OrderStatus.FILLED
+          : makerRemaining < maker.quantity
+            ? OrderStatus.PARTIAL
+            : OrderStatus.OPEN;
+
+      // Update taker
       await tx.order.update({
         where: { id: taker.id },
         data: {
-          status: takerRemaining === 0 ? OrderStatus.FILLED : OrderStatus.OPEN,
+          quantity: takerRemaining,
+          status: takerStatus,
           matchedAt: new Date(),
-          price: executedPrice,
         },
       });
 
-      this.logger.log(
-        `Updating maker order ${maker.id} to status: ${makerRemaining === 0 ? OrderStatus.FILLED : OrderStatus.OPEN}`,
-      );
+      // Update maker
       await tx.order.update({
         where: { id: maker.id },
         data: {
-          status: makerRemaining === 0 ? OrderStatus.FILLED : OrderStatus.OPEN,
+          quantity: makerRemaining,
+          status: makerStatus,
           matchedAt: new Date(),
-          price: executedPrice,
         },
       });
 
-      const buyer = taker.side === 'BUY' ? taker.userId : maker.userId;
-      const seller = taker.side === 'SELL' ? taker.userId : maker.userId;
-      this.logger.log(`Buyer: ${buyer}, Seller: ${seller}`);
-
+      const buyerId = taker.side === 'BUY' ? taker.userId : maker.userId;
+      const sellerId = taker.side === 'SELL' ? taker.userId : maker.userId;
       const ticker = taker.ticker;
       const totalCost = quantity * executedPrice;
 
-      // Update portfolio
+      // Update portfolios
       await this.portfolioService.increase(
-        buyer,
+        buyerId,
         ticker,
         quantity,
         executedPrice,
       );
-      await this.portfolioService.decrease(seller, ticker, quantity);
+      await this.portfolioService.decrease(sellerId, ticker, quantity);
 
-      // Update balance (trả tiền cho seller)
+      // Update seller balance (BUY đã trừ tiền khi đặt lệnh rồi)
       await tx.balance.update({
-        where: { userId: seller },
+        where: { userId: sellerId },
         data: { amount: { increment: totalCost } },
       });
 
-      // Lưu giao dịch
+      // Record transaction
       await this.txService.recordTrade(tx, {
-        buyerId: buyer,
-        sellerId: seller,
+        buyerId,
+        sellerId,
         ticker,
-        price: executedPrice,
         quantity,
+        price: executedPrice,
       });
     });
 
