@@ -21,6 +21,7 @@ import { SocketService } from './core/socket-gateway.service';
 import { CoreModule } from './core/core.module';
 import { UserModule } from './user/user.module';
 import { BalanceModule } from './balance/balance.module';
+import { WatchlistModule } from './watchlist/watchlist.module';
 @Module({
   imports: [
     GraphQLModule.forRoot<ApolloDriverConfig>({
@@ -43,6 +44,7 @@ import { BalanceModule } from './balance/balance.module';
     StockModule,
     AlertRuleModule,
     forwardRef(() => OrderModule),
+    WatchlistModule,
   ],
   controllers: [AppController],
   providers: [

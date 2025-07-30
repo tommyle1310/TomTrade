@@ -1,0 +1,306 @@
+import { login, gqlRequest } from './test-utils';
+import { io } from 'socket.io-client';
+
+async function main() {
+  try {
+    console.log('🔐 Logging in as demo user...');
+    const token = await login('demo@example.com', 'password123');
+    console.log('✅ Login successful');
+
+    // Get demo user info to verify user ID
+    const demoUserRes = await gqlRequest(
+      `
+      query {
+        me {
+          id
+          email
+        }
+      }
+      `,
+      {},
+      token,
+    );
+    console.log('👤 Demo user info:', demoUserRes.me);
+
+    // Connect demo user to WebSocket
+    console.log('🔌 Connecting demo user to WebSocket...');
+    const demoSocket = io('http://localhost:3000', {
+      auth: {
+        token: `Bearer ${token}`,
+      },
+    });
+
+    demoSocket.on('connect', () => {
+      console.log('✅ Demo user WebSocket connected');
+    });
+
+    demoSocket.on('connect_error', (error) => {
+      console.error('❌ Demo user WebSocket connection error:', error);
+    });
+
+    demoSocket.on('disconnect', (reason) => {
+      console.log('🔌 Demo user WebSocket disconnected:', reason);
+    });
+
+    demoSocket.on('connectionTest', (data) => {
+      console.log('✅ Demo user connection test received:', data);
+    });
+
+    demoSocket.on('orderNotification', (notification) => {
+      console.log('📢 Demo user Order Notification received:', notification);
+    });
+
+    demoSocket.on('portfolioUpdate', (portfolioData) => {
+      console.log('📊 Demo user Portfolio Update received:', portfolioData);
+    });
+
+    demoSocket.on('balanceUpdate', (balanceData) => {
+      console.log('💰 Demo user Balance Update received:', balanceData);
+    });
+
+    // Login as buyer user
+    console.log('\n🔐 Logging in as buyer user...');
+    const buyerToken = await login('buyer@example.com', '123456');
+    console.log('✅ Buyer login successful');
+
+    // Get buyer user info to verify user ID
+    const buyerUserRes = await gqlRequest(
+      `
+      query {
+        me {
+          id
+          email
+        }
+      }
+      `,
+      {},
+      buyerToken,
+    );
+    console.log('👤 Buyer user info:', buyerUserRes.me);
+
+    // Connect buyer user to WebSocket
+    console.log('🔌 Connecting buyer user to WebSocket...');
+    const buyerSocket = io('http://localhost:3000', {
+      auth: {
+        token: `Bearer ${buyerToken}`,
+      },
+    });
+
+    buyerSocket.on('connect', () => {
+      console.log('✅ Buyer user WebSocket connected');
+    });
+
+    buyerSocket.on('connect_error', (error) => {
+      console.error('❌ Buyer user WebSocket connection error:', error);
+    });
+
+    buyerSocket.on('disconnect', (reason) => {
+      console.log('🔌 Buyer user WebSocket disconnected:', reason);
+    });
+
+    buyerSocket.on('connectionTest', (data) => {
+      console.log('✅ Buyer user connection test received:', data);
+    });
+
+    buyerSocket.on('orderNotification', (notification) => {
+      console.log('📢 Buyer user Order Notification received:', notification);
+    });
+
+    buyerSocket.on('portfolioUpdate', (portfolioData) => {
+      console.log('📊 Buyer user Portfolio Update received:', portfolioData);
+    });
+
+    buyerSocket.on('balanceUpdate', (balanceData) => {
+      console.log('💰 Buyer user Balance Update received:', balanceData);
+    });
+
+    // Wait for connections
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+
+    // Test WebSocket connection by requesting a manual notification
+    console.log('\n🧪 Testing WebSocket connections...');
+    demoSocket.emit('requestPortfolioUpdate', { userId: demoUserRes.me.id });
+    buyerSocket.emit('requestPortfolioUpdate', { userId: buyerUserRes.me.id });
+
+    // Wait for manual updates
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+
+    console.log('\n🧪 Testing Simple Notification...');
+
+    // Test 1: First give buyer some AAPL shares by buying them
+    console.log('\n📋 Test 1: Giving buyer AAPL shares by buying them...');
+    const buySharesRes = await gqlRequest(
+      `
+      mutation PlaceOrder($input: PlaceOrderInput!) {
+        placeOrder(input: $input) {
+          id
+          side
+          type
+          price
+          quantity
+          status
+          timeInForce
+        }
+      }
+      `,
+      {
+        input: {
+          ticker: 'AAPL',
+          side: 'BUY',
+          type: 'MARKET',
+          price: 300,
+          quantity: 20,
+          timeInForce: 'IOC',
+        },
+      },
+      buyerToken,
+    );
+    console.log('✅ Buyer bought AAPL shares:', buySharesRes.placeOrder);
+
+    // Wait a bit for the order to process
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+
+    // Test 2: Place a BUY order as demo user
+    console.log('\n📋 Test 2: Placing a BUY order as demo user...');
+    const buyOrderRes = await gqlRequest(
+      `
+      mutation PlaceOrder($input: PlaceOrderInput!) {
+        placeOrder(input: $input) {
+          id
+          side
+          type
+          price
+          quantity
+          status
+          timeInForce
+        }
+      }
+      `,
+      {
+        input: {
+          ticker: 'AAPL',
+          side: 'BUY',
+          type: 'LIMIT',
+          price: 300,
+          quantity: 10,
+          timeInForce: 'GTC',
+        },
+      },
+      token,
+    );
+    console.log('✅ Buy order created:', buyOrderRes.placeOrder);
+
+    // Test 3: Place a matching SELL order as buyer user
+    console.log('\n📋 Test 3: Placing a matching SELL order as buyer user...');
+    const sellOrderRes = await gqlRequest(
+      `
+      mutation PlaceOrder($input: PlaceOrderInput!) {
+        placeOrder(input: $input) {
+          id
+          side
+          type
+          price
+          quantity
+          status
+          timeInForce
+        }
+      }
+      `,
+      {
+        input: {
+          ticker: 'AAPL',
+          side: 'SELL',
+          type: 'LIMIT',
+          price: 300,
+          quantity: 10,
+          timeInForce: 'GTC',
+        },
+      },
+      buyerToken,
+    );
+    console.log('✅ Sell order created:', sellOrderRes.placeOrder);
+
+    // Test 4: Send market data to trigger matching
+    console.log('\n📋 Test 4: Sending market data to trigger matching...');
+    demoSocket.emit('mockMarketData', {
+      ticker: 'AAPL',
+      price: 300, // Exact match price
+    });
+
+    // Wait for matching and notifications
+    console.log('\n⏳ Waiting for matching and notifications...');
+    await new Promise((resolve) => setTimeout(resolve, 5000));
+
+    // Test 5: Check order statuses
+    console.log('\n🔍 Checking demo user orders...');
+    const demoOrdersRes = await gqlRequest(
+      `
+      query {
+        myOrders {
+          id
+          side
+          type
+          price
+          quantity
+          status
+          timeInForce
+          createdAt
+        }
+      }
+      `,
+      {},
+      token,
+    );
+
+    console.log('\n📊 Demo User Order Statuses:');
+    demoOrdersRes.myOrders.forEach((order: any) => {
+      console.log(
+        `Order ${order.id}: ${order.status} (${order.timeInForce}) - ${order.side} ${order.quantity} @ ${order.price}`,
+      );
+    });
+
+    console.log('\n🔍 Checking buyer user orders...');
+    const buyerOrdersRes = await gqlRequest(
+      `
+      query {
+        myOrders {
+          id
+          side
+          type
+          price
+          quantity
+          status
+          timeInForce
+          createdAt
+        }
+      }
+      `,
+      {},
+      buyerToken,
+    );
+
+    console.log('\n📊 Buyer User Order Statuses:');
+    buyerOrdersRes.myOrders.forEach((order: any) => {
+      console.log(
+        `Order ${order.id}: ${order.status} (${order.timeInForce}) - ${order.side} ${order.quantity} @ ${order.price}`,
+      );
+    });
+
+    console.log('\n✅ Simple notification test completed!');
+    console.log('\n📝 Expected Results:');
+    console.log('1. Buyer should get AAPL shares first');
+    console.log('2. Orders should be FILLED (matched between different users)');
+    console.log('3. No duplicate notifications should be sent');
+    console.log('4. Both users should receive order notifications');
+    console.log('5. Both users should receive portfolio and balance updates');
+
+    // Disconnect sockets
+    demoSocket.disconnect();
+    buyerSocket.disconnect();
+  } catch (error) {
+    console.error('❌ Error in simple notification test:', error);
+    throw error;
+  }
+}
+
+main().catch(console.error);

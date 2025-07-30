@@ -34,6 +34,27 @@ async function main() {
   });
   console.log(`✅ Created stock: ${ticker}`);
 
+  // Add GOOG stock for watchlist testing
+  await prisma.stock.upsert({
+    where: { ticker: 'GOOG' },
+    update: {},
+    create: {
+      ticker: 'GOOG',
+      companyName: 'Alphabet Inc.',
+      exchange: 'NASDAQ',
+      sector: 'Technology',
+      industry: 'Internet Content & Information',
+      marketCap: BigInt(2_500_000_000_000),
+      outstandingShares: BigInt(12_000_000_000),
+      insiderHolding: 0.01,
+      institutionalHolding: 0.65,
+      ipoDate: new Date('2004-08-19'),
+      country: 'USA',
+      currency: 'USD',
+    },
+  });
+  console.log(`✅ Created stock: GOOG`);
+
   // 2. Seed existing demo user
   const plainPassword = 'password123';
   const hash = await bcrypt.hash(plainPassword, 8);
@@ -80,6 +101,28 @@ async function main() {
     },
   });
   console.log(`✅ Seeded balance for ${buyer.email}`);
+
+  // Give buyer@example.com some AAPL shares to sell
+  await prisma.portfolio.upsert({
+    where: {
+      userId_ticker: {
+        userId: buyer.id,
+        ticker: 'AAPL',
+      },
+    },
+    update: {
+      quantity: 50,
+      averagePrice: 280,
+    },
+    create: {
+      userId: buyer.id,
+      ticker: 'AAPL',
+      quantity: 50,
+      averagePrice: 280,
+      positionType: 'LONG',
+    },
+  });
+  console.log(`✅ Seeded AAPL portfolio for ${buyer.email}`);
 
   // --- Create Sellers ---
   const sellersData = [
@@ -169,7 +212,9 @@ async function main() {
       passwordHash,
     },
   });
-  console.log(`✅ Created seller user: ${sellerUser.email} / ${simplePassword}`);
+  console.log(
+    `✅ Created seller user: ${sellerUser.email} / ${simplePassword}`,
+  );
 
   await prisma.balance.upsert({
     where: { userId: sellerUser.id },
@@ -215,6 +260,23 @@ async function main() {
         close: 152 + i,
         volume: BigInt(1_000_000 + i * 10000),
         afterHours: 151 + i,
+      },
+    });
+  }
+
+  // Add market data for GOOG
+  for (let i = 0; i < 10; i++) {
+    await prisma.marketData.create({
+      data: {
+        ticker: 'GOOG',
+        timestamp: new Date(now.getTime() - i * 86400000),
+        interval: '1d',
+        open: 2800 + i,
+        high: 2850 + i,
+        low: 2750 + i,
+        close: 2820 + i,
+        volume: BigInt(500_000 + i * 5000),
+        afterHours: 2810 + i,
       },
     });
   }

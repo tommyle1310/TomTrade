@@ -1,14 +1,20 @@
 import { Module, forwardRef } from '@nestjs/common';
-import { OrderService } from './order.service';
 import { OrderResolver } from './order.resolver';
-import { PrismaModule } from 'prisma/prisma.module';
+import { OrderService } from './order.service';
 import { TransactionModule } from 'src/transaction/transaction.module';
-import { PortfolioService } from 'src/portfolio/portfolio.service';
+import { PortfolioModule } from 'src/portfolio/portfolio.module';
+import { BalanceModule } from 'src/balance/balance.module';
+import { CoreModule } from 'src/core/core.module';
 import { BalanceService } from 'src/balance/balance.service';
 
 @Module({
-  imports: [PrismaModule, forwardRef(() => TransactionModule)],
-  providers: [OrderResolver, OrderService, PortfolioService, BalanceService],
+  imports: [
+    forwardRef(() => TransactionModule),
+    PortfolioModule,
+    BalanceModule,
+    CoreModule,
+  ],
+  providers: [OrderResolver, OrderService, BalanceService],
   exports: [OrderService],
 })
 export class OrderModule {}

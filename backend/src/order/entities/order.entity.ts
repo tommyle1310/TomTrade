@@ -3,6 +3,7 @@ import { ObjectType, Field, Float, ID } from '@nestjs/graphql';
 import { OrderSide } from '../enums/order-side.enum';
 import { OrderType } from '@prisma/client';
 import { OrderStatus } from '../enums/order-status.enum';
+import { TimeInForce } from '../enums/time-in-force.enum';
 
 @ObjectType()
 export class Order {
@@ -15,7 +16,7 @@ export class Order {
   @Field(() => OrderSide)
   side: OrderSide;
 
-  @Field(() => OrderType) // 👈 QUAN TRỌNG: thêm dòng này
+  @Field(() => OrderType)
   type: OrderType;
 
   @Field(() => Float)
@@ -26,6 +27,9 @@ export class Order {
 
   @Field(() => OrderStatus)
   status: OrderStatus;
+
+  @Field(() => TimeInForce)
+  timeInForce: TimeInForce;
 
   @Field()
   createdAt: Date;

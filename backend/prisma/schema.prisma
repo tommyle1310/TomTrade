@@ -296,30 +296,6 @@ model EconomicCalendarEvent {
   previous   String?
 }
 
-enum OrderType {
-  LIMIT
-  MARKET
-}
-
-model Order {
-  id          String   @id @default(uuid())
-  userId      String
-  ticker      String
-  side        OrderSide
-  price       Float
-  quantity    Float
-  status      OrderStatus   @default(OPEN)
-  createdAt   DateTime      @default(now())
-  matchedAt   DateTime?
-  type        OrderType     @default(LIMIT)
-
-  // ───── RELATIONS ───────────────────────
-  user  User  @relation(fields: [userId], references: [id])
-  stock Stock @relation(fields: [ticker], references: [ticker])
-
-  @@index([ticker, side, price, status])
-}
-
 enum OrderSide {
   BUY
   SELL
@@ -330,4 +306,35 @@ enum OrderStatus {
   PARTIAL
   FILLED
   CANCELLED
+}
+
+enum TimeInForce {
+  GTC
+  IOC
+  FOK
+}
+
+enum OrderType {
+  LIMIT
+  MARKET
+}
+
+model Order {
+  id          String      @id @default(uuid())
+  userId      String
+  ticker      String
+  side        OrderSide
+  price       Float
+  quantity    Float
+  status      OrderStatus   @default(OPEN)
+  createdAt   DateTime      @default(now())
+  matchedAt   DateTime?
+  type        OrderType     @default(LIMIT)
+  timeInForce TimeInForce   @default(GTC)
+
+  // ───── RELATIONS ───────────────────────
+  user  User  @relation(fields: [userId], references: [id])
+  stock Stock @relation(fields: [ticker], references: [ticker])
+
+  @@index([ticker, side, price, status])
 }

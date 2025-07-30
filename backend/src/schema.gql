@@ -2,6 +2,11 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
 # ------------------------------------------------------
 
+input AddStockToWatchlistInput {
+  ticker: String!
+  watchlistId: String!
+}
+
 type AlertRule {
   createdAt: DateTime!
   id: ID!
@@ -30,6 +35,10 @@ input CreateAlertRuleInput {
   ruleType: String!
   targetValue: Float!
   ticker: String!
+}
+
+input CreateWatchlistInput {
+  name: String!
 }
 
 """
@@ -89,14 +98,17 @@ type MarketData {
 }
 
 type Mutation {
+  addStockToWatchlist(input: AddStockToWatchlistInput!): Boolean!
   buyStock(input: BuyStockInput!): BuyStockPayload!
   cancelOrder(orderId: String!): Order!
   createAlertRule(input: CreateAlertRuleInput!): AlertRule!
+  createWatchlist(input: CreateWatchlistInput!): Watchlist!
   deduct(amount: Float!): Boolean!
   deleteAlertRule(id: ID!): Boolean!
   deposit(amount: Float!): Boolean!
   login(input: LoginInput!): AuthPayload!
   placeOrder(input: PlaceOrderInput!): Order!
+  removeStockFromWatchlist(input: AddStockToWatchlistInput!): Boolean!
   sellStock(input: SellStockInput!): SellStockPayload!
   signUp(input: SignUpInput!): AuthPayload!
 }
@@ -122,6 +134,7 @@ type Order {
   side: OrderSide!
   status: OrderStatus!
   ticker: String!
+  timeInForce: TimeInForce!
   type: OrderType!
 }
 
@@ -152,6 +165,7 @@ input PlaceOrderInput {
   quantity: Float!
   side: OrderSide!
   ticker: String!
+  timeInForce: TimeInForce! = GTC
   type: OrderType! = LIMIT
 }
 
@@ -165,10 +179,14 @@ type Query {
   getBalance(userId: String!): Float!
   getMyAlertRules: [AlertRule!]!
   getMyBalance: Float!
+  getPortfolioSummary: String!
+  getPositionPnL(ticker: String!): String!
+  getTotalPnL: String!
   me: User!
   myOrders: [Order!]!
   myPortfolio: [Portfolio!]!
   myTransactions: [Transaction!]!
+  myWatchlists: [Watchlist!]!
   orderBook(ticker: String!): OrderBook!
   sayHello: Hello!
   stock(ticker: String!): Stock
@@ -211,6 +229,12 @@ type Stock {
   ticker: String!
 }
 
+enum TimeInForce {
+  FOK
+  GTC
+  IOC
+}
+
 type Transaction {
   action: TransactionAction!
   id: ID!
@@ -229,4 +253,11 @@ type User {
   createdAt: DateTime!
   email: String!
   id: ID!
+}
+
+type Watchlist {
+  createdAt: DateTime!
+  id: ID!
+  name: String!
+  stocks: [Stock!]!
 }

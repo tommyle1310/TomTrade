@@ -16,6 +16,7 @@ import { OrderService } from 'src/order/order.service';
 import { TransactionService } from 'src/transaction/transaction.service';
 import { PortfolioService } from 'src/portfolio/portfolio.service';
 import { BalanceService } from 'src/balance/balance.service';
+import { PortfolioPnLService } from 'src/portfolio/portfolio-pnl.service';
 
 @Module({
   imports: [EventEmitterModule],
@@ -28,6 +29,7 @@ import { BalanceService } from 'src/balance/balance.service';
     AlertDispatcherService,
     TransactionService,
     BalanceService,
+    PortfolioPnLService,
     PortfolioService,
     OrderService,
     StockGateway, // chỉ nên có ở đây

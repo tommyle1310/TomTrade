@@ -225,3 +225,17 @@ export async function resetOrderBook() {
   await prisma.order.deleteMany();
   console.log('🧹 Reset order book (deleted all orders)');
 }
+
+export async function gqlRequest(
+  query: string,
+  variables: any = {},
+  token?: string,
+) {
+  const headers: any = {};
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  const client = new GraphQLClient(endpoint, { headers });
+  return client.request(query, variables);
+}
