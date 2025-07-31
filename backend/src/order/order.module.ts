@@ -7,6 +7,7 @@ import { PortfolioModule } from 'src/portfolio/portfolio.module';
 import { BalanceModule } from 'src/balance/balance.module';
 import { CoreModule } from 'src/core/core.module';
 import { BalanceService } from 'src/balance/balance.service';
+import { RiskService } from 'src/risk/risk.service';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { BalanceService } from 'src/balance/balance.service';
     OrderService,
     PriceFeedListenerService,
     BalanceService,
+    RiskService,
   ],
   exports: [OrderService],
 })

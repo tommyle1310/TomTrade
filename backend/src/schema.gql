@@ -41,6 +41,15 @@ input CreateWatchlistInput {
   name: String!
 }
 
+type DashboardResult {
+  cashBalance: Float!
+  stockPositions: [StockPosition!]!
+  totalPnL: Float!
+  totalPortfolioValue: Float!
+  totalRealizedPnL: Float!
+  totalUnrealizedPnL: Float!
+}
+
 """
 A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
 """
@@ -99,18 +108,23 @@ type MarketData {
 
 type Mutation {
   addStockToWatchlist(input: AddStockToWatchlistInput!): Boolean!
+  banUser(userId: String!): User!
   buyStock(input: BuyStockInput!): BuyStockPayload!
   cancelOrder(orderId: String!): Order!
   createAlertRule(input: CreateAlertRuleInput!): AlertRule!
   createWatchlist(input: CreateWatchlistInput!): Watchlist!
   deduct(amount: Float!): Boolean!
   deleteAlertRule(id: ID!): Boolean!
+  demoteFromAdmin(userId: String!): User!
   deposit(amount: Float!): Boolean!
   login(input: LoginInput!): AuthPayload!
   placeOrder(input: PlaceOrderInput!): Order!
+  placeStopOrder(input: PlaceStopOrderInput!): Order!
+  promoteToAdmin(userId: String!): User!
   removeStockFromWatchlist(input: AddStockToWatchlistInput!): Boolean!
   sellStock(input: SellStockInput!): SellStockPayload!
   signUp(input: SignUpInput!): AuthPayload!
+  unbanUser(userId: String!): User!
 }
 
 type News {
@@ -155,18 +169,36 @@ enum OrderStatus {
   PARTIAL
 }
 
+"""The type of order"""
 enum OrderType {
   LIMIT
   MARKET
+  STOP_LIMIT
+  STOP_MARKET
 }
 
 input PlaceOrderInput {
+  leverage: Float
+  ocoGroupId: String
+  positionType: String
   price: Float!
   quantity: Float!
   side: OrderSide!
   ticker: String!
   timeInForce: TimeInForce! = GTC
+  trailingAmount: Float
+  trailingType: String
   type: OrderType! = LIMIT
+}
+
+input PlaceStopOrderInput {
+  price: Float!
+  quantity: Float!
+  side: OrderSide!
+  ticker: String!
+  timeInForce: TimeInForce! = GTC
+  triggerPrice: Float!
+  type: OrderType!
 }
 
 type Portfolio {
@@ -176,12 +208,22 @@ type Portfolio {
 }
 
 type Query {
+  getAllUsers: [User!]!
   getBalance(userId: String!): Float!
+  getBollingerBands(interval: Interval! = _1d, period: Float! = 20, stdDev: Float! = 2, ticker: String!): [Float!]!
+  getDashboard: DashboardResult!
+  getEMA(interval: Interval! = _1d, period: Float! = 20, ticker: String!): [Float!]!
   getMyAlertRules: [AlertRule!]!
   getMyBalance: Float!
   getPortfolioSummary: String!
   getPositionPnL(ticker: String!): String!
+  getRSI(interval: Interval! = _1d, period: Float! = 14, ticker: String!): [Float!]!
+  getRecentActivity(limit: Float! = 100): RecentActivityResult!
+  getSMA(interval: Interval! = _1d, period: Float! = 20, ticker: String!): [Float!]!
+  getStockPosition(ticker: String!): StockPosition
+  getSystemStats: SystemStatsResult!
   getTotalPnL: String!
+  getUserById(userId: String!): User!
   me: User!
   myOrders: [Order!]!
   myPortfolio: [Portfolio!]!
@@ -191,6 +233,12 @@ type Query {
   sayHello: Hello!
   stock(ticker: String!): Stock
   stocks: [Stock!]!
+  viewUserPortfolio(userId: String!): UserPortfolioResult!
+}
+
+type RecentActivityResult {
+  orders: [String!]!
+  transactions: [String!]!
 }
 
 input SellStockInput {
@@ -229,6 +277,26 @@ type Stock {
   ticker: String!
 }
 
+type StockPosition {
+  averageBuyPrice: Float!
+  companyName: String!
+  currentPrice: Float!
+  marketValue: Float!
+  quantity: Float!
+  ticker: String!
+  unrealizedPnL: Float!
+  unrealizedPnLPercent: Float!
+}
+
+type SystemStatsResult {
+  adminUsers: Int!
+  bannedUsers: Int!
+  totalOrders: Int!
+  totalStocks: Int!
+  totalTransactions: Int!
+  totalUsers: Int!
+}
+
 enum TimeInForce {
   FOK
   GTC
@@ -253,6 +321,17 @@ type User {
   createdAt: DateTime!
   email: String!
   id: ID!
+  isBanned: Boolean!
+  passwordHash: String!
+  role: String!
+}
+
+type UserPortfolioResult {
+  balance: Float!
+  orders: [String!]!
+  portfolio: [String!]!
+  transactions: [String!]!
+  user: User!
 }
 
 type Watchlist {

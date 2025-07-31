@@ -1,9 +1,10 @@
-import { Resolver, Query, Mutation, Args, UseGuards } from '@nestjs/graphql';
+import { Resolver, Query, Mutation, Args } from '@nestjs/graphql';
+import { UseGuards } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { RolesGuard } from './guards/roles.guard';
 import { Roles } from './decorators/roles.decorator';
 import { GqlAuthGuard } from '../auth/gql-auth.guard';
-import { User } from '@prisma/client';
+import { User } from '../user/entities/user.entity';
 
 @Resolver()
 @UseGuards(GqlAuthGuard, RolesGuard)
@@ -46,23 +47,23 @@ export class AdminResolver {
     return this.adminService.demoteFromAdmin(userId);
   }
 
-  @Query(() => Object)
-  @Roles('ADMIN')
-  async viewUserPortfolio(@Args('userId') userId: string) {
-    return this.adminService.getUserPortfolio(userId);
-  }
+  // @Query(() => UserPortfolioResult)
+  // @Roles('ADMIN')
+  // async viewUserPortfolio(@Args('userId') userId: string) {
+  //   return this.adminService.getUserPortfolio(userId);
+  // }
 
-  @Query(() => Object)
-  @Roles('ADMIN')
-  async getSystemStats() {
-    return this.adminService.getSystemStats();
-  }
+  // @Query(() => SystemStatsResult)
+  // @Roles('ADMIN')
+  // async getSystemStats() {
+  //   return this.adminService.getSystemStats();
+  // }
 
-  @Query(() => Object)
-  @Roles('ADMIN')
-  async getRecentActivity(
-    @Args('limit', { type: () => Number, defaultValue: 100 }) limit: number,
-  ) {
-    return this.adminService.getRecentActivity(limit);
-  }
+  // @Query(() => RecentActivityResult)
+  // @Roles('ADMIN')
+  // async getRecentActivity(
+  //   @Args('limit', { type: () => Number, defaultValue: 100 }) limit: number,
+  // ) {
+  //   return this.adminService.getRecentActivity(limit);
+  // }
 }

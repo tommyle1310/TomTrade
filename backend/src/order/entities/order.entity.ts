@@ -1,7 +1,7 @@
 // src/order/entities/order.entity.ts
 import { ObjectType, Field, Float, ID } from '@nestjs/graphql';
 import { OrderSide } from '../enums/order-side.enum';
-import { OrderType } from '@prisma/client';
+import { OrderType } from '../enums/order-type.enum';
 import { OrderStatus } from '../enums/order-status.enum';
 import { TimeInForce } from '../enums/time-in-force.enum';
 
@@ -17,7 +17,7 @@ export class Order {
   side: OrderSide;
 
   @Field(() => OrderType)
-  type: OrderType;
+  type: string;
 
   @Field(() => Float)
   price: number;

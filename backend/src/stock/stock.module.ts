@@ -18,6 +18,7 @@ import { PortfolioService } from 'src/portfolio/portfolio.service';
 import { BalanceService } from 'src/balance/balance.service';
 import { PortfolioPnLService } from 'src/portfolio/portfolio-pnl.service';
 import { IndicatorService } from './indicator.service';
+import { RiskService } from 'src/risk/risk.service';
 
 @Module({
   imports: [EventEmitterModule],
@@ -30,6 +31,7 @@ import { IndicatorService } from './indicator.service';
     AlertRuleService,
     AlertDispatcherService,
     TransactionService,
+    RiskService,
     BalanceService,
     PortfolioPnLService,
     PortfolioService,
