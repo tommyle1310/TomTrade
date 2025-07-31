@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from 'prisma/prisma.service';
 import { PlaceOrderInput } from './dto/place-order.input';
+import { PlaceStopOrderInput } from './dto/place-stop-order.input';
 import { TransactionService } from 'src/transaction/transaction.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Order, OrderStatus, OrderType, OrderSide } from '@prisma/client';
@@ -19,6 +20,7 @@ import { OrderStatus as OrderStatusEnum } from './enums/order-status.enum';
 import { TimeInForce } from './enums/time-in-force.enum';
 import { SocketService } from 'src/core/socket-gateway.service';
 import { PortfolioPnLService } from '../portfolio/portfolio-pnl.service';
+import { RiskService } from '../risk/risk.service';
 
 @Injectable()
 export class OrderService {
@@ -33,6 +35,7 @@ export class OrderService {
     private balanceService: BalanceService,
     private socketService: SocketService,
     private portfolioPnLService: PortfolioPnLService,
+    private riskService: RiskService,
   ) {}
 
   onModuleInit() {
@@ -43,6 +46,31 @@ export class OrderService {
 
   async placeOrder(userId: string, input: PlaceOrderInput): Promise<Order> {
     const { side, ticker, quantity, price, type } = input;
+
+    // Risk management validation
+    const positionSizeValidation = await this.riskService.validatePositionSize(
+      userId,
+      ticker,
+      quantity,
+      price,
+    );
+    if (!positionSizeValidation.isValid) {
+      throw new Error(
+        `❌ Risk validation failed: ${positionSizeValidation.message}`,
+      );
+    }
+
+    const riskPerTradeValidation = await this.riskService.validateRiskPerTrade(
+      userId,
+      ticker,
+      quantity,
+      price,
+    );
+    if (!riskPerTradeValidation.isValid) {
+      throw new Error(
+        `❌ Risk validation failed: ${riskPerTradeValidation.message}`,
+      );
+    }
 
     if (side === OrderSideEnum.BUY) {
       const cost = price * quantity;
@@ -89,6 +117,68 @@ export class OrderService {
       if (!updated) throw new Error('❌ Order not found');
       return updated;
     }
+
+    return order;
+  }
+
+  async placeStopOrder(
+    userId: string,
+    input: PlaceStopOrderInput,
+  ): Promise<Order> {
+    const { side, ticker, quantity, price, triggerPrice, type } = input;
+
+    // Validate STOP order type
+    if (type !== 'STOP_LIMIT' && type !== 'STOP_MARKET') {
+      throw new Error('❌ Invalid order type for STOP order.');
+    }
+
+    // For STOP orders, we don't reserve balance/shares until triggered
+    // But we validate that the user has sufficient resources for when it triggers
+    if (side === OrderSideEnum.BUY) {
+      const cost = price * quantity;
+      const balance = await this.prisma.balance.findUnique({
+        where: { userId },
+      });
+
+      if (!balance || balance.amount < cost) {
+        throw new Error('❌ Insufficient balance for STOP BUY order.');
+      }
+    }
+
+    if (side === OrderSideEnum.SELL) {
+      const holding = await this.prisma.portfolio.findFirst({
+        where: { userId, ticker },
+      });
+
+      if (!holding || holding.quantity < quantity) {
+        throw new Error('❌ Not enough shares for STOP SELL order.');
+      }
+    }
+
+    // Validate trigger price logic
+    if (side === OrderSideEnum.BUY && triggerPrice <= price) {
+      throw new Error(
+        '❌ For BUY STOP orders, trigger price must be higher than limit price.',
+      );
+    }
+
+    if (side === OrderSideEnum.SELL && triggerPrice >= price) {
+      throw new Error(
+        '❌ For SELL STOP orders, trigger price must be lower than limit price.',
+      );
+    }
+
+    const order = await this.prisma.order.create({
+      data: {
+        ...input,
+        userId,
+        triggerPrice,
+      },
+    });
+
+    this.logger.log(
+      `STOP order placed: ${order.id} for ${ticker} at trigger price $${triggerPrice}`,
+    );
 
     return order;
   }

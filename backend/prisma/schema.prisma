@@ -135,6 +135,8 @@ model User {
   id           String   @id @default(uuid())
   email        String   @unique
   passwordHash String
+  role         Role     @default(USER)
+  isBanned     Boolean  @default(false)
   createdAt    DateTime @default(now())
 
   // 👇 Giữ lại relation đơn giản
@@ -308,6 +310,11 @@ enum OrderStatus {
   CANCELLED
 }
 
+enum Role {
+  USER
+  ADMIN
+}
+
 enum TimeInForce {
   GTC
   IOC
@@ -317,6 +324,8 @@ enum TimeInForce {
 enum OrderType {
   LIMIT
   MARKET
+  STOP_LIMIT
+  STOP_MARKET
 }
 
 model Order {
@@ -331,10 +340,12 @@ model Order {
   matchedAt   DateTime?
   type        OrderType     @default(LIMIT)
   timeInForce TimeInForce   @default(GTC)
+  triggerPrice Float?       // For STOP orders
 
   // ───── RELATIONS ───────────────────────
   user  User  @relation(fields: [userId], references: [id])
   stock Stock @relation(fields: [ticker], references: [ticker])
 
   @@index([ticker, side, price, status])
+  @@index([ticker, type, triggerPrice]) // For STOP order matching
 }

@@ -1,6 +1,7 @@
 import { Resolver, Mutation, Args, Query } from '@nestjs/graphql';
 import { OrderService } from './order.service';
 import { PlaceOrderInput } from './dto/place-order.input';
+import { PlaceStopOrderInput } from './dto/place-stop-order.input';
 import { Order } from './entities/order.entity';
 import { UseGuards } from '@nestjs/common';
 import { GqlAuthGuard } from 'src/auth/gql-auth.guard';
@@ -19,6 +20,15 @@ export class OrderResolver {
     @Args('input') input: PlaceOrderInput,
   ) {
     return this.orderService.placeOrder(user.id, input);
+  }
+
+  @UseGuards(GqlAuthGuard)
+  @Mutation(() => Order)
+  async placeStopOrder(
+    @CurrentUser() user: User,
+    @Args('input') input: PlaceStopOrderInput,
+  ) {
+    return this.orderService.placeStopOrder(user.id, input);
   }
 
   @Mutation(() => Order)

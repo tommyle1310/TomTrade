@@ -22,6 +22,8 @@ import { CoreModule } from './core/core.module';
 import { UserModule } from './user/user.module';
 import { BalanceModule } from './balance/balance.module';
 import { WatchlistModule } from './watchlist/watchlist.module';
+import { DashboardModule } from './dashboard/dashboard.module';
+import { AdminModule } from './admin/admin.module';
 @Module({
   imports: [
     GraphQLModule.forRoot<ApolloDriverConfig>({
@@ -45,6 +47,8 @@ import { WatchlistModule } from './watchlist/watchlist.module';
     AlertRuleModule,
     forwardRef(() => OrderModule),
     WatchlistModule,
+    DashboardModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [

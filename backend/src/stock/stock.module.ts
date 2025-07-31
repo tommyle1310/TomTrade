@@ -17,6 +17,7 @@ import { TransactionService } from 'src/transaction/transaction.service';
 import { PortfolioService } from 'src/portfolio/portfolio.service';
 import { BalanceService } from 'src/balance/balance.service';
 import { PortfolioPnLService } from 'src/portfolio/portfolio-pnl.service';
+import { IndicatorService } from './indicator.service';
 
 @Module({
   imports: [EventEmitterModule],
@@ -25,6 +26,7 @@ import { PortfolioPnLService } from 'src/portfolio/portfolio-pnl.service';
     MarketDataResolver,
     StockService,
     MarketDataService,
+    IndicatorService,
     AlertRuleService,
     AlertDispatcherService,
     TransactionService,
