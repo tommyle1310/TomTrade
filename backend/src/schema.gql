@@ -178,16 +178,11 @@ enum OrderType {
 }
 
 input PlaceOrderInput {
-  leverage: Float
-  ocoGroupId: String
-  positionType: String
   price: Float!
   quantity: Float!
   side: OrderSide!
   ticker: String!
   timeInForce: TimeInForce! = GTC
-  trailingAmount: Float
-  trailingType: String
   type: OrderType! = LIMIT
 }
 
@@ -218,10 +213,8 @@ type Query {
   getPortfolioSummary: String!
   getPositionPnL(ticker: String!): String!
   getRSI(interval: Interval! = _1d, period: Float! = 14, ticker: String!): [Float!]!
-  getRecentActivity(limit: Float! = 100): RecentActivityResult!
   getSMA(interval: Interval! = _1d, period: Float! = 20, ticker: String!): [Float!]!
   getStockPosition(ticker: String!): StockPosition
-  getSystemStats: SystemStatsResult!
   getTotalPnL: String!
   getUserById(userId: String!): User!
   me: User!
@@ -233,12 +226,6 @@ type Query {
   sayHello: Hello!
   stock(ticker: String!): Stock
   stocks: [Stock!]!
-  viewUserPortfolio(userId: String!): UserPortfolioResult!
-}
-
-type RecentActivityResult {
-  orders: [String!]!
-  transactions: [String!]!
 }
 
 input SellStockInput {
@@ -288,15 +275,6 @@ type StockPosition {
   unrealizedPnLPercent: Float!
 }
 
-type SystemStatsResult {
-  adminUsers: Int!
-  bannedUsers: Int!
-  totalOrders: Int!
-  totalStocks: Int!
-  totalTransactions: Int!
-  totalUsers: Int!
-}
-
 enum TimeInForce {
   FOK
   GTC
@@ -324,14 +302,6 @@ type User {
   isBanned: Boolean!
   passwordHash: String!
   role: String!
-}
-
-type UserPortfolioResult {
-  balance: Float!
-  orders: [String!]!
-  portfolio: [String!]!
-  transactions: [String!]!
-  user: User!
 }
 
 type Watchlist {
