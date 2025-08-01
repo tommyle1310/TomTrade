@@ -7,6 +7,17 @@ export class AppController {
 
   @Get()
   getHello(): string {
-    return this.appService.getHello();
+    const instanceId = process.env.INSTANCE_ID || 'unknown';
+    return `${this.appService.getHello()} - Served by: ${instanceId}`;
+  }
+
+  @Get('health')
+  getHealth(): object {
+    const instanceId = process.env.INSTANCE_ID || 'unknown';
+    return {
+      status: 'ok',
+      instance: instanceId,
+      timestamp: new Date().toISOString(),
+    };
   }
 }

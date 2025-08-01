@@ -3,8 +3,8 @@ FROM ubuntu:22.04
 # Cài gói cần thiết
 RUN apt update && apt install -y openssh-server sudo curl git gnupg
 
-# Cài Node.js 18.x (có cả npm)
-RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
+# Cài Node.js 20.x (có cả npm)
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
     apt install -y nodejs
 
 # Tạo user

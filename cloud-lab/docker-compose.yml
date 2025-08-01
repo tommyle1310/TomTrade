@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  backend1:
+    container_name: backend1
+    build:
+      context: .
+    volumes:
+      - ../backend:/home/clouduser/app
+    networks:
+      - cloud-net
+    environment:
+      - PORT=3000
+      - INSTANCE_ID=backend1
+    command: >
+      bash -c "chown -R clouduser:clouduser /home/clouduser/app &&
+               su clouduser -c 'cd /home/clouduser/app &&
+               npm install &&
+               npm run build &&
+               npm run start:prod'"
+
+  backend2:
+    container_name: backend2
+    build:
+      context: .
+    volumes:
+      - ../backend:/home/clouduser/app
+    networks:
+      - cloud-net
+    environment:
+      - PORT=3000
+      - INSTANCE_ID=backend2
+    command: >
+      bash -c "chown -R clouduser:clouduser /home/clouduser/app &&
+               su clouduser -c 'cd /home/clouduser/app &&
+               npm install &&
+               npm run build &&
+               npm run start:prod'"
+
+  nginx:
+    image: nginx:stable
+    container_name: nginx
+    depends_on:
+      - backend1
+      - backend2
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - ./lb-nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/certs:/etc/nginx/certs:ro
+    networks:
+      - cloud-net
+
+networks:
+  cloud-net:
+    driver: bridge
