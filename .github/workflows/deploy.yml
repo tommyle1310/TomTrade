@@ -1,0 +1,23 @@
+name: 🚀 Auto Deploy to Local Docker EC2
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Deploy NestJS vào Docker Container EC2 Local
+    runs-on: self-hosted
+
+    steps:
+      - name: 📥 Lấy source từ GitHub
+        uses: actions/checkout@v4
+
+      - name: 🛠️ Build lại Docker image backend1 & backend2
+        run: |
+          docker compose -f ./cloud-lab/docker-compose.yml build backend1 backend2
+
+      - name: 🔁 Restart container với image mới
+        run: |
+          docker compose -f ./cloud-lab/docker-compose.yml up -d --force-recreate backend1 backend2

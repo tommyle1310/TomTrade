@@ -9,6 +9,7 @@ async function bootstrap() {
     console.log(
       `[${instanceId}] Server is running successfully on PORT`,
       process.env.PORT ?? 3000,
+      '🚀 TomTrade đã deploy tự động',
     );
   });
 }
