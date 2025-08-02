@@ -65,6 +65,7 @@ services:
     restart: always
     networks:
       - cloud-net
+    privileged: true
 
 networks:
   cloud-net:

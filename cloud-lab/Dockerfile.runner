@@ -16,7 +16,7 @@ RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /
 
 # Tạo user clouduser và thêm vào docker group
 RUN useradd -m clouduser && echo "clouduser ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers && \
-    groupadd docker || true && \
+    groupadd -g 999 docker || true && \
     usermod -aG docker clouduser
 
 # Làm việc trong thư mục runner

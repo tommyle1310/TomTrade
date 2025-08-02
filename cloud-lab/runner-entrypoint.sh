@@ -1,6 +1,9 @@
 #!/bin/bash
 set -e
 
+# Fix Docker socket permissions first (as root)
+sudo chmod 666 /var/run/docker.sock || true
+
 cd /home/clouduser/actions-runner
 
 # Function to cleanup on exit
@@ -33,7 +36,6 @@ echo ">> Configuring new GitHub runner..."
 
 echo ">> Starting GitHub Actions runner..."
 # Disable auto-update to prevent restart loops
-export RUNNER_ALLOW_RUNASROOT=1
 export ACTIONS_RUNNER_DISABLEUPDATE=1
 
 exec ./run.sh
