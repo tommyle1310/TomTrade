@@ -66,7 +66,7 @@ export const usePortfolioStore = create<PortfolioState>((set, get) => ({
 
       const { data } = await apolloClient.query({
         query: GET_DASHBOARD,
-        fetchPolicy: 'cache-and-network',
+        fetchPolicy: 'cache-first',
       });
 
       set({
@@ -85,7 +85,7 @@ export const usePortfolioStore = create<PortfolioState>((set, get) => ({
     try {
       const { data } = await apolloClient.query({
         query: GET_MY_BALANCE,
-        fetchPolicy: 'cache-and-network',
+        fetchPolicy: 'cache-first',
       });
 
       set({ balance: data?.getMyBalance || 0 });
@@ -100,7 +100,7 @@ export const usePortfolioStore = create<PortfolioState>((set, get) => ({
 
       const { data } = await apolloClient.query({
         query: MY_PORTFOLIO,
-        fetchPolicy: 'cache-and-network',
+        fetchPolicy: 'cache-first',
       });
 
       set({
@@ -121,7 +121,7 @@ export const usePortfolioStore = create<PortfolioState>((set, get) => ({
 
       const { data } = await apolloClient.query({
         query: MY_TRANSACTIONS,
-        fetchPolicy: 'cache-and-network',
+        fetchPolicy: 'cache-first',
       });
 
       set({
@@ -142,7 +142,7 @@ export const usePortfolioStore = create<PortfolioState>((set, get) => ({
 
       const { data } = await apolloClient.query({
         query: MY_ORDERS,
-        fetchPolicy: 'cache-and-network',
+        fetchPolicy: 'cache-first',
       });
 
       set({

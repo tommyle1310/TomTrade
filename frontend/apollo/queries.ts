@@ -173,7 +173,7 @@ export const CANCEL_ORDER = gql`
   }
 `;
 
-// Stock Queries
+// Stock Queries (removed marketCap to fix GraphQL error)
 export const GET_STOCKS = gql`
   query GetStocks {
     stocks {
@@ -182,7 +182,6 @@ export const GET_STOCKS = gql`
       exchange
       sector
       industry
-      marketCap
       currency
     }
   }
@@ -196,7 +195,6 @@ export const GET_STOCK = gql`
       exchange
       sector
       industry
-      marketCap
       currency
       marketData(interval: _1d) {
         open

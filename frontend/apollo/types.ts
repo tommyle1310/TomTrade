@@ -100,10 +100,18 @@ export interface Stock {
   exchange: string;
   sector?: string;
   industry?: string;
-  marketCap?: string;
+  marketCap?: number; // Fixed: Changed from string to number
   currency?: string;
+  country?: string;
+  status?: string;
+  insiderHolding?: number;
+  institutionalHolding?: number;
+  ipoDate?: string;
+  outstandingShares?: string;
   marketData?: MarketData[];
   news?: News[];
+  dividends?: Dividend[];
+  forecastModels?: ForecastModel[];
 }
 
 export interface MarketData {
@@ -122,6 +130,26 @@ export interface News {
   publishedAt: string;
   source?: string;
   url?: string;
+  ticker: string;
+  sentimentScore?: number;
+  type?: string;
+}
+
+export interface Dividend {
+  amount: number;
+  exDate: string;
+  frequency: 'ANNUAL' | 'QUARTERLY';
+  payDate: string;
+  ticker: string;
+}
+
+export interface ForecastModel {
+  id: string;
+  modelType: string;
+  prediction: number;
+  confidenceScore: number;
+  ticker: string;
+  trainedAt: string;
 }
 
 export interface Watchlist {

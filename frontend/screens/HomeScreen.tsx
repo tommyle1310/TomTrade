@@ -1,5 +1,12 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  RefreshControl,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../theme';
@@ -12,13 +19,13 @@ interface HomeScreenProps {
 
 export default function HomeScreen({ navigation }: HomeScreenProps) {
   const { user } = useAuthStore();
-  const { 
-    dashboard, 
-    balance, 
-    dashboardLoading, 
-    fetchDashboard, 
-    fetchBalance, 
-    refreshAll 
+  const {
+    dashboard,
+    balance,
+    dashboardLoading,
+    fetchDashboard,
+    fetchBalance,
+    refreshAll,
   } = usePortfolioStore();
 
   const isLoading = dashboardLoading;
@@ -30,37 +37,37 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
   }, [fetchDashboard, fetchBalance]);
 
   const quickActions = [
-    { 
-      id: 1, 
-      title: 'Portfolio', 
-      subtitle: 'View your investments', 
-      icon: 'pie-chart', 
+    {
+      id: 1,
+      title: 'Portfolio',
+      subtitle: 'View your investments',
+      icon: 'pie-chart',
       color: theme.colors.primary,
-      screen: 'Portfolio'
+      screen: 'Portfolio',
     },
-    { 
-      id: 2, 
-      title: 'Trading', 
-      subtitle: 'Buy & sell stocks', 
-      icon: 'trending-up', 
-      color: theme.colors.success,
-      screen: 'Trading'
+    {
+      id: 2,
+      title: 'Trading',
+      subtitle: 'Buy & sell stocks',
+      icon: 'trending-up',
+      color: theme.colors.accent.avocado,
+      screen: 'Trading',
     },
-    { 
-      id: 3, 
-      title: 'Watchlist', 
-      subtitle: 'Track favorites', 
-      icon: 'bookmark', 
-      color: theme.colors.info,
-      screen: 'Watchlist'
+    {
+      id: 3,
+      title: 'Watchlist',
+      subtitle: 'Track favorites',
+      icon: 'bookmark',
+      color: theme.colors.accent.gamboge,
+      screen: 'Watchlist',
     },
-    { 
-      id: 4, 
-      title: 'Orders', 
-      subtitle: 'Manage orders', 
-      icon: 'receipt', 
-      color: theme.colors.warning,
-      screen: 'Orders'
+    {
+      id: 4,
+      title: 'Orders',
+      subtitle: 'Manage orders',
+      icon: 'receipt',
+      color: theme.colors.accent.azure,
+      screen: 'Orders',
     },
   ];
 
@@ -76,7 +83,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
   };
 
   const getPercentColor = (percent: number) => {
-    return percent >= 0 ? theme.colors.success : theme.colors.error;
+    return percent >= 0 ? theme.colors.accent.avocado : theme.colors.accent.folly;
   };
 
   const formatPercent = (percent: number) => {
@@ -85,8 +92,8 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView 
-        style={styles.scrollView} 
+      <ScrollView
+        style={styles.scrollView}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={isLoading} onRefresh={handleRefresh} />
@@ -96,10 +103,16 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
         <View style={styles.header}>
           <View>
             <Text style={styles.greeting}>Welcome back</Text>
-            <Text style={styles.username}>{user?.email?.split('@')[0] || 'Trader'}</Text>
+            <Text style={styles.username}>
+              {user?.email?.split('@')[0] || 'Trader'}
+            </Text>
           </View>
           <TouchableOpacity style={styles.notificationButton}>
-            <Ionicons name="notifications-outline" size={24} color={theme.colors.text.primary} />
+            <Ionicons
+              name="notifications-outline"
+              size={24}
+              color={theme.colors.text.primary}
+            />
           </TouchableOpacity>
         </View>
 
@@ -107,27 +120,50 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
         <View style={styles.portfolioCard}>
           <Text style={styles.portfolioLabel}>Total Portfolio Value</Text>
           <Text style={styles.portfolioValue}>
-            {dashboard ? formatCurrency(dashboard.totalPortfolioValue) : formatCurrency(balance)}
+            {dashboard
+              ? formatCurrency(dashboard.totalPortfolioValue)
+              : formatCurrency(balance)}
           </Text>
-          {dashboard && (
-            <View style={styles.portfolioChange}>
-              <Ionicons 
-                name={dashboard.totalPnL >= 0 ? "trending-up" : "trending-down"} 
-                size={16} 
-                color={getPercentColor(dashboard.totalPnL)} 
-              />
-              <Text style={[styles.changeText, { color: getPercentColor(dashboard.totalPnL) }]}>
-                {formatCurrency(dashboard.totalPnL)} ({formatPercent(dashboard.totalPnL / dashboard.totalPortfolioValue * 100)})
-              </Text>
-            </View>
-          )}
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+          >
+            {dashboard && (
+              <View style={styles.portfolioChange}>
+                <Ionicons
+                  name={
+                    dashboard.totalPnL >= 0 ? 'trending-up' : 'trending-down'
+                  }
+                  size={16}
+                  color={theme.colors.text.secondary}
+                />
+                <Text
+                  style={[
+                    styles.changeText,
+                    { color: theme.colors.text.secondary },
+                  ]}
+                >
+                  {formatCurrency(dashboard.totalPnL)} (
+                  {formatPercent(
+                    (dashboard.totalPnL / dashboard.totalPortfolioValue) * 100
+                  )}
+                  )
+                </Text>
+              </View>
+            )}
+          </View>
         </View>
 
         {/* Balance Card */}
         <View style={styles.balanceCard}>
           <Text style={styles.balanceLabel}>Available Cash</Text>
           <Text style={styles.balanceValue}>
-            {dashboard ? formatCurrency(dashboard.cashBalance) : formatCurrency(balance)}
+            {dashboard
+              ? formatCurrency(dashboard.cashBalance)
+              : formatCurrency(balance)}
           </Text>
         </View>
 
@@ -136,16 +172,27 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
           <Text style={styles.sectionTitle}>Quick Actions</Text>
           <View style={styles.quickActionsGrid}>
             {quickActions.map((action) => (
-              <TouchableOpacity 
-                key={action.id} 
+              <TouchableOpacity
+                key={action.id}
                 style={styles.quickActionCard}
                 onPress={() => navigation.navigate(action.screen)}
               >
-                <View style={[styles.quickActionIcon, { backgroundColor: `${action.color}15` }]}>
-                  <Ionicons name={action.icon as any} size={24} color={action.color} />
+                <View
+                  style={[
+                    styles.quickActionIcon,
+                    { backgroundColor: `${action.color}15` },
+                  ]}
+                >
+                  <Ionicons
+                    name={action.icon as any}
+                    size={24}
+                    color={action.color}
+                  />
                 </View>
                 <Text style={styles.quickActionTitle}>{action.title}</Text>
-                <Text style={styles.quickActionSubtitle}>{action.subtitle}</Text>
+                <Text style={styles.quickActionSubtitle}>
+                  {action.subtitle}
+                </Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -156,27 +203,39 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Top Positions</Text>
-              <TouchableOpacity onPress={() => navigation.navigate('Portfolio')}>
+              <TouchableOpacity
+                onPress={() => navigation.navigate('Portfolio')}
+              >
                 <Text style={styles.seeAllText}>See All</Text>
               </TouchableOpacity>
             </View>
-            
+
             {dashboard.stockPositions.slice(0, 3).map((position) => (
-              <TouchableOpacity 
-                key={position.ticker} 
+              <TouchableOpacity
+                key={position.ticker}
                 style={styles.positionCard}
-                onPress={() => navigation.navigate('StockDetail', { ticker: position.ticker })}
+                onPress={() =>
+                  navigation.navigate('StockDetail', {
+                    ticker: position.ticker,
+                  })
+                }
               >
                 <View style={styles.positionInfo}>
                   <Text style={styles.positionTicker}>{position.ticker}</Text>
-                  <Text style={styles.positionShares}>{position.quantity} shares</Text>
+                  <Text style={styles.positionShares}>
+                    {position.quantity} shares
+                  </Text>
                 </View>
                 <View style={styles.positionValues}>
-                  <Text style={styles.positionValue}>{formatCurrency(position.marketValue)}</Text>
-                  <Text style={[
-                    styles.positionPnL,
-                    { color: getPercentColor(position.unrealizedPnLPercent) }
-                  ]}>
+                  <Text style={styles.positionValue}>
+                    {formatCurrency(position.marketValue)}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.positionPnL,
+                      { color: getPercentColor(position.unrealizedPnLPercent) },
+                    ]}
+                  >
                     {formatPercent(position.unrealizedPnLPercent)}
                   </Text>
                 </View>
@@ -190,13 +249,15 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
           <Text style={styles.sectionTitle}>Market Summary</Text>
           <View style={styles.marketSummaryCard}>
             <Text style={styles.marketSummaryText}>
-              Markets are {new Date().getHours() >= 9 && new Date().getHours() < 16 ? 'open' : 'closed'}
+              Markets are{' '}
+              {new Date().getHours() >= 9 && new Date().getHours() < 16
+                ? 'open'
+                : 'closed'}
             </Text>
             <Text style={styles.marketSummarySubtext}>
-              {new Date().getHours() >= 9 && new Date().getHours() < 16 
-                ? 'Trading until 4:00 PM EST' 
-                : 'Opens at 9:30 AM EST'
-              }
+              {new Date().getHours() >= 9 && new Date().getHours() < 16
+                ? 'Trading until 4:00 PM EST'
+                : 'Opens at 9:30 AM EST'}
             </Text>
           </View>
         </View>
@@ -261,9 +322,15 @@ const styles = StyleSheet.create({
   portfolioChange: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: theme.colors.background.secondary,
+    justifyContent: 'center',
+    borderRadius: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    marginTop: 8,
   },
   changeText: {
-    fontSize: 16,
+    fontSize: 12,
     fontWeight: '600',
     marginLeft: 4,
   },

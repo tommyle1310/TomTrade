@@ -63,7 +63,7 @@ export const useTradingStore = create<TradingState>((set, get) => ({
 
       const { data } = await apolloClient.query({
         query: GET_STOCKS,
-        fetchPolicy: 'cache-and-network',
+        fetchPolicy: 'cache-first',
       });
 
       set({
@@ -84,7 +84,7 @@ export const useTradingStore = create<TradingState>((set, get) => ({
 
       const { data } = await apolloClient.query({
         query: MY_WATCHLISTS,
-        fetchPolicy: 'cache-and-network',
+        fetchPolicy: 'cache-first',
       });
 
       set({

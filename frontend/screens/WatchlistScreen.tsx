@@ -260,7 +260,7 @@ export default function WatchlistScreen({ navigation }: WatchlistScreenProps) {
                       }}
                       disabled={removing}
                     >
-                      <Ionicons name="trash-outline" size={20} color={theme.colors.error} />
+                      <Ionicons name="trash-outline" size={20} color={theme.colors.accent.folly} />
                     </TouchableOpacity>
                   </View>
                 </TouchableOpacity>
@@ -394,7 +394,7 @@ const styles = StyleSheet.create({
   },
   tabCount: {
     fontSize: 12,
-    color: theme.colors.text.secondary,
+    color: theme.colors.text.disabled,
     textAlign: 'center',
     marginTop: 2,
   },

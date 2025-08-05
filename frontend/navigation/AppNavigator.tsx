@@ -12,6 +12,8 @@ import WatchlistScreen from '../screens/WatchlistScreen';
 import BalanceScreen from '../screens/BalanceScreen';
 import AlertsScreen from '../screens/AlertsScreen';
 import SettingsScreen from '../screens/SettingsScreen';
+import StockPickerScreen from '../screens/StockPickerScreen';
+import StockDetailScreen from '../screens/StockDetailScreen';
 import AuthNavigator from './AuthNavigator';
 import FloatingTabBar from './FloatingTabBar';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
@@ -82,6 +84,8 @@ function AppNavigatorContent() {
             <Stack.Screen name="Orders" component={OrdersScreen} />
             <Stack.Screen name="Balance" component={BalanceScreen} />
             <Stack.Screen name="Alerts" component={AlertsScreen} />
+            <Stack.Screen name="StockPicker" component={StockPickerScreen} />
+            <Stack.Screen name="StockDetail" component={StockDetailScreen} />
           </>
         ) : (
           <Stack.Screen name="Auth" component={AuthNavigator} />

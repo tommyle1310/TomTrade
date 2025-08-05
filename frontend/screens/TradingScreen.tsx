@@ -277,7 +277,7 @@ export default function TradingScreen({ navigation }: TradingScreenProps) {
               <Text style={styles.summaryLabel}>Side</Text>
               <Text style={[
                 styles.summaryValue,
-                { color: orderSide === OrderSide.BUY ? theme.colors.success : theme.colors.error }
+                { color: orderSide === OrderSide.BUY ? theme.colors.accent.avocado : theme.colors.accent.folly }
               ]}>
                 {orderSide}
               </Text>
@@ -380,12 +380,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   buyButton: {
-    backgroundColor: theme.colors.success,
-    borderColor: theme.colors.success,
+    backgroundColor: theme.colors.accent.avocado,
+    borderColor: theme.colors.accent.avocado,
   },
   sellButton: {
-    backgroundColor: theme.colors.error,
-    borderColor: theme.colors.error,
+    backgroundColor: theme.colors.accent.folly,
+    borderColor: theme.colors.accent.folly,
   },
   orderSideText: {
     fontSize: 16,
@@ -531,10 +531,10 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   buyOrderButton: {
-    backgroundColor: theme.colors.success,
+    backgroundColor: theme.colors.accent.avocado,
   },
   sellOrderButton: {
-    backgroundColor: theme.colors.error,
+    backgroundColor: theme.colors.accent.folly,
   },
   disabledButton: {
     opacity: 0.6,

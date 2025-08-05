@@ -77,7 +77,7 @@ export default function AlertsScreen({ navigation }: AlertsScreenProps) {
                 variables: { id: alertId },
                 refetchQueries: [{ query: GET_MY_ALERT_RULES }],
               });
-              Alert.alert('Success', 'Alert deleted successfully');
+              Alert.alert('Success', 'Alert deleted accent.avocadofully');
             } catch (error: any) {
               Alert.alert('Error', error.message || 'Failed to delete alert');
             }
@@ -159,7 +159,7 @@ export default function AlertsScreen({ navigation }: AlertsScreenProps) {
                     onPress={() => handleDeleteAlert(alert.id, alert.ticker)}
                     disabled={deleting}
                   >
-                    <Ionicons name="trash-outline" size={20} color={theme.colors.error} />
+                    <Ionicons name="trash-outline" size={20} color={theme.colors.accent.folly} />
                   </TouchableOpacity>
                 </View>
 
@@ -403,12 +403,12 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: theme.colors.success,
+    backgroundColor: theme.colors.accent.avocado,
     marginRight: 6,
   },
   statusText: {
     fontSize: 12,
-    color: theme.colors.success,
+    color: theme.colors.accent.avocado,
     fontWeight: '600',
   },
   editButton: {

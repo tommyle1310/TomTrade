@@ -509,10 +509,10 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   depositButton: {
-    backgroundColor: theme.colors.success,
+    backgroundColor: theme.colors.accent.avocado,
   },
   withdrawButton: {
-    backgroundColor: theme.colors.warning,
+    backgroundColor: theme.colors.accent.gamboge,
   },
   disabledButton: {
     opacity: 0.6,
@@ -528,6 +528,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.background.secondary,
     borderRadius: 8,
     padding: 12,
+    marginBottom: 80,
   },
   disclaimerText: {
     fontSize: 12,

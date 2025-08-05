@@ -49,7 +49,7 @@ export default function PortfolioScreen({ navigation }: PortfolioScreenProps) {
   };
 
   const getPercentColor = (percent: number) => {
-    return percent >= 0 ? theme.colors.success : theme.colors.error;
+    return percent >= 0 ? theme.colors.accent.avocado : theme.colors.accent.folly;
   };
 
   return (
@@ -188,7 +188,7 @@ export default function PortfolioScreen({ navigation }: PortfolioScreenProps) {
                   <Ionicons 
                     name={transaction.action === 'BUY' ? 'arrow-down' : 'arrow-up'} 
                     size={16} 
-                    color={transaction.action === 'BUY' ? theme.colors.success : theme.colors.error} 
+                    color={transaction.action === 'BUY' ? theme.colors.accent.avocado : theme.colors.accent.folly} 
                   />
                 </View>
                 
@@ -289,13 +289,13 @@ const styles = StyleSheet.create({
     color: theme.colors.text.primary,
   },
   section: {
-    marginBottom: 24,
+    marginBottom: 12,
+    gap: 12,
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
   },
   sectionTitle: {
     fontSize: 18,

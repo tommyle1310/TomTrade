@@ -67,20 +67,20 @@ export default function OrdersScreen({ navigation }: OrdersScreenProps) {
   const getStatusColor = (status: OrderStatus) => {
     switch (status) {
       case OrderStatus.OPEN:
-        return theme.colors.warning;
+        return theme.colors.accent.gamboge;
       case OrderStatus.FILLED:
-        return theme.colors.success;
+        return theme.colors.accent.asparagus;
       case OrderStatus.CANCELLED:
-        return theme.colors.error;
+        return theme.colors.accent.folly;
       case OrderStatus.PARTIAL:
-        return theme.colors.info;
+        return theme.colors.accent.azure;
       default:
         return theme.colors.text.secondary;
     }
   };
 
   const getSideColor = (side: string) => {
-    return side === 'BUY' ? theme.colors.success : theme.colors.error;
+    return side === 'BUY' ? theme.colors.accent.avocado : theme.colors.accent.folly;
   };
 
   const filters = ['ALL', ...Object.values(OrderStatus)];
@@ -142,7 +142,7 @@ export default function OrdersScreen({ navigation }: OrdersScreenProps) {
                     <View style={[styles.sideBadge, { backgroundColor: getSideColor(order.side) }]}>
                       <Text style={styles.sideBadgeText}>{order.side}</Text>
                     </View>
-                    <View style={[styles.statusBadge, { backgroundColor: getStatusColor(order.status) }]}>
+                    <View style={[styles.statusBadge, { backgroundColor: getStatusColor(order.status as OrderStatus) }]}>
                       <Text style={styles.statusBadgeText}>{order.status}</Text>
                     </View>
                   </View>
@@ -154,7 +154,7 @@ export default function OrdersScreen({ navigation }: OrdersScreenProps) {
                     onPress={() => handleCancelOrder(order.id)}
                     disabled={cancelling}
                   >
-                    <Ionicons name="close" size={20} color={theme.colors.error} />
+                    <Ionicons name="close" size={20} color={theme.colors.accent.folly} />
                   </TouchableOpacity>
                 )}
               </View>

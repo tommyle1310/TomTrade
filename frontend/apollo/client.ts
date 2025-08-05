@@ -10,7 +10,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // HTTP Link
 const httpLink = createHttpLink({
-  uri: 'http://172.30.160.1:3000/graphql', // Update with your backend URL
+  uri: 'http://192.168.1.3:3000/graphql', // Update with your backend URL
 });
 
 // Auth Link
