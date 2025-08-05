@@ -1,0 +1,179 @@
+import { create } from 'zustand';
+import { apolloClient } from '../apollo/client';
+import {
+  GET_DASHBOARD,
+  GET_MY_BALANCE,
+  MY_PORTFOLIO,
+  MY_TRANSACTIONS,
+  MY_ORDERS,
+} from '../apollo/queries';
+import {
+  DashboardResult,
+  Portfolio,
+  Transaction,
+  Order,
+} from '../apollo/types';
+
+interface PortfolioState {
+  // Dashboard data
+  dashboard: DashboardResult | null;
+  balance: number;
+
+  // Portfolio data
+  portfolio: Portfolio[];
+  transactions: Transaction[];
+  orders: Order[];
+
+  // Loading states
+  dashboardLoading: boolean;
+  portfolioLoading: boolean;
+  transactionsLoading: boolean;
+  ordersLoading: boolean;
+
+  // Error states
+  error: string | null;
+
+  // Actions
+  fetchDashboard: () => Promise<void>;
+  fetchBalance: () => Promise<void>;
+  fetchPortfolio: () => Promise<void>;
+  fetchTransactions: () => Promise<void>;
+  fetchOrders: () => Promise<void>;
+  refreshAll: () => Promise<void>;
+  clearError: () => void;
+}
+
+export const usePortfolioStore = create<PortfolioState>((set, get) => ({
+  // Initial state
+  dashboard: null,
+  balance: 0,
+  portfolio: [],
+  transactions: [],
+  orders: [],
+
+  // Loading states
+  dashboardLoading: false,
+  portfolioLoading: false,
+  transactionsLoading: false,
+  ordersLoading: false,
+
+  error: null,
+
+  // Actions
+  fetchDashboard: async () => {
+    try {
+      set({ dashboardLoading: true, error: null });
+
+      const { data } = await apolloClient.query({
+        query: GET_DASHBOARD,
+        fetchPolicy: 'cache-and-network',
+      });
+
+      set({
+        dashboard: data?.getDashboard || null,
+        dashboardLoading: false,
+      });
+    } catch (error: any) {
+      set({
+        dashboardLoading: false,
+        error: error.message || 'Failed to fetch dashboard',
+      });
+    }
+  },
+
+  fetchBalance: async () => {
+    try {
+      const { data } = await apolloClient.query({
+        query: GET_MY_BALANCE,
+        fetchPolicy: 'cache-and-network',
+      });
+
+      set({ balance: data?.getMyBalance || 0 });
+    } catch (error: any) {
+      console.error('Balance fetch error:', error);
+    }
+  },
+
+  fetchPortfolio: async () => {
+    try {
+      set({ portfolioLoading: true, error: null });
+
+      const { data } = await apolloClient.query({
+        query: MY_PORTFOLIO,
+        fetchPolicy: 'cache-and-network',
+      });
+
+      set({
+        portfolio: data?.myPortfolio || [],
+        portfolioLoading: false,
+      });
+    } catch (error: any) {
+      set({
+        portfolioLoading: false,
+        error: error.message || 'Failed to fetch portfolio',
+      });
+    }
+  },
+
+  fetchTransactions: async () => {
+    try {
+      set({ transactionsLoading: true, error: null });
+
+      const { data } = await apolloClient.query({
+        query: MY_TRANSACTIONS,
+        fetchPolicy: 'cache-and-network',
+      });
+
+      set({
+        transactions: data?.myTransactions || [],
+        transactionsLoading: false,
+      });
+    } catch (error: any) {
+      set({
+        transactionsLoading: false,
+        error: error.message || 'Failed to fetch transactions',
+      });
+    }
+  },
+
+  fetchOrders: async () => {
+    try {
+      set({ ordersLoading: true, error: null });
+
+      const { data } = await apolloClient.query({
+        query: MY_ORDERS,
+        fetchPolicy: 'cache-and-network',
+      });
+
+      set({
+        orders: data?.myOrders || [],
+        ordersLoading: false,
+      });
+    } catch (error: any) {
+      set({
+        ordersLoading: false,
+        error: error.message || 'Failed to fetch orders',
+      });
+    }
+  },
+
+  refreshAll: async () => {
+    const {
+      fetchDashboard,
+      fetchBalance,
+      fetchPortfolio,
+      fetchTransactions,
+      fetchOrders,
+    } = get();
+
+    await Promise.all([
+      fetchDashboard(),
+      fetchBalance(),
+      fetchPortfolio(),
+      fetchTransactions(),
+      fetchOrders(),
+    ]);
+  },
+
+  clearError: () => set({ error: null }),
+}));
