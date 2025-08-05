@@ -1,38 +1,38 @@
 FROM ubuntu:22.04
 
-# Cài đặt các công cụ cần thiết và .NET dependencies
+ARG RUNNER_VERSION=2.327.1
+ENV RUNNER_VERSION=${RUNNER_VERSION}
+
 RUN apt-get update && apt-get install -y \
-    curl sudo git jq unzip gnupg2 software-properties-common \
+    curl sudo git unzip gnupg2 software-properties-common \
     ca-certificates lsb-release apt-transport-https \
     libicu70 liblttng-ust1 libssl3 libkrb5-3 zlib1g \
     libunwind8 libc6-dev libgcc-s1 libstdc++6 \
     && rm -rf /var/lib/apt/lists/*
 
-# Cài đặt Docker CLI
-RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg && \
-    echo "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null && \
-    apt-get update && apt-get install -y docker-ce-cli && \
+# Install Node.js 20.x
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
+    apt-get install -y nodejs && \
     rm -rf /var/lib/apt/lists/*
 
-# Tạo user clouduser và thêm vào docker group
-RUN useradd -m clouduser && echo "clouduser ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers && \
-    groupadd -g 999 docker || true && \
-    usermod -aG docker clouduser
+# Docker CLI
+RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg && \
+    echo "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null && \
+    apt-get update && apt-get install -y docker-ce-cli && rm -rf /var/lib/apt/lists/*
 
-# Làm việc trong thư mục runner
+# User
+RUN useradd -m clouduser && echo "clouduser ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers && \
+    groupadd -g 999 docker || true && usermod -aG docker clouduser
+
 WORKDIR /home/clouduser/actions-runner
 
-# Tải runner GitHub Actions (latest stable version)
-RUN curl -o actions-runner-linux-x64.tar.gz -L https://github.com/actions/runner/releases/download/v2.320.0/actions-runner-linux-x64-2.320.0.tar.gz && \
+# Tải runner phiên bản chuẩn
+RUN curl -o actions-runner-linux-x64.tar.gz -L https://github.com/actions/runner/releases/download/v${RUNNER_VERSION}/actions-runner-linux-x64-${RUNNER_VERSION}.tar.gz && \
     tar xzf actions-runner-linux-x64.tar.gz && rm actions-runner-linux-x64.tar.gz
 
-# Copy entrypoint vào image
-COPY runner-entrypoint.sh ./
+COPY runner-entrypoint.sh .
 RUN chmod +x runner-entrypoint.sh && chown clouduser:clouduser runner-entrypoint.sh
-
-# Chuyển quyền toàn bộ thư mục cho clouduser
 RUN chown -R clouduser:clouduser /home/clouduser/actions-runner
 
 USER clouduser
-
 CMD ["./runner-entrypoint.sh"]

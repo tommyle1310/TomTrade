@@ -57,12 +57,12 @@ services:
       dockerfile: Dockerfile.runner
     environment:
       - RUNNER_NAME=local-runner
-      - RUNNER_LABELS=self-hosted,linux
+      - RUNNER_LABELS=self-hosted,linux,docker
       - REPO_URL=https://github.com/tommyle1310/TomTrade
-      - RUNNER_TOKEN=BH3SMFF5SXSFLNTE6QQW4ODIRWTJ4
+      - GH_TOKEN=PASTE_YOUR_NEW_TOKEN_HERE
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-    restart: always
+    restart: unless-stopped
     networks:
       - cloud-net
     privileged: true

@@ -1,41 +1,56 @@
 #!/bin/bash
+
 set -e
 
-# Fix Docker socket permissions first (as root)
-sudo chmod 666 /var/run/docker.sock || true
-
-cd /home/clouduser/actions-runner
-
-# Function to cleanup on exit
-cleanup() {
-    echo ">> Cleaning up runner registration..."
-    if [ -f "./config.sh" ] && [ -x "./config.sh" ]; then
-        ./config.sh remove --token "${RUNNER_TOKEN}" || true
-    fi
-}
-
-# Set trap to cleanup on exit
-trap cleanup EXIT
-
-# Check if runner is already configured
-if [ -f ".runner" ]; then
-    echo ">> Runner already configured, removing old config..."
-    if [ -f "./config.sh" ] && [ -x "./config.sh" ]; then
-        ./config.sh remove --token "${RUNNER_TOKEN}" || true
-    fi
+# Check required environment variables
+if [ -z "$REPO_URL" ]; then
+  echo "❌ REPO_URL not set"
+  exit 1
 fi
 
-echo ">> Configuring new GitHub runner..."
-./config.sh \
-  --unattended \
-  --url "${REPO_URL}" \
-  --token "${RUNNER_TOKEN}" \
-  --name "${RUNNER_NAME}" \
-  --labels "${RUNNER_LABELS}" \
-  --replace
+if [ -z "$GH_TOKEN" ]; then
+  echo "❌ GH_TOKEN not set"
+  exit 1
+fi
 
-echo ">> Starting GitHub Actions runner..."
-# Disable auto-update to prevent restart loops
-export ACTIONS_RUNNER_DISABLEUPDATE=1
+if [ -z "$RUNNER_NAME" ]; then
+  echo "❌ RUNNER_NAME not set"
+  exit 1
+fi
 
-exec ./run.sh
+echo "🛠️ Getting registration token..."
+TOKEN_RESPONSE=$(curl -s -X POST \
+  -H "Authorization: token $GH_TOKEN" \
+  -H "Accept: application/vnd.github+json" \
+  "${REPO_URL}/actions/runners/registration-token")
+
+if [ $? -ne 0 ]; then
+  echo "❌ Failed to get registration token"
+  exit 1
+fi
+
+# Extract token using grep and sed instead of jq
+TOKEN=$(echo "$TOKEN_RESPONSE" | grep -o '"token": *"[^"]*"' | sed 's/"token": *"\([^"]*\)"/\1/')
+
+if [ -z "$TOKEN" ]; then
+  echo "❌ Invalid token received: $TOKEN_RESPONSE"
+  exit 1
+fi
+
+echo "✅ Token received successfully"
+
+# Remove existing runner if it exists
+echo "🧹 Removing existing runner configuration..."
+./config.sh remove --token "$TOKEN" || true
+
+echo "📦 Configuring runner..."
+./config.sh --url "$REPO_URL" --token "$TOKEN" --name "$RUNNER_NAME" --labels "$RUNNER_LABELS" --unattended --replace
+
+if [ $? -ne 0 ]; then
+  echo "❌ Failed to configure runner"
+  exit 1
+fi
+
+echo "✅ Runner configured successfully"
+echo "🚀 Starting runner..."
+./run.sh

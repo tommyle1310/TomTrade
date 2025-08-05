@@ -14,10 +14,10 @@ jobs:
       - name: 📥 Lấy source từ GitHub
         uses: actions/checkout@v4
 
-      - name: 🛠️ Build lại Docker image backend1 & backend2
+      - name: 🛠️ Build lại Docker images
         run: |
-          docker compose -f ./cloud-lab/docker-compose.yml build backend1 backend2
+          docker compose -f ./cloud-lab/docker-compose.yml build backend1 backend2 runner
 
-      - name: 🔁 Restart container với image mới
+      - name: 🔁 Restart containers với image mới
         run: |
-          docker compose -f ./cloud-lab/docker-compose.yml up -d --force-recreate backend1 backend2
+          docker compose -f ./cloud-lab/docker-compose.yml up -d --force-recreate backend1 backend2 runner
