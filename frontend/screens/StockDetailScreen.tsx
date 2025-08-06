@@ -32,6 +32,9 @@ export default function StockDetailScreen({ navigation, route }: StockDetailScre
     fetchPolicy: 'cache-first',
   });
 
+  const stock = stockData?.stock;
+  const orderBook = orderBookData?.orderBook;
+
   // Check if we have enough market data for technical indicators
   const hasEnoughDataForIndicators = stock?.marketData && stock.marketData.length >= 20;
   const hasEnoughDataForRSI = stock?.marketData && stock.marketData.length >= 15;
@@ -57,9 +60,6 @@ export default function StockDetailScreen({ navigation, route }: StockDetailScre
     skip: !hasEnoughDataForRSI, // Skip query if insufficient data
     errorPolicy: 'ignore',
   });
-
-  const stock = stockData?.stock;
-  const orderBook = orderBookData?.orderBook;
   const isLoading = stockLoading || orderBookLoading;
 
   const handleRefresh = () => {
@@ -149,19 +149,21 @@ export default function StockDetailScreen({ navigation, route }: StockDetailScre
       {/* Price Section */}
       {stock && (
         <View style={styles.priceSection}>
-          <Text style={styles.currentPrice}>{formatCurrency(currentPrice)}</Text>
-          <View style={styles.priceChangeContainer}>
-            <Ionicons 
-              name={priceChange.change >= 0 ? 'trending-up' : 'trending-down'} 
-              size={16} 
-              color={priceChange.change >= 0 ? theme.colors.accent.avocado : theme.colors.accent.folly} 
-            />
-            <Text style={[
-              styles.priceChange,
-              { color: priceChange.change >= 0 ? theme.colors.accent.avocado : theme.colors.accent.folly }
-            ]}>
-              {priceChange.change >= 0 ? '+' : ''}{formatCurrency(priceChange.change)} ({priceChange.percent.toFixed(2)}%)
-            </Text>
+          <View style={styles.priceContainer}>
+            <Text style={styles.currentPrice}>{formatCurrency(currentPrice)}</Text>
+            <View style={styles.priceChangeContainer}>
+              <Ionicons 
+                name={priceChange.change >= 0 ? 'trending-up' : 'trending-down'} 
+                size={16} 
+                color={priceChange.change >= 0 ? theme.colors.accent.avocado : theme.colors.accent.folly} 
+              />
+              <Text style={[
+                styles.priceChange,
+                { color: priceChange.change >= 0 ? theme.colors.accent.avocado : theme.colors.accent.folly }
+              ]}>
+                {priceChange.change >= 0 ? '+' : ''}{formatCurrency(priceChange.change)} ({priceChange.percent.toFixed(2)}%)
+              </Text>
+            </View>
           </View>
         </View>
       )}
@@ -448,10 +450,14 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   priceSection: {
-    alignItems: 'center',
-    paddingVertical: 20,
+    paddingVertical: 24,
+    paddingHorizontal: 20,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border.primary,
+    backgroundColor: theme.colors.background.secondary,
+  },
+  priceContainer: {
+    alignItems: 'center',
   },
   currentPrice: {
     fontSize: 32,
@@ -517,13 +523,16 @@ const styles = StyleSheet.create({
   infoGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 16,
+    gap: 12,
   },
   infoItem: {
-    width: '48%',
+    flex: 1,
+    minWidth: '45%',
     backgroundColor: theme.colors.background.secondary,
     borderRadius: 8,
-    padding: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: theme.colors.border.primary,
   },
   infoLabel: {
     fontSize: 12,
@@ -541,11 +550,14 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   marketDataItem: {
-    width: '48%',
+    flex: 1,
+    minWidth: '45%',
     backgroundColor: theme.colors.background.secondary,
     borderRadius: 8,
-    padding: 12,
+    padding: 16,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: theme.colors.border.primary,
   },
   marketDataLabel: {
     fontSize: 12,
@@ -562,6 +574,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.border.primary,
   },
   newsHeadline: {
     fontSize: 16,
@@ -595,11 +609,14 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   indicatorCard: {
-    width: '48%',
+    flex: 1,
+    minWidth: '30%',
     backgroundColor: theme.colors.background.secondary,
     borderRadius: 8,
     padding: 16,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: theme.colors.border.primary,
   },
   indicatorLabel: {
     fontSize: 12,
@@ -636,6 +653,8 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.background.secondary,
     borderRadius: 12,
     padding: 16,
+    borderWidth: 1,
+    borderColor: theme.colors.border.primary,
   },
   orderBookSection: {
     marginBottom: 16,

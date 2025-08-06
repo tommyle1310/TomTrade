@@ -103,7 +103,7 @@ export default function TradingScreen({ navigation }: TradingScreenProps) {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Trading</Text>
         <View style={styles.balanceContainer}>
-          <Text style={styles.balanceLabel}>Balance</Text>
+          <Text style={styles.balanceLabel}>Available Balance</Text>
           <Text style={styles.balanceValue}>{formatCurrency(balance)}</Text>
         </View>
       </View>
@@ -111,7 +111,7 @@ export default function TradingScreen({ navigation }: TradingScreenProps) {
       <ScrollView style={styles.content}>
         {/* Order Side Selection */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Order Type</Text>
+          <Text style={styles.sectionTitle}>Order Side</Text>
           <View style={styles.orderSideContainer}>
             <TouchableOpacity
               style={[
@@ -372,12 +372,13 @@ const styles = StyleSheet.create({
   },
   orderSideButton: {
     flex: 1,
-    paddingVertical: 12,
+    paddingVertical: 16,
     paddingHorizontal: 16,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: theme.colors.border.primary,
     alignItems: 'center',
+    backgroundColor: theme.colors.background.secondary,
   },
   buyButton: {
     backgroundColor: theme.colors.accent.avocado,
@@ -422,11 +423,12 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   orderTypeButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: theme.colors.border.primary,
+    backgroundColor: theme.colors.background.secondary,
   },
   selectedOrderType: {
     backgroundColor: theme.colors.primary,
@@ -455,7 +457,7 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    paddingVertical: 12,
+    paddingVertical: 16,
     fontSize: 16,
     color: theme.colors.text.primary,
   },
@@ -464,11 +466,12 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   timeInForceButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: theme.colors.border.primary,
+    backgroundColor: theme.colors.background.secondary,
   },
   selectedTimeInForce: {
     backgroundColor: theme.colors.primary,
@@ -484,8 +487,10 @@ const styles = StyleSheet.create({
   orderSummary: {
     backgroundColor: theme.colors.background.secondary,
     borderRadius: 12,
-    padding: 16,
+    padding: 20,
     marginBottom: 24,
+    borderWidth: 1,
+    borderColor: theme.colors.border.primary,
   },
   orderSummaryTitle: {
     fontSize: 16,

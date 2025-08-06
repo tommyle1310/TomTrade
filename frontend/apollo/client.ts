@@ -7,12 +7,34 @@ import {
 import { setContext } from '@apollo/client/link/context';
 import { onError } from '@apollo/client/link/error';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
 
 // HTTP Link
-const httpLink = createHttpLink({
-  uri: 'http://192.168.1.3:3000/graphql', // Update with your backend URL
-});
+// console.log('process.env', process.env);
+// console.log('Constants.expoConfig?.extra', Constants.expoConfig?.extra);
 
+// Try both methods: process.env (for web) and Constants.expoConfig.extra (for native)
+const backendUrl =
+  process.env.EXPO_PUBLIC_BACKEND_URL ||
+  Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL ||
+  'localhost';
+const backendPort =
+  process.env.EXPO_PUBLIC_BACKEND_PORT ||
+  Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_PORT ||
+  '4000';
+const graphqlUri = `http://${backendUrl}:${backendPort}/graphql`;
+
+// console.log('Apollo Client Configuration:', {
+//   backendUrl,
+//   backendPort,
+//   graphqlUri,
+//   'process.env.EXPO_PUBLIC_BACKEND_URL': process.env.EXPO_PUBLIC_BACKEND_URL,
+//   'Constants.expoConfig?.extra': Constants.expoConfig?.extra,
+// });
+
+const httpLink = createHttpLink({
+  uri: graphqlUri,
+});
 // Auth Link
 const authLink = setContext(async (_, { headers }) => {
   try {
@@ -44,7 +66,7 @@ const errorLink = onError(
       console.error(`Network error: ${networkError}`);
 
       // Handle 401 errors by clearing token and redirecting to login
-      if (networkError.statusCode === 401) {
+      if ('statusCode' in networkError && networkError.statusCode === 401) {
         AsyncStorage.removeItem('accessToken');
         // You can add navigation logic here if needed
       }

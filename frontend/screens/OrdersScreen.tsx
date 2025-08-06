@@ -92,7 +92,9 @@ export default function OrdersScreen({ navigation }: OrdersScreenProps) {
         <Text style={styles.headerTitle}>Orders</Text>
         <TouchableOpacity 
           style={styles.addButton}
-          onPress={() => navigation.navigate('Trading')}
+          onPress={() => 
+            navigation.navigate('MainTabs', { screen: 'Trading', params: { ticker: 'AAPL' } })      
+          }
         >
           <Ionicons name="add" size={24} color="white" />
         </TouchableOpacity>

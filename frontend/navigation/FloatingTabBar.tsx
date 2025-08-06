@@ -28,12 +28,20 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
     switch (routeName) {
       case 'Home':
         return 'home';
-      case 'Like':
-        return 'heart';
+      case 'Trading':
+        return 'trending-up';
+      case 'Orders':
+        return 'receipt';
+      case 'Portfolio':
+        return 'pie-chart';
+      case 'Watchlist':
+        return 'bookmarks-outline';
       case 'Settings':
         return 'settings';
       case 'Search':
         return 'search';
+      case 'Like':
+        return 'heart';
       default:
         return 'home';
     }
