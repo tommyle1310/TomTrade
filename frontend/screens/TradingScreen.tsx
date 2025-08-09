@@ -1,18 +1,31 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQuery } from '@apollo/client';
-import { theme } from '../theme';
-import { PLACE_ORDER, PLACE_STOP_ORDER, GET_MY_BALANCE, GET_STOCKS, MY_ORDERS } from '../apollo/queries';
+import { spacing, theme } from '../theme';
+import { PLACE_ORDER, PLACE_STOP_ORDER, GET_MY_BALANCE, GET_STOCKS_WITH_MARKET, MY_ORDERS, MY_WATCHLISTS, GET_DASHBOARD } from '../apollo/queries';
 import { OrderSide, OrderType, TimeInForce, PlaceOrderInput, PlaceStopOrderInput } from '../apollo/types';
 import { usePortfolioStore } from '../stores';
 
 interface TradingScreenProps {
   navigation: any;
+  route?: {
+    params?: {
+      prefilledData?: {
+        ticker?: string;
+        side?: 'BUY' | 'SELL';
+        price?: string;
+      };
+    };
+  };
 }
 
-export default function TradingScreen({ navigation }: TradingScreenProps) {
+export default function TradingScreen({ navigation, route }: TradingScreenProps) {
+  // Top-level tabs
+  const [activeTab, setActiveTab] = useState<'Markets' | 'PlaceOrder'>('Markets');
+
+  // Order form state
   const [selectedStock, setSelectedStock] = useState('');
   const [orderSide, setOrderSide] = useState<OrderSide>(OrderSide.BUY);
   const [orderType, setOrderType] = useState<OrderType>(OrderType.LIMIT);
@@ -22,7 +35,8 @@ export default function TradingScreen({ navigation }: TradingScreenProps) {
   const [timeInForce, setTimeInForce] = useState<TimeInForce>(TimeInForce.GTC);
 
   const { data: balanceData } = useQuery(GET_MY_BALANCE);
-  const { data: stocksData } = useQuery(GET_STOCKS);
+  const { data: marketData } = useQuery(GET_STOCKS_WITH_MARKET);
+  const { data: watchlistsData } = useQuery(MY_WATCHLISTS);
   
   const [placeOrder, { loading: placingOrder }] = useMutation(PLACE_ORDER);
   const [placeStopOrder, { loading: placingStopOrder }] = useMutation(PLACE_STOP_ORDER);
@@ -31,12 +45,62 @@ export default function TradingScreen({ navigation }: TradingScreenProps) {
   const { fetchBalance, fetchDashboard, fetchOrders } = usePortfolioStore();
 
   const balance = balanceData?.getMyBalance || 0;
-  const stocks = stocksData?.stocks || [];
+
+  // Handle prefilled data from navigation
+  React.useEffect(() => {
+    const prefilledData = route?.params?.prefilledData;
+    if (prefilledData) {
+      setActiveTab('PlaceOrder'); // Switch to place order tab
+      
+      if (prefilledData.ticker) {
+        setSelectedStock(prefilledData.ticker);
+      }
+      if (prefilledData.side) {
+        setOrderSide(prefilledData.side === 'BUY' ? OrderSide.BUY : OrderSide.SELL);
+      }
+      if (prefilledData.price) {
+        setPrice(prefilledData.price);
+      }
+      
+      // Clear the params to prevent re-triggering
+      navigation.setParams({ prefilledData: undefined });
+    }
+  }, [route?.params?.prefilledData, navigation]);
+  const stocksWithMarket = marketData?.stocks || [];
 
   const isStopOrder = orderType === OrderType.STOP_LIMIT || orderType === OrderType.STOP_MARKET;
   const isLoading = placingOrder || placingStopOrder;
 
+  // Markets sub-filter
+  const [marketFilter, setMarketFilter] = useState<'All' | 'Favorites' | 'Major'>('All');
+
+  const favoriteTickers: string[] = useMemo(() => {
+    const lists = watchlistsData?.myWatchlists || [];
+    const set = new Set<string>();
+    lists.forEach((w: any) => w.stocks?.forEach((s: any) => set.add(s.ticker)));
+    return Array.from(set);
+  }, [watchlistsData]);
+
+  const filteredStocks = useMemo(() => {
+    let list = [...stocksWithMarket];
+    if (marketFilter === 'Favorites') {
+      list = list.filter((s: any) => favoriteTickers.includes(s.ticker));
+    } else if (marketFilter === 'Major') {
+      list = list.filter((s: any) => ['NYSE', 'NASDAQ'].includes(s.exchange));
+    }
+    // compute change and sort by abs change desc
+    const withChange = list.map((s: any) => {
+      const md = s.marketData || [];
+      const last = md[md.length - 1]?.close ?? 0;
+      const prev = md[md.length - 2]?.close ?? last;
+      const changePct = last && prev ? ((last - prev) / prev) * 100 : 0;
+      return { ...s, last, changePct };
+    });
+    return withChange.sort((a, b) => Math.abs(b.changePct) - Math.abs(a.changePct));
+  }, [stocksWithMarket, marketFilter, favoriteTickers]);
+
   const handlePlaceOrder = async () => {
+    console.log('check here')
     if (!selectedStock || !quantity || !price) {
       Alert.alert('Error', 'Please fill in all required fields');
       return;
@@ -63,8 +127,8 @@ export default function TradingScreen({ navigation }: TradingScreenProps) {
           variables: { input },
           refetchQueries: [
             { query: MY_ORDERS },
-            'GetDashboard',
-            'GetMyBalance',
+            { query: GET_DASHBOARD },
+            { query: GET_MY_BALANCE },
           ],
         });
       } else {
@@ -81,8 +145,8 @@ export default function TradingScreen({ navigation }: TradingScreenProps) {
           variables: { input },
           refetchQueries: [
             { query: MY_ORDERS },
-            'GetDashboard',
-            'GetMyBalance',
+            { query: GET_DASHBOARD },
+            { query: GET_MY_BALANCE },
           ],
         });
       }
@@ -131,42 +195,73 @@ export default function TradingScreen({ navigation }: TradingScreenProps) {
         </View>
       </View>
 
+      {/* Top Tabs */}
+      <View style={styles.tabsContainer}>
+        {(['Markets', 'PlaceOrder'] as const).map((tab) => (
+          <TouchableOpacity key={tab} style={[styles.tab, activeTab === tab && styles.activeTab]} onPress={() => setActiveTab(tab)}>
+            <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>
+              {tab === 'PlaceOrder' ? 'Place Order' : 'Markets'}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
       <ScrollView style={styles.content}>
-        {/* Order Side Selection */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Order Side</Text>
-          <View style={styles.orderSideContainer}>
-            <TouchableOpacity
-              style={[
-                styles.orderSideButton,
-                orderSide === OrderSide.BUY && styles.buyButton,
-              ]}
-              onPress={() => setOrderSide(OrderSide.BUY)}
-            >
-              <Text style={[
-                styles.orderSideText,
-                orderSide === OrderSide.BUY && styles.buyButtonText,
-              ]}>
-                BUY
-              </Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={[
-                styles.orderSideButton,
-                orderSide === OrderSide.SELL && styles.sellButton,
-              ]}
-              onPress={() => setOrderSide(OrderSide.SELL)}
-            >
-              <Text style={[
-                styles.orderSideText,
-                orderSide === OrderSide.SELL && styles.sellButtonText,
-              ]}>
-                SELL
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+        {activeTab === 'Markets' ? (
+          <>
+            {/* Filter Chips */}
+            <View style={styles.filtersRow}>
+              {(['All', 'Favorites', 'Major'] as const).map((f) => (
+                <TouchableOpacity key={f} style={[styles.filterChip, marketFilter === f && styles.filterChipActive]} onPress={() => setMarketFilter(f)}>
+                  <Ionicons name={f === 'All' ? 'cube-outline' : f === 'Favorites' ? 'star' : 'star-outline'} size={18} color={marketFilter === f ? 'white' : theme.colors.text.secondary} />
+                  <Text style={[styles.filterText, marketFilter === f && styles.filterTextActive]}>{f}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Text style={styles.sectionTitle}>Top Market</Text>
+
+            <View>
+              {filteredStocks.map((s: any) => (
+                <TouchableOpacity key={s.ticker} style={styles.marketRow} onPress={() => navigation.navigate('StockDetail', { ticker: s.ticker })}>
+                  <View style={styles.marketLeft}>
+                    {s.avatar ? (
+                      <Image source={{ uri: s.avatar }} style={styles.marketAvatar} />
+                    ) : (
+                      <View style={[styles.marketAvatar, styles.marketAvatarFallback]} />
+                    )}
+                    <View>
+                      <Text style={styles.marketTicker}>{s.ticker}</Text>
+                      <Text style={styles.marketCompany}>{s.companyName}</Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.marketSparkline}>{renderBars(s.marketData || [])}</View>
+
+                  <View style={styles.marketRight}>
+                    <Text style={styles.marketPrice}>{formatCurrency(s.last || 0)}</Text>
+                    <Text style={[styles.marketChange, { color: s.changePct >= 0 ? theme.colors.accent.avocado : theme.colors.accent.folly }]}>
+                      {`${s.changePct >= 0 ? '+' : ''}${(s.changePct || 0).toFixed(2)}%`}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </>
+        ) : (
+          <>
+            {/* Order Side Selection */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Order Side</Text>
+              <View style={styles.orderSideContainer}>
+                <TouchableOpacity style={[styles.orderSideButton, orderSide === OrderSide.BUY && styles.buyButton]} onPress={() => setOrderSide(OrderSide.BUY)}>
+                  <Text style={[styles.orderSideText, orderSide === OrderSide.BUY && styles.buyButtonText]}>BUY</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.orderSideButton, orderSide === OrderSide.SELL && styles.sellButton]} onPress={() => setOrderSide(OrderSide.SELL)}>
+                  <Text style={[styles.orderSideText, orderSide === OrderSide.SELL && styles.sellButtonText]}>SELL</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
 
         {/* Stock Selection */}
         <View style={styles.section}>
@@ -185,6 +280,20 @@ export default function TradingScreen({ navigation }: TradingScreenProps) {
             </Text>
             <Ionicons name="chevron-down" size={20} color={theme.colors.text.secondary} />
           </TouchableOpacity>
+          
+          {/* Order Book Button */}
+          {selectedStock && (
+            <TouchableOpacity
+              style={styles.orderBookButton}
+              onPress={() => navigation.navigate('OrderBook', { 
+                ticker: selectedStock,
+                companyName: stocksWithMarket.find((s: any) => s.ticker === selectedStock)?.companyName 
+              })}
+            >
+              <Ionicons name="bar-chart" size={18} color={theme.colors.primary} />
+              <Text style={styles.orderBookButtonText}>View Order Book</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Order Type Selection */}
@@ -340,6 +449,8 @@ export default function TradingScreen({ navigation }: TradingScreenProps) {
             {isLoading ? 'Placing Order...' : `${orderSide} ${selectedStock || 'Stock'}`}
           </Text>
         </TouchableOpacity>
+          </>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -376,6 +487,30 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: theme.colors.text.primary,
   },
+  tabsContainer: {
+    flexDirection: 'row',
+    backgroundColor: theme.colors.background.secondary,
+    margin: 16,
+    borderRadius: 12,
+    padding: 4,
+    gap: 6,
+  },
+  tab: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  activeTab: {
+    backgroundColor: theme.colors.primary,
+  },
+  tabText: {
+    color: theme.colors.text.secondary,
+    fontWeight: '600',
+  },
+  activeTabText: {
+    color: 'white',
+  },
   content: {
     flex: 1,
     padding: 20,
@@ -389,6 +524,96 @@ const styles = StyleSheet.create({
     color: theme.colors.text.primary,
     marginBottom: 12,
   },
+  // Markets styles
+  filtersRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 16,
+  },
+  filterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    backgroundColor: theme.colors.background.secondary,
+    borderWidth: 1,
+    borderColor: theme.colors.border.primary,
+  },
+  filterChipActive: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+  },
+  filterText: {
+    color: theme.colors.text.secondary,
+    fontWeight: '600',
+  },
+  filterTextActive: {
+    color: 'white',
+  },
+  marketRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.background.secondary,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: theme.colors.border.primary,
+  },
+  marketLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+  },
+  marketAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+  },
+  marketAvatarFallback: {
+    backgroundColor: theme.colors.background.primary,
+    borderWidth: 1,
+    borderColor: theme.colors.border.primary,
+  },
+  marketSparkline: {
+    width: 80,
+    height: 24,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    marginRight: 12,
+  },
+  sparkBar: {
+    width: 5,
+    borderRadius: 2,
+  },
+  marketRight: {
+    width: 90,
+    alignItems: 'flex-end',
+  },
+  marketPrice: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.colors.text.primary,
+  },
+  marketChange: {
+    fontSize: 12,
+    marginTop: 2,
+    fontWeight: '600',
+  },
+  marketTicker: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: theme.colors.text.primary,
+  },
+  marketCompany: {
+    fontSize: 12,
+    color: theme.colors.text.secondary,
+  },
+  // Order styles
   orderSideContainer: {
     flexDirection: 'row',
     gap: 12,
@@ -439,6 +664,24 @@ const styles = StyleSheet.create({
   },
   placeholderText: {
     color: theme.colors.text.secondary,
+  },
+  orderBookButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.background.primary,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginTop: 12,
+    gap: 8,
+  },
+  orderBookButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.colors.primary,
   },
   orderTypeContainer: {
     flexDirection: 'row',
@@ -556,7 +799,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: spacing[32],
   },
   buyOrderButton: {
     backgroundColor: theme.colors.accent.avocado,
@@ -573,3 +816,21 @@ const styles = StyleSheet.create({
     color: 'white',
   },
 });
+
+// Lightweight sparkline bars from marketData without external deps
+function renderBars(marketData: any[]) {
+  const closes = (marketData || []).slice(-12).map((d) => d.close);
+  if (closes.length === 0) return <View style={{ width: 80 }} />;
+  const min = Math.min(...closes);
+  const max = Math.max(...closes);
+  const range = max - min || 1;
+  return (
+    <>
+      {closes.map((c, idx) => {
+        const h = 6 + ((c - min) / range) * 18; // 6..24
+        const isUp = idx > 0 ? c >= closes[idx - 1] : true;
+        return <View key={idx} style={[styles.sparkBar, { height: h, backgroundColor: isUp ? theme.colors.accent.avocado : theme.colors.accent.folly }]} />;
+      })}
+    </>
+  );
+}

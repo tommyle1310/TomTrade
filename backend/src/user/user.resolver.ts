@@ -1,4 +1,4 @@
-import { Resolver, Query, Args } from '@nestjs/graphql';
+import { Resolver, Query, Args, Mutation } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
 import { GqlAuthGuard } from 'src/auth/gql-auth.guard';
 import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
@@ -40,5 +40,28 @@ export class UserResolver {
   async getAllUsers(): Promise<User[]> {
     // This should probably have admin role check
     return this.userService.getAllUsers();
+  }
+
+  @UseGuards(GqlAuthGuard)
+  @Mutation(() => User)
+  async updateAvatar(
+    @CurrentUser() user: User,
+    @Args('avatarUrl') avatarUrl: string,
+  ): Promise<User | null> {
+    return this.userService.updateUserAvatar(user.id, avatarUrl);
+  }
+
+  @UseGuards(GqlAuthGuard)
+  @Mutation(() => Boolean)
+  async changePassword(
+    @CurrentUser() user: User,
+    @Args('currentPassword') currentPassword: string,
+    @Args('newPassword') newPassword: string,
+  ): Promise<boolean> {
+    return this.userService.changePassword(
+      user.id,
+      currentPassword,
+      newPassword,
+    );
   }
 }

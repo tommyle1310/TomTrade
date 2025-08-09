@@ -111,6 +111,7 @@ type Mutation {
   banUser(userId: String!): User!
   buyStock(input: BuyStockInput!): BuyStockPayload!
   cancelOrder(orderId: String!): Order!
+  changePassword(currentPassword: String!, newPassword: String!): Boolean!
   createAlertRule(input: CreateAlertRuleInput!): AlertRule!
   createWatchlist(input: CreateWatchlistInput!): Watchlist!
   deduct(amount: Float!): Boolean!
@@ -125,6 +126,7 @@ type Mutation {
   sellStock(input: SellStockInput!): SellStockPayload!
   signUp(input: SignUpInput!): AuthPayload!
   unbanUser(userId: String!): User!
+  updateAvatar(avatarUrl: String!): User!
 }
 
 type News {

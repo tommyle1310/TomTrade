@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
 import { User } from './entities/user.entity';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UserService {
@@ -17,7 +18,11 @@ export class UserService {
 
     if (cachedUser) {
       console.log(`[UserService] User ${userId} found in cache`);
-      return JSON.parse(cachedUser);
+      const parsed = JSON.parse(cachedUser) as any;
+      if (parsed && typeof parsed.createdAt === 'string') {
+        parsed.createdAt = new Date(parsed.createdAt);
+      }
+      return parsed as User;
     }
 
     // If not in cache, get from database
@@ -93,5 +98,29 @@ export class UserService {
     const cacheKey = `user:${userId}`;
     await this.redisService.del(cacheKey);
     console.log(`[UserService] Cache cleared for user ${userId}`);
+  }
+
+  async changePassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<boolean> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { passwordHash: true },
+    });
+    if (!user) throw new Error('User not found');
+
+    const valid = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!valid) throw new Error('Current password is incorrect');
+
+    const newHash = await bcrypt.hash(newPassword, 10);
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash: newHash },
+    });
+
+    await this.clearUserCache(userId);
+    return true;
   }
 }

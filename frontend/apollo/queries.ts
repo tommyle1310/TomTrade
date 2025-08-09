@@ -190,6 +190,23 @@ export const GET_STOCKS = gql`
   }
 `;
 
+// Stocks with latest market data for Markets tab
+export const GET_STOCKS_WITH_MARKET = gql`
+  query GetStocksWithMarket {
+    stocks {
+      ticker
+      companyName
+      exchange
+      currency
+      avatar
+      marketData(interval: _1d) {
+        close
+        timestamp
+      }
+    }
+  }
+`;
+
 export const GET_STOCK = gql`
   query GetStock($ticker: String!) {
     stock(ticker: $ticker) {
@@ -335,6 +352,51 @@ export const CREATE_ALERT_RULE = gql`
 export const DELETE_ALERT_RULE = gql`
   mutation DeleteAlertRule($id: ID!) {
     deleteAlertRule(id: $id)
+  }
+`;
+
+// User profile updates
+export const UPDATE_AVATAR = gql`
+  mutation UpdateAvatar($avatarUrl: String!) {
+    updateAvatar(avatarUrl: $avatarUrl) {
+      id
+      email
+      avatar
+    }
+  }
+`;
+
+export const CHANGE_PASSWORD = gql`
+  mutation ChangePassword($currentPassword: String!, $newPassword: String!) {
+    changePassword(currentPassword: $currentPassword, newPassword: $newPassword)
+  }
+`;
+
+// Order Book Queries
+export const GET_ORDER_BOOK = gql`
+  query GetOrderBook($ticker: String!) {
+    orderBook(ticker: $ticker) {
+      buyOrders {
+        id
+        price
+        quantity
+        createdAt
+        side
+        status
+        type
+        timeInForce
+      }
+      sellOrders {
+        id
+        price
+        quantity
+        createdAt
+        side
+        status
+        type
+        timeInForce
+      }
+    }
   }
 `;
 

@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation } from '@apollo/client';
 import { theme } from '../theme';
-import { GET_MY_BALANCE, DEPOSIT, DEDUCT } from '../apollo/queries';
+import { GET_MY_BALANCE, DEPOSIT, DEDUCT, GET_DASHBOARD } from '../apollo/queries';
 import { usePortfolioStore } from '../stores';
 
 interface BalanceScreenProps {
@@ -47,7 +47,7 @@ export default function BalanceScreen({ navigation }: BalanceScreenProps) {
           variables: { amount: transactionAmount },
           refetchQueries: [
             { query: GET_MY_BALANCE },
-            'GetDashboard', // Refetch dashboard to update home screen
+            { query: GET_DASHBOARD }, // Refetch dashboard to update home screen
           ],
         });
         Alert.alert('Success', `$${transactionAmount} deposited successfully`);
@@ -56,7 +56,7 @@ export default function BalanceScreen({ navigation }: BalanceScreenProps) {
           variables: { amount: transactionAmount },
           refetchQueries: [
             { query: GET_MY_BALANCE },
-            'GetDashboard', // Refetch dashboard to update home screen
+            { query: GET_DASHBOARD }, // Refetch dashboard to update home screen
           ],
         });
         Alert.alert('Success', `$${transactionAmount} withdrawn successfully`);
@@ -99,6 +99,16 @@ export default function BalanceScreen({ navigation }: BalanceScreenProps) {
         <View style={{ width: 24 }} />
       </View>
 
+      {/* Tabs */}
+      <View style={styles.tabsContainer}>
+        {(['deposit','withdraw'] as const).map((t) => (
+          <TouchableOpacity key={t} style={[styles.tab, activeTab === t && styles.activeTab]} onPress={() => setActiveTab(t)}>
+            <Ionicons name={t === 'deposit' ? 'add-circle-outline' : 'remove-circle-outline'} size={18} color={activeTab === t ? 'white' : theme.colors.text.secondary} />
+            <Text style={[styles.tabText, activeTab === t && styles.activeTabText]}>{t === 'deposit' ? 'Deposit' : 'Withdraw'}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
       <ScrollView style={styles.content}>
         {/* Current Balance */}
         <View style={styles.balanceCard}>
@@ -115,41 +125,6 @@ export default function BalanceScreen({ navigation }: BalanceScreenProps) {
         </View>
 
         {/* Tab Selection */}
-        <View style={styles.tabContainer}>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'deposit' && styles.activeTab]}
-            onPress={() => setActiveTab('deposit')}
-          >
-            <Ionicons 
-              name="add-circle-outline" 
-              size={20} 
-              color={activeTab === 'deposit' ? 'white' : theme.colors.text.secondary} 
-            />
-            <Text style={[
-              styles.tabText,
-              activeTab === 'deposit' && styles.activeTabText
-            ]}>
-              Deposit
-            </Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'withdraw' && styles.activeTab]}
-            onPress={() => setActiveTab('withdraw')}
-          >
-            <Ionicons 
-              name="remove-circle-outline" 
-              size={20} 
-              color={activeTab === 'withdraw' ? 'white' : theme.colors.text.secondary} 
-            />
-            <Text style={[
-              styles.tabText,
-              activeTab === 'withdraw' && styles.activeTabText
-            ]}>
-              Withdraw
-            </Text>
-          </TouchableOpacity>
-        </View>
 
         {/* Amount Input */}
         <View style={styles.section}>
@@ -323,6 +298,11 @@ const styles = StyleSheet.create({
     padding: 24,
     alignItems: 'center',
     marginBottom: 24,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
   },
   balanceLabel: {
     fontSize: 14,
@@ -347,6 +327,16 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: 'white',
     marginLeft: 4,
+  },
+  tabsContainer: {
+    flexDirection: 'row',
+    backgroundColor: theme.colors.background.secondary,
+    borderRadius: 12,
+    padding: 4,
+    marginHorizontal: 20,
+    marginBottom: 12,
+    marginTop: 8,
+    gap: 6,
   },
   tabContainer: {
     flexDirection: 'row',

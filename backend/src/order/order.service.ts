@@ -82,10 +82,9 @@ export class OrderService {
         throw new Error('❌ Insufficient balance to place BUY order.');
       }
 
-      await this.prisma.balance.update({
-        where: { userId },
-        data: { amount: { decrement: cost } },
-      });
+      // Note: Balance is NOT deducted here - only checked for availability
+      // Balance will be deducted when the order actually executes in executeTrade
+      this.logger.log(`✅ Balance check passed: ${balance.amount} >= ${cost}`);
     }
 
     if (side === OrderSideEnum.SELL) {
@@ -104,6 +103,10 @@ export class OrderService {
       data: { ...input, userId },
     });
 
+    this.logger.log(
+      `📝 Order created: ${order.id} - ${side} ${quantity} ${ticker} @ ${price}`,
+    );
+
     // Khớp lệnh sau khi tạo
     await this.tryMatchByOrder(order);
 
@@ -115,8 +118,19 @@ export class OrderService {
         where: { id: order.id },
       });
       if (!updated) throw new Error('❌ Order not found');
+      this.logger.log(
+        `📈 MARKET order final status: ${updated.status}, remaining quantity: ${updated.quantity}`,
+      );
       return updated;
     }
+
+    // Check final order status
+    const finalOrder = await this.prisma.order.findUnique({
+      where: { id: order.id },
+    });
+    this.logger.log(
+      `📊 LIMIT order final status: ${finalOrder?.status}, remaining quantity: ${finalOrder?.quantity}`,
+    );
 
     return order;
   }
@@ -184,6 +198,10 @@ export class OrderService {
   }
 
   async tryMatchByOrder(order: Order) {
+    this.logger.log(
+      `🔍 Trying to match order: ${order.id} - ${order.side} ${order.quantity} ${order.ticker} @ ${order.price}`,
+    );
+
     const oppositeSide: OrderSide = order.side === 'BUY' ? 'SELL' : 'BUY';
     const priceOrder = order.side === 'BUY' ? 'asc' : 'desc';
 
@@ -197,6 +215,11 @@ export class OrderService {
                 : { gte: order.price },
           };
 
+    this.logger.log(
+      `🔎 Looking for ${oppositeSide} orders for ${order.ticker} with price filter:`,
+      priceFilter,
+    );
+
     const candidates = await this.prisma.order.findMany({
       where: {
         ticker: order.ticker,
@@ -208,7 +231,20 @@ export class OrderService {
       orderBy: [{ price: priceOrder }, { createdAt: 'asc' }],
     });
 
+    this.logger.log(
+      `📋 Found ${candidates.length} matching candidates for order ${order.id}`,
+    );
+
+    if (candidates.length > 0) {
+      candidates.forEach((candidate, index) => {
+        this.logger.log(
+          `  ${index + 1}. Order ${candidate.id}: ${candidate.side} ${candidate.quantity} @ ${candidate.price}`,
+        );
+      });
+    }
+
     if (!candidates.length) {
+      this.logger.log(`❌ No matching orders found for ${order.id}`);
       // Handle FOK orders that don't get any matches
       if (order.timeInForce === TimeInForce.FOK) {
         await this.prisma.order.update({
@@ -412,20 +448,43 @@ export class OrderService {
       const ticker = taker.ticker;
       const totalCost = quantity * executedPrice;
 
-      // Update portfolios
-      await this.portfolioService.increase(
+      // Check buyer has sufficient balance before executing trade
+      const buyerBalance = await tx.balance.findUnique({
+        where: { userId: buyerId },
+      });
+
+      if (!buyerBalance || buyerBalance.amount < totalCost) {
+        throw new Error(
+          `❌ Buyer ${buyerId} has insufficient balance for trade: ${buyerBalance?.amount || 0} < ${totalCost}`,
+        );
+      }
+
+      // Update buyer balance (deduct cost)
+      await tx.balance.update({
+        where: { userId: buyerId },
+        data: { amount: { decrement: totalCost } },
+      });
+
+      // Update seller balance (add proceeds)
+      await tx.balance.update({
+        where: { userId: sellerId },
+        data: { amount: { increment: totalCost } },
+      });
+
+      // Update portfolios using transaction client
+      await this.portfolioService.upsertPortfolio(
+        tx,
         buyerId,
         ticker,
         quantity,
         executedPrice,
       );
-      await this.portfolioService.decrease(sellerId, ticker, quantity);
-
-      // Update seller balance
-      await tx.balance.update({
-        where: { userId: sellerId },
-        data: { amount: { increment: totalCost } },
-      });
+      await this.portfolioService.updatePortfolioOnSell(
+        tx,
+        sellerId,
+        ticker,
+        quantity,
+      );
 
       // Record transaction
       await this.txService.recordTrade(tx, {
@@ -620,13 +679,12 @@ export class OrderService {
       data: { status: OrderStatus.CANCELLED },
     });
 
-    if (order.side === 'BUY') {
-      const refund = order.price * order.quantity;
-      await this.prisma.balance.update({
-        where: { userId },
-        data: { amount: { increment: refund } },
-      });
-    }
+    // Note: No balance refund needed for BUY orders since balance is not pre-deducted
+    // Balance is only deducted when trades actually execute
+    this.logger.log(`📋 Order ${orderId} cancelled - no balance refund needed`);
+
+    // TODO: If implementing a reservation system in the future,
+    // release reserved funds here for BUY orders
 
     return updatedOrder;
   }
