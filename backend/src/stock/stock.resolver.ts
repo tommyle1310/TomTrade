@@ -34,6 +34,12 @@ export class StockResolver {
     return this.stockService.getStock(ticker);
   }
 
+  @ResolveField('avatar', () => String, { nullable: true })
+  async getAvatar(@Parent() stock: Stock) {
+    // Return existing avatar or fallback to Financial Modeling Prep image
+    return stock.avatar || `https://financialmodelingprep.com/image-stock/${stock.ticker}.png`;
+  }
+
   @ResolveField('marketData', () => [MarketData])
   async getMarketData(
     @Parent() stock: Stock,

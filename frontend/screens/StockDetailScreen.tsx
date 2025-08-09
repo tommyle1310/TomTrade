@@ -6,6 +6,7 @@ import { useQuery } from '@apollo/client';
 import { theme } from '../theme';
 import { GET_STOCK, ORDER_BOOK, GET_SMA, GET_EMA, GET_RSI } from '../apollo/queries';
 import { Stock, OrderBook, StockPosition } from '../apollo/types';
+import Avatar from '../components/Avatar';
 
 interface StockDetailScreenProps {
   navigation: any;
@@ -126,8 +127,20 @@ export default function StockDetailScreen({ navigation, route }: StockDetailScre
         </TouchableOpacity>
         
         <View style={styles.headerInfo}>
-          <Text style={styles.headerTicker}>{ticker}</Text>
-          {stock && <Text style={styles.headerCompany}>{stock.companyName}</Text>}
+          <View style={styles.headerTitleContainer}>
+            {stock?.avatar && (
+              <Avatar 
+                source={stock.avatar} 
+                fallback={stock.companyName} 
+                size={32} 
+                style={styles.headerAvatar}
+              />
+            )}
+            <View style={styles.headerTextContainer}>
+              <Text style={styles.headerTicker}>{ticker}</Text>
+              {stock && <Text style={styles.headerCompany}>{stock.companyName}</Text>}
+            </View>
+          </View>
         </View>
 
         <View style={styles.headerActions}>
@@ -430,6 +443,18 @@ const styles = StyleSheet.create({
   },
   headerInfo: {
     flex: 1,
+    alignItems: 'center',
+  },
+  headerTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  headerAvatar: {
+    borderWidth: 1,
+    borderColor: theme.colors.border.primary,
+  },
+  headerTextContainer: {
     alignItems: 'center',
   },
   headerTicker: {

@@ -36,6 +36,7 @@ export const ME_QUERY = gql`
       email
       role
       isBanned
+      avatar
       createdAt
     }
   }
@@ -59,6 +60,7 @@ export const GET_DASHBOARD = gql`
         marketValue
         unrealizedPnL
         unrealizedPnLPercent
+        avatar
       }
     }
   }
@@ -183,6 +185,7 @@ export const GET_STOCKS = gql`
       sector
       industry
       currency
+      avatar
     }
   }
 `;
@@ -196,6 +199,7 @@ export const GET_STOCK = gql`
       sector
       industry
       currency
+      avatar
       marketData(interval: _1d) {
         open
         high
@@ -262,6 +266,7 @@ export const MY_WATCHLISTS = gql`
         ticker
         companyName
         exchange
+        avatar
       }
     }
   }

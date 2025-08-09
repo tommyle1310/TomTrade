@@ -6,6 +6,7 @@ import { useQuery } from '@apollo/client';
 import { theme } from '../theme';
 import { GET_STOCKS } from '../apollo/queries';
 import { Stock } from '../apollo/types';
+import Avatar from '../components/Avatar';
 
 interface StockPickerScreenProps {
   navigation: any;
@@ -157,6 +158,12 @@ export default function StockPickerScreen({ navigation, route }: StockPickerScre
               style={styles.stockCard}
               onPress={() => handleSelectStock(stock.ticker)}
             >
+              <Avatar 
+                source={stock.avatar} 
+                fallback={stock.companyName} 
+                size={48} 
+                style={styles.stockAvatar}
+              />
               <View style={styles.stockInfo}>
                 <View style={styles.stockHeader}>
                   <Text style={styles.stockTicker}>{stock.ticker}</Text>
@@ -293,12 +300,16 @@ const styles = StyleSheet.create({
   },
   stockCard: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     backgroundColor: theme.colors.background.secondary,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
+    gap: 12,
+  },
+  stockAvatar: {
+    borderWidth: 1,
+    borderColor: theme.colors.border.primary,
   },
   stockInfo: {
     flex: 1,

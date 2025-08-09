@@ -20,6 +20,7 @@ model Stock {
   ipoDate              DateTime?
   country              String?
   currency             String?
+  avatar               String?
   status               String?             @default("active")
 
   marketData           MarketData[]
@@ -137,6 +138,7 @@ model User {
   passwordHash String
   role         Role     @default(USER)
   isBanned     Boolean  @default(false)
+  avatar       String?
   createdAt    DateTime @default(now())
 
   // 👇 Giữ lại relation đơn giản

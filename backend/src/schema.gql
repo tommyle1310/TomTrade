@@ -245,6 +245,7 @@ input SignUpInput {
 }
 
 type Stock {
+  avatar: String
   companyName: String!
   country: String
   currency: String
@@ -265,6 +266,7 @@ type Stock {
 }
 
 type StockPosition {
+  avatar: String
   averageBuyPrice: Float!
   companyName: String!
   currentPrice: Float!
@@ -296,6 +298,7 @@ enum TransactionAction {
 }
 
 type User {
+  avatar: String
   createdAt: DateTime!
   email: String!
   id: ID!

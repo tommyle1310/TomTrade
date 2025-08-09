@@ -1,9 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { theme } from '../theme';
 import { useAuth } from '../contexts/AuthContext';
+import { useUserStore } from '../stores';
+import Avatar from '../components/Avatar';
 
 interface SettingsScreenProps {
   navigation?: any;
@@ -15,6 +18,14 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
   const [biometric, setBiometric] = useState(true);
   const [autoSync, setAutoSync] = useState(true);
   const { logout } = useAuth();
+  const { user, loading, fetchUser } = useUserStore();
+
+  // Fetch user data when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchUser();
+    }, [fetchUser])
+  );
 
   const settingSections = [
     {
@@ -111,15 +122,32 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* User Profile Card */}
         <TouchableOpacity style={styles.profileCard}>
-          <View style={styles.profileAvatar}>
-            <Text style={styles.profileInitials}>JD</Text>
-          </View>
+          {user?.avatar ? (
+            <Avatar 
+              source={user.avatar} 
+              fallback={user.email} 
+              size={60} 
+              style={styles.profileAvatarImage}
+            />
+          ) : (
+            <View style={styles.profileAvatar}>
+              <Text style={styles.profileInitials}>
+                {user?.email ? user.email.charAt(0).toUpperCase() : '?'}
+              </Text>
+            </View>
+          )}
           <View style={styles.profileInfo}>
-            <Text style={styles.profileName}>John Doe</Text>
-            <Text style={styles.profileEmail}>john.doe@example.com</Text>
+            <Text style={styles.profileName}>
+              {user?.email?.split('@')[0] || 'User'}
+            </Text>
+            <Text style={styles.profileEmail}>
+              {user?.email || 'Loading...'}
+            </Text>
             <View style={styles.profileBadge}>
               <Ionicons name="checkmark-circle" size={16} color={theme.colors.accent.asparagus} />
-              <Text style={styles.profileBadgeText}>Verified</Text>
+              <Text style={styles.profileBadgeText}>
+                {user?.isBanned ? 'Banned' : 'Verified'}
+              </Text>
             </View>
           </View>
           <Ionicons name="chevron-forward" size={20} color={theme.colors.text.tertiary} />
@@ -195,6 +223,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: theme.spacing[4],
+  },
+  profileAvatarImage: {
+    marginRight: theme.spacing[4],
+    borderWidth: 2,
+    borderColor: theme.colors.border.primary,
   },
   profileInitials: {
     ...theme.typography.heading.h4,

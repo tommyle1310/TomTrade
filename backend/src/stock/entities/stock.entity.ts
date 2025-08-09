@@ -28,6 +28,9 @@ export class Stock {
   @Field(() => String, { nullable: true })
   status?: string;
 
+  @Field(() => String, { nullable: true })
+  avatar?: string | null;
+
   @Field(() => Float, { nullable: true })
   insiderHolding?: number;
 

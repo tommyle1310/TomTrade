@@ -11,6 +11,7 @@ import {
   REMOVE_STOCK_FROM_WATCHLIST 
 } from '../apollo/queries';
 import { Watchlist, CreateWatchlistInput, AddStockToWatchlistInput } from '../apollo/types';
+import Avatar from '../components/Avatar';
 
 interface WatchlistScreenProps {
   navigation: any;
@@ -235,6 +236,12 @@ export default function WatchlistScreen({ navigation }: WatchlistScreenProps) {
                   style={styles.stockCard}
                   onPress={() => navigation.navigate('StockDetail', { ticker: stock.ticker })}
                 >
+                  <Avatar 
+                    source={stock.avatar} 
+                    fallback={stock.companyName} 
+                    size={40} 
+                    style={styles.stockAvatar}
+                  />
                   <View style={styles.stockInfo}>
                     <Text style={styles.stockTicker}>{stock.ticker}</Text>
                     <Text style={styles.stockName}>{stock.companyName}</Text>
@@ -422,12 +429,16 @@ const styles = StyleSheet.create({
   },
   stockCard: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     backgroundColor: theme.colors.background.secondary,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
+    gap: 12,
+  },
+  stockAvatar: {
+    borderWidth: 1,
+    borderColor: theme.colors.border.primary,
   },
   stockInfo: {
     flex: 1,
@@ -451,6 +462,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+    marginLeft: 'auto',
   },
   tradeButton: {
     backgroundColor: theme.colors.primary,

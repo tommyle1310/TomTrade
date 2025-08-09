@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../theme';
 import { usePortfolioStore } from '../stores';
 import { DashboardResult, Portfolio, Transaction } from '../apollo/types';
+import Avatar from '../components/Avatar';
 
 interface PortfolioScreenProps {
   navigation: any;
@@ -123,7 +124,13 @@ export default function PortfolioScreen({ navigation }: PortfolioScreenProps) {
                 onPress={() => navigation.navigate('StockDetail', { ticker: position.ticker })}
               >
                 <View style={styles.positionHeader}>
-                  <View>
+                  <Avatar 
+                    source={position.avatar} 
+                    fallback={position.companyName} 
+                    size={40} 
+                    style={styles.positionAvatar}
+                  />
+                  <View style={styles.positionInfo}>
                     <Text style={styles.positionTicker}>{position.ticker}</Text>
                     <Text style={styles.positionCompany}>{position.companyName}</Text>
                   </View>
@@ -315,9 +322,19 @@ const styles = StyleSheet.create({
   },
   positionHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     marginBottom: 12,
+    gap: 12,
+  },
+  positionAvatar: {
+    borderWidth: 1,
+    borderColor: theme.colors.border.primary,
+  },
+  positionInfo: {
+    flex: 1,
+  },
+  positionValues: {
+    alignItems: 'flex-end',
   },
   positionTicker: {
     fontSize: 16,

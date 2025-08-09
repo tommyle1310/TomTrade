@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../theme';
 import { useAuthStore, usePortfolioStore } from '../stores';
 import { DashboardResult } from '../apollo/types';
+import Avatar from '../components/Avatar';
 
 interface HomeScreenProps {
   navigation: any;
@@ -221,35 +222,41 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
 
             {dashboard.stockPositions.slice(0, 3).map((position) => (
               <TouchableOpacity
-                key={position.ticker}
-                style={styles.positionCard}
-                onPress={() =>
-                  navigation.navigate('StockDetail', {
-                    ticker: position.ticker,
-                  })
-                }
-              >
-                <View style={styles.positionInfo}>
-                  <Text style={styles.positionTicker}>{position.ticker}</Text>
-                  <Text style={styles.positionShares}>
-                    {position.quantity} shares
-                  </Text>
-                </View>
-                <View style={styles.positionValues}>
-                  <Text style={styles.positionValue}>
-                    {formatCurrency(position.marketValue)}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.positionPnL,
-                      { color: getPercentColor(position.unrealizedPnLPercent) },
-                    ]}
-                  >
-                    {formatPercent(position.unrealizedPnLPercent)}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            ))}
+                  key={position.ticker}
+                  style={styles.positionCard}
+                  onPress={() =>
+                    navigation.navigate('StockDetail', {
+                      ticker: position.ticker,
+                    })
+                  }
+                >
+                  <Avatar 
+                    source={position.avatar} 
+                    fallback={position.companyName} 
+                    size={40} 
+                    style={styles.positionAvatar}
+                  />
+                  <View style={styles.positionInfo}>
+                    <Text style={styles.positionTicker}>{position.ticker}</Text>
+                    <Text style={styles.positionShares}>
+                      {position.quantity} shares
+                    </Text>
+                  </View>
+                  <View style={styles.positionValues}>
+                    <Text style={styles.positionValue}>
+                      {formatCurrency(position.marketValue)}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.positionPnL,
+                        { color: getPercentColor(position.unrealizedPnLPercent) },
+                      ]}
+                    >
+                      {formatPercent(position.unrealizedPnLPercent)}
+                                       </Text>
+                 </View>
+               </TouchableOpacity>
+             ))}
           </View>
         )}
 
@@ -416,12 +423,16 @@ const styles = StyleSheet.create({
   },
   positionCard: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     backgroundColor: theme.colors.background.secondary,
     borderRadius: 12,
     padding: 16,
     marginBottom: 8,
+    gap: 12,
+  },
+  positionAvatar: {
+    borderWidth: 1,
+    borderColor: theme.colors.border.primary,
   },
   positionInfo: {
     flex: 1,
@@ -438,6 +449,7 @@ const styles = StyleSheet.create({
   },
   positionValues: {
     alignItems: 'flex-end',
+    marginLeft: 'auto',
   },
   positionValue: {
     fontSize: 16,

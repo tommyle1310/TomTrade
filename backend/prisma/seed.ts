@@ -14,11 +14,9 @@ async function main() {
   const ticker = 'AAPL';
 
   // 1. First, seed the Stock data (before creating portfolios that reference it)
-  await prisma.stock.upsert({
-    where: { ticker },
-    update: {},
-    create: {
-      ticker,
+  const stocks = [
+    {
+      ticker: 'AAPL',
       companyName: 'Apple Inc.',
       exchange: 'NASDAQ',
       sector: 'Technology',
@@ -30,15 +28,9 @@ async function main() {
       ipoDate: new Date('1980-12-12'),
       country: 'USA',
       currency: 'USD',
+      avatar: 'https://financialmodelingprep.com/image-stock/AAPL.png',
     },
-  });
-  console.log(`✅ Created stock: ${ticker}`);
-
-  // Add GOOG stock for watchlist testing
-  await prisma.stock.upsert({
-    where: { ticker: 'GOOG' },
-    update: {},
-    create: {
+    {
       ticker: 'GOOG',
       companyName: 'Alphabet Inc.',
       exchange: 'NASDAQ',
@@ -51,9 +43,93 @@ async function main() {
       ipoDate: new Date('2004-08-19'),
       country: 'USA',
       currency: 'USD',
+      avatar: 'https://financialmodelingprep.com/image-stock/GOOG.png',
     },
-  });
-  console.log(`✅ Created stock: GOOG`);
+    {
+      ticker: 'MSFT',
+      companyName: 'Microsoft Corporation',
+      exchange: 'NASDAQ',
+      sector: 'Technology',
+      industry: 'Software',
+      marketCap: BigInt(2_800_000_000_000),
+      outstandingShares: BigInt(7_400_000_000),
+      insiderHolding: 0.01,
+      institutionalHolding: 0.72,
+      ipoDate: new Date('1986-03-13'),
+      country: 'USA',
+      currency: 'USD',
+      avatar: 'https://financialmodelingprep.com/image-stock/MSFT.png',
+    },
+    {
+      ticker: 'TSLA',
+      companyName: 'Tesla, Inc.',
+      exchange: 'NASDAQ',
+      sector: 'Consumer Cyclical',
+      industry: 'Auto Manufacturers',
+      marketCap: BigInt(800_000_000_000),
+      outstandingShares: BigInt(3_200_000_000),
+      insiderHolding: 0.13,
+      institutionalHolding: 0.44,
+      ipoDate: new Date('2010-06-29'),
+      country: 'USA',
+      currency: 'USD',
+      avatar: 'https://financialmodelingprep.com/image-stock/TSLA.png',
+    },
+    {
+      ticker: 'AMZN',
+      companyName: 'Amazon.com, Inc.',
+      exchange: 'NASDAQ',
+      sector: 'Consumer Cyclical',
+      industry: 'Internet Retail',
+      marketCap: BigInt(1_500_000_000_000),
+      outstandingShares: BigInt(10_500_000_000),
+      insiderHolding: 0.1,
+      institutionalHolding: 0.58,
+      ipoDate: new Date('1997-05-15'),
+      country: 'USA',
+      currency: 'USD',
+      avatar: 'https://financialmodelingprep.com/image-stock/AMZN.png',
+    },
+    {
+      ticker: 'NVDA',
+      companyName: 'NVIDIA Corporation',
+      exchange: 'NASDAQ',
+      sector: 'Technology',
+      industry: 'Semiconductors',
+      marketCap: BigInt(1_800_000_000_000),
+      outstandingShares: BigInt(24_700_000_000),
+      insiderHolding: 0.04,
+      institutionalHolding: 0.65,
+      ipoDate: new Date('1999-01-22'),
+      country: 'USA',
+      currency: 'USD',
+      avatar: 'https://financialmodelingprep.com/image-stock/NVDA.png',
+    },
+    {
+      ticker: 'META',
+      companyName: 'Meta Platforms, Inc.',
+      exchange: 'NASDAQ',
+      sector: 'Communication Services',
+      industry: 'Internet Content & Information',
+      marketCap: BigInt(900_000_000_000),
+      outstandingShares: BigInt(2_600_000_000),
+      insiderHolding: 0.13,
+      institutionalHolding: 0.7,
+      ipoDate: new Date('2012-05-18'),
+      country: 'USA',
+      currency: 'USD',
+      avatar: 'https://financialmodelingprep.com/image-stock/META.png',
+    },
+  ];
+
+  for (const stockData of stocks) {
+    await prisma.stock.upsert({
+      where: { ticker: stockData.ticker },
+      update: {},
+      create: stockData,
+    });
+    console.log(`✅ Created stock: ${stockData.ticker}`);
+  }
 
   // 2. Seed existing demo user
   const plainPassword = 'password123';
@@ -64,6 +140,7 @@ async function main() {
     create: {
       email: 'demo@example.com',
       passwordHash: hash,
+      avatar: 'https://i.pravatar.cc/200?u=18284',
     },
   });
   console.log(`✅ Created test user: ${user.email} / ${plainPassword}`);
@@ -88,6 +165,7 @@ async function main() {
     create: {
       email: 'buyer@example.com',
       passwordHash,
+      avatar: 'https://i.pravatar.cc/200?u=1234567890123456789012345678',
     },
   });
   console.log(`✅ Created buyer user: ${buyer.email} / ${simplePassword}`);
@@ -126,9 +204,21 @@ async function main() {
 
   // --- Create Sellers ---
   const sellersData = [
-    { email: 'seller1@example.com', shares: 50 },
-    { email: 'seller2@example.com', shares: 50 },
-    { email: 'seller3@example.com', shares: 50 },
+    {
+      email: 'seller1@example.com',
+      shares: 50,
+      avatarId: '9876543210987654321098765432',
+    },
+    {
+      email: 'seller2@example.com',
+      shares: 50,
+      avatarId: '5555555555555555555555555555',
+    },
+    {
+      email: 'seller3@example.com',
+      shares: 50,
+      avatarId: '7777777777777777777777777777',
+    },
   ];
 
   for (const sellerData of sellersData) {
@@ -138,6 +228,7 @@ async function main() {
       create: {
         email: sellerData.email,
         passwordHash,
+        avatar: `https://i.pravatar.cc/200?u=${sellerData.avatarId}`,
       },
     });
     console.log(`✅ Created seller user: ${seller.email} / ${simplePassword}`);
@@ -176,9 +267,21 @@ async function main() {
 
   // --- Create Buyers for test-sell-limit-multiple-buy ---
   const buyersData = [
-    { email: 'buyer1@example.com', balance: 100000 },
-    { email: 'buyer2@example.com', balance: 100000 },
-    { email: 'buyer3@example.com', balance: 100000 },
+    {
+      email: 'buyer1@example.com',
+      balance: 100000,
+      avatarId: '1111111111111111111111111111',
+    },
+    {
+      email: 'buyer2@example.com',
+      balance: 100000,
+      avatarId: '2222222222222222222222222222',
+    },
+    {
+      email: 'buyer3@example.com',
+      balance: 100000,
+      avatarId: '3333333333333333333333333333',
+    },
   ];
 
   for (const buyerData of buyersData) {
@@ -188,6 +291,7 @@ async function main() {
       create: {
         email: buyerData.email,
         passwordHash,
+        avatar: `https://i.pravatar.cc/200?u=${buyerData.avatarId}`,
       },
     });
     console.log(`✅ Created buyer user: ${buyer.email} / ${simplePassword}`);
@@ -210,6 +314,7 @@ async function main() {
     create: {
       email: 'seller@example.com',
       passwordHash,
+      avatar: 'https://i.pravatar.cc/200?u=8888888888888888888888888888',
     },
   });
   console.log(
@@ -247,38 +352,37 @@ async function main() {
   });
   console.log(`✅ Seeded portfolio for ${sellerUser.email}`);
 
-  // 4. Seed MarketData
-  for (let i = 0; i < 10; i++) {
-    await prisma.marketData.create({
-      data: {
-        ticker,
-        timestamp: new Date(now.getTime() - i * 86400000),
-        interval: '1d',
-        open: 150 + i,
-        high: 155 + i,
-        low: 145 + i,
-        close: 152 + i,
-        volume: BigInt(1_000_000 + i * 10000),
-        afterHours: 151 + i,
-      },
-    });
-  }
+  // 4. Seed MarketData for all stocks
+  const marketDataConfig = [
+    { ticker: 'AAPL', basePrice: 150, volume: 1_000_000 },
+    { ticker: 'GOOG', basePrice: 2800, volume: 500_000 },
+    { ticker: 'MSFT', basePrice: 380, volume: 800_000 },
+    { ticker: 'TSLA', basePrice: 250, volume: 1_500_000 },
+    { ticker: 'AMZN', basePrice: 140, volume: 600_000 },
+    { ticker: 'NVDA', basePrice: 900, volume: 2_000_000 },
+    { ticker: 'META', basePrice: 350, volume: 700_000 },
+  ];
 
-  // Add market data for GOOG
-  for (let i = 0; i < 10; i++) {
-    await prisma.marketData.create({
-      data: {
-        ticker: 'GOOG',
-        timestamp: new Date(now.getTime() - i * 86400000),
-        interval: '1d',
-        open: 2800 + i,
-        high: 2850 + i,
-        low: 2750 + i,
-        close: 2820 + i,
-        volume: BigInt(500_000 + i * 5000),
-        afterHours: 2810 + i,
-      },
-    });
+  for (const config of marketDataConfig) {
+    for (let i = 0; i < 10; i++) {
+      const variation = Math.random() * 20 - 10; // Random variation between -10 and +10
+      const basePrice = config.basePrice + variation;
+
+      await prisma.marketData.create({
+        data: {
+          ticker: config.ticker,
+          timestamp: new Date(now.getTime() - i * 86400000),
+          interval: '1d',
+          open: basePrice + (Math.random() * 4 - 2),
+          high: basePrice + Math.random() * 8,
+          low: basePrice - Math.random() * 8,
+          close: basePrice + (Math.random() * 4 - 2),
+          volume: BigInt(config.volume + Math.floor(Math.random() * 100000)),
+          afterHours: basePrice + (Math.random() * 2 - 1),
+        },
+      });
+    }
+    console.log(`✅ Created market data for ${config.ticker}`);
   }
 
   // 5. Seed News

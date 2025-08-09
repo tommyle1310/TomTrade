@@ -4,6 +4,7 @@ export interface User {
   email: string;
   role: string;
   isBanned: boolean;
+  avatar?: string;
   createdAt: string;
 }
 
@@ -31,6 +32,7 @@ export interface StockPosition {
   marketValue: number;
   unrealizedPnL: number;
   unrealizedPnLPercent: number;
+  avatar?: string;
 }
 
 export interface DashboardResult {
@@ -104,6 +106,7 @@ export interface Stock {
   currency?: string;
   country?: string;
   status?: string;
+  avatar?: string;
   insiderHolding?: number;
   institutionalHolding?: number;
   ipoDate?: string;

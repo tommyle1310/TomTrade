@@ -8,6 +8,7 @@
   "scripts": {
     "build": "nest build",
     "seed": "ts-node prisma/seed.ts",
+    "db:truncate-all-tables-sql": "ts-node --require tsconfig-paths/register src/scripts/truncate-all-tables-sql.script.ts",
     "mock:alert": "ts-node --require tsconfig-paths/register src/scripts/mock-marketdata.ts",
     "test:limit-matching": "ts-node --require tsconfig-paths/register src/scripts/test-limit-matching.script.ts",
     "test:multi-match": "ts-node --require tsconfig-paths/register src/scripts/test-multi-match.script.ts",

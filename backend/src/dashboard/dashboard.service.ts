@@ -52,6 +52,10 @@ export class DashboardService {
       const stockPosition = new StockPosition();
       stockPosition.ticker = position.ticker;
       stockPosition.companyName = stock?.companyName || position.ticker;
+      // Provide fallback avatar URL if stock doesn't have one
+      stockPosition.avatar =
+        stock?.avatar ||
+        `https://financialmodelingprep.com/image-stock/${position.ticker}.png`;
       stockPosition.quantity = position.quantity;
       stockPosition.averageBuyPrice = position.averagePrice;
       stockPosition.currentPrice = currentPrice;
@@ -151,6 +155,10 @@ export class DashboardService {
     const stockPosition = new StockPosition();
     stockPosition.ticker = position.ticker;
     stockPosition.companyName = stock?.companyName || position.ticker;
+    // Provide fallback avatar URL if stock doesn't have one
+    stockPosition.avatar =
+      stock?.avatar ||
+      `https://financialmodelingprep.com/image-stock/${position.ticker}.png`;
     stockPosition.quantity = position.quantity;
     stockPosition.averageBuyPrice = position.averagePrice;
     stockPosition.currentPrice = currentPrice;

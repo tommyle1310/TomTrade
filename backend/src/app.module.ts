@@ -24,6 +24,7 @@ import { BalanceModule } from './balance/balance.module';
 import { WatchlistModule } from './watchlist/watchlist.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { AdminModule } from './admin/admin.module';
+import { RedisModule } from './redis/redis.module';
 @Module({
   imports: [
     GraphQLModule.forRoot<ApolloDriverConfig>({
@@ -34,6 +35,7 @@ import { AdminModule } from './admin/admin.module';
       playground: true,
     }),
     EventEmitterModule.forRoot(),
+    RedisModule,
     CoreModule,
     BalanceModule,
     PrismaModule,

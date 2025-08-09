@@ -6,6 +6,7 @@ import { useQuery, useMutation } from '@apollo/client';
 import { theme } from '../theme';
 import { MY_ORDERS, CANCEL_ORDER } from '../apollo/queries';
 import { Order, OrderStatus } from '../apollo/types';
+import Avatar from '../components/Avatar';
 
 interface OrdersScreenProps {
   navigation: any;
@@ -138,6 +139,12 @@ export default function OrdersScreen({ navigation }: OrdersScreenProps) {
             <View key={order.id} style={styles.orderCard}>
               {/* Order Header */}
               <View style={styles.orderHeader}>
+                <Avatar 
+                  source={`https://financialmodelingprep.com/image-stock/${order.ticker}.png`} 
+                  fallback={order.ticker} 
+                  size={32} 
+                  style={styles.orderAvatar}
+                />
                 <View style={styles.orderTitleContainer}>
                   <Text style={styles.orderTicker}>{order.ticker}</Text>
                   <View style={styles.orderBadges}>
@@ -298,9 +305,13 @@ const styles = StyleSheet.create({
   },
   orderHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     marginBottom: 12,
+    gap: 12,
+  },
+  orderAvatar: {
+    borderWidth: 1,
+    borderColor: theme.colors.border.primary,
   },
   orderTitleContainer: {
     flex: 1,

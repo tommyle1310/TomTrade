@@ -8,6 +8,9 @@ export class StockPosition {
   @Field()
   companyName: string;
 
+  @Field({ nullable: true })
+  avatar?: string;
+
   @Field(() => Float)
   quantity: number;
 
