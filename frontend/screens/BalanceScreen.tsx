@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation } from '@apollo/client';
 import { theme } from '../theme';
 import { GET_MY_BALANCE, DEPOSIT, DEDUCT } from '../apollo/queries';
+import { usePortfolioStore } from '../stores';
 
 interface BalanceScreenProps {
   navigation: any;
@@ -18,6 +19,9 @@ export default function BalanceScreen({ navigation }: BalanceScreenProps) {
   const { data, loading, refetch } = useQuery(GET_MY_BALANCE);
   const [deposit, { loading: depositing }] = useMutation(DEPOSIT);
   const [withdraw, { loading: withdrawing }] = useMutation(DEDUCT);
+  
+  // Get portfolio store methods to update global state
+  const { fetchBalance, fetchDashboard } = usePortfolioStore();
 
   const balance = data?.getMyBalance || 0;
   const isProcessing = depositing || withdrawing;
@@ -41,16 +45,29 @@ export default function BalanceScreen({ navigation }: BalanceScreenProps) {
       if (activeTab === 'deposit') {
         await deposit({
           variables: { amount: transactionAmount },
-          refetchQueries: [{ query: GET_MY_BALANCE }],
+          refetchQueries: [
+            { query: GET_MY_BALANCE },
+            'GetDashboard', // Refetch dashboard to update home screen
+          ],
         });
         Alert.alert('Success', `$${transactionAmount} deposited successfully`);
       } else {
         await withdraw({
           variables: { amount: transactionAmount },
-          refetchQueries: [{ query: GET_MY_BALANCE }],
+          refetchQueries: [
+            { query: GET_MY_BALANCE },
+            'GetDashboard', // Refetch dashboard to update home screen
+          ],
         });
         Alert.alert('Success', `$${transactionAmount} withdrawn successfully`);
       }
+      
+      // Force refetch the balance data immediately
+      await refetch();
+      
+      // Update the global portfolio store state
+      await fetchBalance();
+      await fetchDashboard();
       
       setAmount('');
     } catch (error: any) {

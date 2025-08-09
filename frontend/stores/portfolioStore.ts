@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { FetchPolicy } from '@apollo/client';
 import { apolloClient } from '../apollo/client';
 import {
   GET_DASHBOARD,
@@ -66,7 +67,7 @@ export const usePortfolioStore = create<PortfolioState>((set, get) => ({
 
       const { data } = await apolloClient.query({
         query: GET_DASHBOARD,
-        fetchPolicy: 'cache-first',
+        fetchPolicy: 'no-cache', // Always fetch fresh data
       });
 
       set({
@@ -85,7 +86,7 @@ export const usePortfolioStore = create<PortfolioState>((set, get) => ({
     try {
       const { data } = await apolloClient.query({
         query: GET_MY_BALANCE,
-        fetchPolicy: 'cache-first',
+        fetchPolicy: 'no-cache', // Always fetch fresh data
       });
 
       set({ balance: data?.getMyBalance || 0 });
@@ -100,7 +101,7 @@ export const usePortfolioStore = create<PortfolioState>((set, get) => ({
 
       const { data } = await apolloClient.query({
         query: MY_PORTFOLIO,
-        fetchPolicy: 'cache-first',
+        fetchPolicy: 'no-cache',
       });
 
       set({
@@ -121,7 +122,7 @@ export const usePortfolioStore = create<PortfolioState>((set, get) => ({
 
       const { data } = await apolloClient.query({
         query: MY_TRANSACTIONS,
-        fetchPolicy: 'cache-first',
+        fetchPolicy: 'no-cache',
       });
 
       set({
@@ -142,7 +143,7 @@ export const usePortfolioStore = create<PortfolioState>((set, get) => ({
 
       const { data } = await apolloClient.query({
         query: MY_ORDERS,
-        fetchPolicy: 'cache-first',
+        fetchPolicy: 'no-cache',
       });
 
       set({

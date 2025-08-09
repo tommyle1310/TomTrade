@@ -4,8 +4,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQuery } from '@apollo/client';
 import { theme } from '../theme';
-import { PLACE_ORDER, PLACE_STOP_ORDER, GET_MY_BALANCE, GET_STOCKS } from '../apollo/queries';
+import { PLACE_ORDER, PLACE_STOP_ORDER, GET_MY_BALANCE, GET_STOCKS, MY_ORDERS } from '../apollo/queries';
 import { OrderSide, OrderType, TimeInForce, PlaceOrderInput, PlaceStopOrderInput } from '../apollo/types';
+import { usePortfolioStore } from '../stores';
 
 interface TradingScreenProps {
   navigation: any;
@@ -25,6 +26,9 @@ export default function TradingScreen({ navigation }: TradingScreenProps) {
   
   const [placeOrder, { loading: placingOrder }] = useMutation(PLACE_ORDER);
   const [placeStopOrder, { loading: placingStopOrder }] = useMutation(PLACE_STOP_ORDER);
+  
+  // Get portfolio store methods to update global state
+  const { fetchBalance, fetchDashboard, fetchOrders } = usePortfolioStore();
 
   const balance = balanceData?.getMyBalance || 0;
   const stocks = stocksData?.stocks || [];
@@ -55,7 +59,14 @@ export default function TradingScreen({ navigation }: TradingScreenProps) {
           timeInForce,
         };
 
-        await placeStopOrder({ variables: { input } });
+        await placeStopOrder({ 
+          variables: { input },
+          refetchQueries: [
+            { query: MY_ORDERS },
+            'GetDashboard',
+            'GetMyBalance',
+          ],
+        });
       } else {
         const input: PlaceOrderInput = {
           ticker: selectedStock,
@@ -66,10 +77,22 @@ export default function TradingScreen({ navigation }: TradingScreenProps) {
           timeInForce,
         };
 
-        await placeOrder({ variables: { input } });
+        await placeOrder({ 
+          variables: { input },
+          refetchQueries: [
+            { query: MY_ORDERS },
+            'GetDashboard',
+            'GetMyBalance',
+          ],
+        });
       }
 
       Alert.alert('Success', 'Order placed successfully');
+      
+      // Update the global portfolio store state
+      await fetchBalance();
+      await fetchDashboard();
+      await fetchOrders();
       
       // Reset form
       setSelectedStock('');

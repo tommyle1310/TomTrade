@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   RefreshControl,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../theme';
@@ -35,6 +36,14 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
     fetchDashboard();
     fetchBalance();
   }, [fetchDashboard, fetchBalance]);
+
+  // Refresh data when screen comes into focus (e.g., after navigating back from other screens)
+  useFocusEffect(
+    useCallback(() => {
+      fetchDashboard();
+      fetchBalance();
+    }, [fetchDashboard, fetchBalance])
+  );
 
   const quickActions = [
     {
@@ -71,8 +80,8 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
     },
   ];
 
-  const handleRefresh = () => {
-    refreshAll();
+  const handleRefresh = async () => {
+    await refreshAll();
   };
 
   const formatCurrency = (amount: number) => {
