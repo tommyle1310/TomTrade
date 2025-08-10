@@ -16,6 +16,7 @@ import StockPickerScreen from '../screens/StockPickerScreen';
 import StockDetailScreen from '../screens/StockDetailScreen';
 import TransactionsScreen from '../screens/TransactionsScreen';
 import OrderBookScreen from '../screens/OrderBookScreen';
+import RiskManagementScreen from '../screens/RiskManagementScreen';
 import AuthNavigator from './AuthNavigator';
 import FloatingTabBar from './FloatingTabBar';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
@@ -90,6 +91,7 @@ function AppNavigatorContent() {
             <Stack.Screen name="StockPicker" component={StockPickerScreen} />
             <Stack.Screen name="StockDetail" component={StockDetailScreen} />
             <Stack.Screen name="OrderBook" component={OrderBookScreen} />
+            <Stack.Screen name="RiskManagement" component={RiskManagementScreen} />
           </>
         ) : (
           <Stack.Screen name="Auth" component={AuthNavigator} />

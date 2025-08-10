@@ -52,6 +52,7 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
         { id: 'orders', title: 'Orders', subtitle: 'Manage your orders', icon: 'receipt-outline', type: 'navigation', screen: 'Orders' },
         { id: 'alerts', title: 'Price Alerts', subtitle: 'Manage price notifications', icon: 'alarm-outline', type: 'navigation', screen: 'Alerts' },
         { id: 'balance', title: 'Balance', subtitle: 'Deposit and withdraw funds', icon: 'wallet-outline', type: 'navigation', screen: 'Balance' },
+        { id: 'risk', title: 'Risk Management', subtitle: 'Configure risk parameters', icon: 'shield-outline', type: 'navigation', screen: 'RiskManagement' },
       ]
     },
     {

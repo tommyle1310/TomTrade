@@ -127,6 +127,7 @@ type Mutation {
   signUp(input: SignUpInput!): AuthPayload!
   unbanUser(userId: String!): User!
   updateAvatar(avatarUrl: String!): User!
+  updateRiskConfig(input: UpdateRiskConfigInput!): RiskConfig!
 }
 
 type News {
@@ -204,7 +205,14 @@ type Portfolio {
   ticker: String!
 }
 
+type PositionValidation {
+  isValid: Boolean!
+  maxQuantity: Float
+  message: String
+}
+
 type Query {
+  calculateRecommendedStopLoss(entryPrice: Float!, side: String!, ticker: String!): Float!
   getAllUsers: [User!]!
   getBalance(userId: String!): Float!
   getBollingerBands(interval: Interval! = _1d, period: Float! = 20, stdDev: Float! = 2, ticker: String!): [Float!]!
@@ -215,6 +223,8 @@ type Query {
   getPortfolioSummary: String!
   getPositionPnL(ticker: String!): String!
   getRSI(interval: Interval! = _1d, period: Float! = 14, ticker: String!): [Float!]!
+  getRiskConfig: RiskConfig!
+  getRiskReport: RiskReport!
   getSMA(interval: Interval! = _1d, period: Float! = 20, ticker: String!): [Float!]!
   getStockPosition(ticker: String!): StockPosition
   getTotalPnL: String!
@@ -228,6 +238,30 @@ type Query {
   sayHello: Hello!
   stock(ticker: String!): Stock
   stocks: [Stock!]!
+  validatePortfolioRisk: RiskValidation!
+  validatePositionSize(price: Float!, quantity: Float!, ticker: String!): PositionValidation!
+  validateRiskPerTrade(price: Float!, quantity: Float!, stopLossPrice: Float, ticker: String!): RiskValidation!
+}
+
+type RiskConfig {
+  maxLeverage: Float!
+  maxPortfolioRisk: Float!
+  maxPositionSizePercent: Float!
+  maxRiskPerTrade: Float!
+  stopLossPercent: Float!
+}
+
+type RiskReport {
+  maxPositionSize: Float!
+  portfolioRisk: Float!
+  portfolioValue: Float!
+  riskConfig: RiskConfig!
+}
+
+type RiskValidation {
+  currentRisk: Float
+  isValid: Boolean!
+  message: String
 }
 
 input SellStockInput {
@@ -297,6 +331,14 @@ type Transaction {
 enum TransactionAction {
   BUY
   SELL
+}
+
+input UpdateRiskConfigInput {
+  maxLeverage: Float
+  maxPortfolioRisk: Float
+  maxPositionSizePercent: Float
+  maxRiskPerTrade: Float
+  stopLossPercent: Float
 }
 
 type User {

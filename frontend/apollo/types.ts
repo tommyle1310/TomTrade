@@ -222,3 +222,39 @@ export enum TransactionAction {
   BUY = 'BUY',
   SELL = 'SELL',
 }
+
+// Risk Management Types
+export interface RiskConfig {
+  maxPositionSizePercent: number;
+  maxRiskPerTrade: number;
+  maxPortfolioRisk: number;
+  stopLossPercent: number;
+  maxLeverage: number;
+}
+
+export interface RiskReport {
+  portfolioValue: number;
+  portfolioRisk: number;
+  maxPositionSize: number;
+  riskConfig: RiskConfig;
+}
+
+export interface UpdateRiskConfigInput {
+  maxPositionSizePercent?: number;
+  maxRiskPerTrade?: number;
+  maxPortfolioRisk?: number;
+  stopLossPercent?: number;
+  maxLeverage?: number;
+}
+
+export interface PositionValidation {
+  isValid: boolean;
+  message?: string;
+  maxQuantity?: number;
+}
+
+export interface RiskValidation {
+  isValid: boolean;
+  message?: string;
+  currentRisk?: number;
+}

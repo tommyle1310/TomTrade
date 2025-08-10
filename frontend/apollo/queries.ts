@@ -448,3 +448,102 @@ export const DEMOTE_FROM_ADMIN = gql`
     }
   }
 `;
+
+// Risk Management Queries
+export const GET_RISK_CONFIG = gql`
+  query GetRiskConfig {
+    getRiskConfig {
+      maxPositionSizePercent
+      maxRiskPerTrade
+      maxPortfolioRisk
+      stopLossPercent
+      maxLeverage
+    }
+  }
+`;
+
+export const GET_RISK_REPORT = gql`
+  query GetRiskReport {
+    getRiskReport {
+      portfolioValue
+      portfolioRisk
+      maxPositionSize
+      riskConfig {
+        maxPositionSizePercent
+        maxRiskPerTrade
+        maxPortfolioRisk
+        stopLossPercent
+        maxLeverage
+      }
+    }
+  }
+`;
+
+export const UPDATE_RISK_CONFIG = gql`
+  mutation UpdateRiskConfig($input: UpdateRiskConfigInput!) {
+    updateRiskConfig(input: $input) {
+      maxPositionSizePercent
+      maxRiskPerTrade
+      maxPortfolioRisk
+      stopLossPercent
+      maxLeverage
+    }
+  }
+`;
+
+export const VALIDATE_POSITION_SIZE = gql`
+  query ValidatePositionSize(
+    $ticker: String!
+    $quantity: Float!
+    $price: Float!
+  ) {
+    validatePositionSize(ticker: $ticker, quantity: $quantity, price: $price) {
+      isValid
+      message
+      maxQuantity
+    }
+  }
+`;
+
+export const VALIDATE_RISK_PER_TRADE = gql`
+  query ValidateRiskPerTrade(
+    $ticker: String!
+    $quantity: Float!
+    $price: Float!
+    $stopLossPrice: Float
+  ) {
+    validateRiskPerTrade(
+      ticker: $ticker
+      quantity: $quantity
+      price: $price
+      stopLossPrice: $stopLossPrice
+    ) {
+      isValid
+      message
+    }
+  }
+`;
+
+export const VALIDATE_PORTFOLIO_RISK = gql`
+  query ValidatePortfolioRisk {
+    validatePortfolioRisk {
+      isValid
+      message
+      currentRisk
+    }
+  }
+`;
+
+export const CALCULATE_RECOMMENDED_STOP_LOSS = gql`
+  query CalculateRecommendedStopLoss(
+    $ticker: String!
+    $entryPrice: Float!
+    $side: String!
+  ) {
+    calculateRecommendedStopLoss(
+      ticker: $ticker
+      entryPrice: $entryPrice
+      side: $side
+    )
+  }
+`;

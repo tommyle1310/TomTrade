@@ -25,6 +25,7 @@ import { WatchlistModule } from './watchlist/watchlist.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { AdminModule } from './admin/admin.module';
 import { RedisModule } from './redis/redis.module';
+import { RiskModule } from './risk/risk.module';
 @Module({
   imports: [
     GraphQLModule.forRoot<ApolloDriverConfig>({
@@ -51,6 +52,7 @@ import { RedisModule } from './redis/redis.module';
     WatchlistModule,
     DashboardModule,
     AdminModule,
+    RiskModule,
   ],
   controllers: [AppController],
   providers: [

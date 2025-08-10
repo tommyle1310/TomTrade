@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'prisma/prisma.service';
+import { UpdateRiskConfigInput } from './risk.dto';
 
 export interface RiskConfig {
   maxPositionSizePercent: number; // Max % of portfolio per position
@@ -197,6 +198,29 @@ export class RiskService {
     }
 
     return (totalRisk / portfolioValue) * 100;
+  }
+
+  async updateRiskConfig(
+    userId: string,
+    input: UpdateRiskConfigInput,
+  ): Promise<RiskConfig> {
+    // For now, we'll store in memory or return updated default config
+    // In a real implementation, you'd store this in the database per user
+    const currentConfig = await this.getRiskConfig(userId);
+
+    const updatedConfig: RiskConfig = {
+      maxPositionSizePercent:
+        input.maxPositionSizePercent ?? currentConfig.maxPositionSizePercent,
+      maxRiskPerTrade: input.maxRiskPerTrade ?? currentConfig.maxRiskPerTrade,
+      maxPortfolioRisk:
+        input.maxPortfolioRisk ?? currentConfig.maxPortfolioRisk,
+      stopLossPercent: input.stopLossPercent ?? currentConfig.stopLossPercent,
+      maxLeverage: input.maxLeverage ?? currentConfig.maxLeverage,
+    };
+
+    // TODO: Store in database per user
+    // For now, just return the updated config
+    return updatedConfig;
   }
 
   async getRiskReport(userId: string): Promise<{

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Alert, Button } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@apollo/client';
@@ -401,6 +401,7 @@ export default function StockDetailScreen({ navigation, route }: StockDetailScre
                 ))}
               </View>
             </View>
+            <Button title="View Order Book" onPress={() => navigation.navigate('OrderBook', { ticker })} />
           </View>
         )}
       </ScrollView>
