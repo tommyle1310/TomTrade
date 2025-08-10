@@ -1,6 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'prisma/prisma.service';
-import { CreateAlertRuleInput } from './dto/create-alert-rule.input';
+import {
+  CreateAlertRuleInput,
+  AlertRuleType,
+} from './dto/create-alert-rule.input';
 
 @Injectable()
 export class AlertRuleService {
@@ -37,12 +40,20 @@ export class AlertRuleService {
 
   async checkAndTrigger(ticker: string, price: number) {
     const rules = await this.prisma.alertRule.findMany({ where: { ticker } });
-    const alerts: { userId: string, data: any }[] = [];
+    const alerts: { userId: string; data: any }[] = [];
 
     for (const rule of rules) {
       let triggered = false;
-      if (rule.ruleType === 'PRICE_ABOVE' && price > rule.targetValue) triggered = true;
-      if (rule.ruleType === 'PRICE_BELOW' && price < rule.targetValue) triggered = true;
+      if (
+        rule.ruleType === AlertRuleType.PRICE_ABOVE &&
+        price > rule.targetValue
+      )
+        triggered = true;
+      if (
+        rule.ruleType === AlertRuleType.PRICE_BELOW &&
+        price < rule.targetValue
+      )
+        triggered = true;
 
       if (triggered) {
         const alertSent = await this.prisma.alertSent.create({
@@ -66,5 +77,4 @@ export class AlertRuleService {
 
     return alerts;
   }
-
 }

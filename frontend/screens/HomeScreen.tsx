@@ -79,6 +79,15 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
       color: theme.colors.accent.azure,
       screen: 'Orders',
     },
+    {
+      id: 5,
+      title: 'Order Book',
+      subtitle: 'View market depth & liquidity',
+      icon: 'bar-chart',
+      color: theme.colors.accent.folly,
+      screen: 'OrderBookPicker',
+      fullWidth: true,
+    },
   ];
 
   const handleRefresh = async () => {
@@ -184,13 +193,31 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
             {quickActions.map((action) => (
               <TouchableOpacity
                 key={action.id}
-                style={styles.quickActionCard}
-                onPress={() => navigation.navigate(action.screen)}
+                style={[
+                  styles.quickActionCard,
+                  action.fullWidth && styles.quickActionCardFullWidth
+                ]}
+                onPress={() => {
+                  if (action.screen === 'OrderBookPicker') {
+                    navigation.navigate('StockPicker', {
+                      navigateAfterSelect: false, // Don't go back, let onSelect handle navigation
+                      onSelect: (ticker: string) => {
+                        navigation.navigate('OrderBook', { 
+                          ticker,
+                          companyName: `${ticker} Company`
+                        });
+                      },
+                    });
+                  } else {
+                    navigation.navigate(action.screen);
+                  }
+                }}
               >
                 <View
                   style={[
                     styles.quickActionIcon,
                     { backgroundColor: `${action.color}15` },
+                    action.fullWidth && styles.quickActionIconFullWidth
                   ]}
                 >
                   <Ionicons
@@ -199,10 +226,21 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
                     color={action.color}
                   />
                 </View>
-                <Text style={styles.quickActionTitle}>{action.title}</Text>
-                <Text style={styles.quickActionSubtitle}>
-                  {action.subtitle}
-                </Text>
+                {action.fullWidth ? (
+                  <View style={styles.quickActionTextContainer}>
+                    <Text style={styles.quickActionTitle}>{action.title}</Text>
+                    <Text style={styles.quickActionSubtitle}>
+                      {action.subtitle}
+                    </Text>
+                  </View>
+                ) : (
+                  <>
+                    <Text style={styles.quickActionTitle}>{action.title}</Text>
+                    <Text style={styles.quickActionSubtitle}>
+                      {action.subtitle}
+                    </Text>
+                  </>
+                )}
               </TouchableOpacity>
             ))}
           </View>
@@ -401,6 +439,13 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     alignItems: 'center',
   },
+  quickActionCardFullWidth: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    paddingHorizontal: 20,
+  },
   quickActionIcon: {
     width: 48,
     height: 48,
@@ -408,6 +453,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 12,
+  },
+  quickActionIconFullWidth: {
+    marginBottom: 0,
+    marginRight: 16,
+  },
+  quickActionTextContainer: {
+    flex: 1,
+    alignItems: 'flex-start',
   },
   quickActionTitle: {
     fontSize: 16,

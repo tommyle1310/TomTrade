@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+
+
 import { useQuery, useMutation } from '@apollo/client';
 import { theme } from '../theme';
 import { 
@@ -9,7 +11,7 @@ import {
   CREATE_ALERT_RULE, 
   DELETE_ALERT_RULE 
 } from '../apollo/queries';
-import { AlertRule, CreateAlertRuleInput } from '../apollo/types';
+import { AlertRule, CreateAlertRuleInput, AlertRuleType } from '../apollo/types';
 
 interface AlertsScreenProps {
   navigation: any;
@@ -19,7 +21,7 @@ export default function AlertsScreen({ navigation }: AlertsScreenProps) {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newAlert, setNewAlert] = useState({
     ticker: '',
-    ruleType: 'PRICE_ABOVE',
+    ruleType: AlertRuleType.PRICE_ABOVE,
     targetValue: '',
   });
 
@@ -30,10 +32,10 @@ export default function AlertsScreen({ navigation }: AlertsScreenProps) {
   const alerts = data?.getMyAlertRules || [];
 
   const ruleTypes = [
-    { value: 'PRICE_ABOVE', label: 'Price Above', icon: 'trending-up' },
-    { value: 'PRICE_BELOW', label: 'Price Below', icon: 'trending-down' },
-    { value: 'VOLUME_SPIKE', label: 'Volume Spike', icon: 'bar-chart' },
-    { value: 'PERCENT_CHANGE', label: 'Percent Change', icon: 'analytics' },
+    { value: AlertRuleType.PRICE_ABOVE, label: 'Price Above', icon: 'trending-up' },
+    { value: AlertRuleType.PRICE_BELOW, label: 'Price Below', icon: 'trending-down' },
+    { value: AlertRuleType.VOLUME_SPIKE, label: 'Volume Spike', icon: 'bar-chart' },
+    { value: AlertRuleType.PERCENT_CHANGE, label: 'Percent Change', icon: 'analytics' },
   ];
 
   const handleCreateAlert = async () => {
@@ -54,7 +56,7 @@ export default function AlertsScreen({ navigation }: AlertsScreenProps) {
         refetchQueries: [{ query: GET_MY_ALERT_RULES }],
       });
 
-      setNewAlert({ ticker: '', ruleType: 'PRICE_ABOVE', targetValue: '' });
+      setNewAlert({ ticker: '', ruleType: AlertRuleType.PRICE_ABOVE, targetValue: '' });
       setShowCreateModal(false);
       Alert.alert('Success', 'Alert created successfully');
     } catch (error: any) {
@@ -77,7 +79,7 @@ export default function AlertsScreen({ navigation }: AlertsScreenProps) {
                 variables: { id: alertId },
                 refetchQueries: [{ query: GET_MY_ALERT_RULES }],
               });
-              Alert.alert('Success', 'Alert deleted accent.avocadofully');
+              Alert.alert('Success', 'Alert deleted successfully');
             } catch (error: any) {
               Alert.alert('Error', error.message || 'Failed to delete alert');
             }
@@ -110,13 +112,13 @@ export default function AlertsScreen({ navigation }: AlertsScreenProps) {
   const getRuleDescription = (alert: AlertRule) => {
     const ruleInfo = getRuleTypeInfo(alert.ruleType);
     switch (alert.ruleType) {
-      case 'PRICE_ABOVE':
+      case AlertRuleType.PRICE_ABOVE:
         return `Alert when price goes above ${formatCurrency(alert.targetValue)}`;
-      case 'PRICE_BELOW':
+      case AlertRuleType.PRICE_BELOW:
         return `Alert when price goes below ${formatCurrency(alert.targetValue)}`;
-      case 'VOLUME_SPIKE':
+      case AlertRuleType.VOLUME_SPIKE:
         return `Alert when volume spikes above ${alert.targetValue}x average`;
-      case 'PERCENT_CHANGE':
+      case AlertRuleType.PERCENT_CHANGE:
         return `Alert when price changes by ${alert.targetValue}%`;
       default:
         return `Alert when ${ruleInfo.label.toLowerCase()} reaches ${alert.targetValue}`;
@@ -132,76 +134,89 @@ export default function AlertsScreen({ navigation }: AlertsScreenProps) {
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Price Alerts</Text>
         <TouchableOpacity onPress={() => setShowCreateModal(true)}>
-          <Ionicons name="add" size={24} color={theme.colors.primary} />
+          <Ionicons name="add" size={24} color={theme.colors.text.primary} />
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.content}>
+      <ScrollView 
+        style={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Active Alerts */}
         {alerts.length > 0 ? (
           alerts.map((alert) => {
             const ruleInfo = getRuleTypeInfo(alert.ruleType);
             return (
               <View key={alert.id} style={styles.alertCard}>
-                <View style={styles.alertHeader}>
-                  <View style={styles.alertTitleContainer}>
-                    <View style={[styles.alertIcon, { backgroundColor: `${theme.colors.primary}15` }]}>
-                      <Ionicons name={ruleInfo.icon as any} size={20} color={theme.colors.primary} />
+                  <View style={styles.alertHeader}>
+                    <View style={styles.alertTitleContainer}>
+                      <View style={[styles.alertIcon, { backgroundColor: `${ruleInfo.value === AlertRuleType.PRICE_ABOVE ? '#4ECDC4' : ruleInfo.value === AlertRuleType.PRICE_BELOW ? '#FF6B6B' : '#FFD93D'}20` }]}>
+                        <Ionicons 
+                          name={ruleInfo.icon as any} 
+                          size={24} 
+                          color={ruleInfo.value === AlertRuleType.PRICE_ABOVE ? '#4ECDC4' : ruleInfo.value === AlertRuleType.PRICE_BELOW ? '#FF6B6B' : '#FFD93D'} 
+                        />
+                      </View>
+                      <View style={styles.alertInfo}>
+                        <Text style={styles.alertTicker}>{alert.ticker}</Text>
+                        <Text style={styles.alertType}>{ruleInfo.label}</Text>
+                      </View>
                     </View>
-                    <View style={styles.alertInfo}>
-                      <Text style={styles.alertTicker}>{alert.ticker}</Text>
-                      <Text style={styles.alertType}>{ruleInfo.label}</Text>
+                    
+                    <TouchableOpacity
+                      style={styles.deleteButton}
+                      onPress={() => handleDeleteAlert(alert.id, alert.ticker)}
+                      disabled={deleting}
+                    >
+                      <View style={styles.deleteIconContainer}>
+                        <Ionicons name="trash-outline" size={20} color="#FF6B6B" />
+                      </View>
+                    </TouchableOpacity>
+                  </View>
+
+                  <View style={styles.alertDetails}>
+                    <Text style={styles.alertDescription}>
+                      {getRuleDescription(alert)}
+                    </Text>
+                    <Text style={styles.alertDate}>
+                      Created {formatDate(alert.createdAt)}
+                    </Text>
+                  </View>
+
+                  <View style={styles.alertFooter}>
+                    <View style={styles.alertStatus}>
+                      <View style={styles.statusIndicator} />
+                      <Text style={styles.statusText}>Active</Text>
                     </View>
+                    <TouchableOpacity 
+                      style={styles.editButton}
+                      onPress={() => navigation.navigate('StockDetail', { ticker: alert.ticker })}
+                    >
+                      <Text style={styles.editButtonText}>View Stock</Text>
+                    </TouchableOpacity>
                   </View>
-                  
-                  <TouchableOpacity
-                    style={styles.deleteButton}
-                    onPress={() => handleDeleteAlert(alert.id, alert.ticker)}
-                    disabled={deleting}
-                  >
-                    <Ionicons name="trash-outline" size={20} color={theme.colors.accent.folly} />
-                  </TouchableOpacity>
-                </View>
-
-                <View style={styles.alertDetails}>
-                  <Text style={styles.alertDescription}>
-                    {getRuleDescription(alert)}
-                  </Text>
-                  <Text style={styles.alertDate}>
-                    Created {formatDate(alert.createdAt)}
-                  </Text>
-                </View>
-
-                <View style={styles.alertFooter}>
-                  <View style={styles.alertStatus}>
-                    <View style={styles.statusIndicator} />
-                    <Text style={styles.statusText}>Active</Text>
-                  </View>
-                  <TouchableOpacity 
-                    style={styles.editButton}
-                    onPress={() => navigation.navigate('StockDetail', { ticker: alert.ticker })}
-                  >
-                    <Text style={styles.editButtonText}>View Stock</Text>
-                  </TouchableOpacity>
-                </View>
               </View>
             );
           })
         ) : (
           <View style={styles.emptyState}>
-            <Ionicons name="notifications-outline" size={64} color={theme.colors.text.secondary} />
-            <Text style={styles.emptyStateTitle}>No Alerts Set</Text>
-            <Text style={styles.emptyStateText}>
-              Create price alerts to get notified when your stocks hit target prices
-            </Text>
-            <TouchableOpacity 
-              style={styles.createFirstButton}
-              onPress={() => setShowCreateModal(true)}
-            >
-              <Text style={styles.createFirstButtonText}>Create Alert</Text>
-            </TouchableOpacity>
+            <View style={styles.emptyStateCard}>
+              <Ionicons name="notifications-outline" size={64} color={theme.colors.text.secondary} />
+              <Text style={styles.emptyStateTitle}>No Alerts Set</Text>
+              <Text style={styles.emptyStateText}>
+                Create price alerts to get notified when your stocks hit target prices
+              </Text>
+              <TouchableOpacity 
+                style={styles.createFirstButton}
+                onPress={() => setShowCreateModal(true)}
+              >
+                <Text style={styles.createFirstButtonText}>Create Alert</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         )}
+        
+        <View style={styles.bottomSpacing} />
       </ScrollView>
 
       {/* Create Alert Modal */}
@@ -233,14 +248,29 @@ export default function AlertsScreen({ navigation }: AlertsScreenProps) {
             {/* Stock Symbol */}
             <View style={styles.inputSection}>
               <Text style={styles.inputLabel}>Stock Symbol</Text>
-              <TextInput
-                style={styles.textInput}
-                placeholder="e.g., AAPL"
-                placeholderTextColor={theme.colors.text.secondary}
-                value={newAlert.ticker}
-                onChangeText={(text) => setNewAlert({ ...newAlert, ticker: text.toUpperCase() })}
-                autoCapitalize="characters"
-              />
+              <View style={styles.stockInputContainer}>
+                <TextInput
+                  style={[styles.textInput, styles.stockInput]}
+                  placeholder="e.g., AAPL"
+                  placeholderTextColor={theme.colors.text.secondary}
+                  value={newAlert.ticker}
+                  onChangeText={(text) => setNewAlert({ ...newAlert, ticker: text.toUpperCase() })}
+                  autoCapitalize="characters"
+                />
+                <TouchableOpacity
+                  style={styles.stockPickerButton}
+                  onPress={() => {
+                    navigation.navigate('StockPicker', {
+                      onSelect: (ticker: string) => {
+                        setNewAlert({ ...newAlert, ticker });
+                      },
+                    });
+                  }}
+                >
+                  <Ionicons name="search" size={20} color={theme.colors.primary} />
+                  <Text style={styles.stockPickerButtonText}>Browse</Text>
+                </TouchableOpacity>
+              </View>
             </View>
 
             {/* Alert Type */}
@@ -340,14 +370,16 @@ const styles = StyleSheet.create({
   alertCard: {
     backgroundColor: theme.colors.background.secondary,
     borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    padding: 20,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: theme.colors.border.primary,
   },
   alertHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 12,
+    marginBottom: 16,
   },
   alertTitleContainer: {
     flexDirection: 'row',
@@ -355,39 +387,49 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   alertIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 16,
   },
   alertInfo: {
     flex: 1,
   },
   alertTicker: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: theme.colors.text.primary,
-    marginBottom: 2,
-  },
-  alertType: {
-    fontSize: 12,
-    color: theme.colors.text.secondary,
-  },
-  deleteButton: {
-    padding: 8,
-  },
-  alertDetails: {
-    marginBottom: 12,
-  },
-  alertDescription: {
-    fontSize: 14,
+    fontSize: 20,
+    fontWeight: '700',
     color: theme.colors.text.primary,
     marginBottom: 4,
   },
+  alertType: {
+    fontSize: 14,
+    color: theme.colors.text.secondary,
+    fontWeight: '500',
+  },
+  deleteButton: {
+    padding: 4,
+  },
+  deleteIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: `${theme.colors.accent.folly}20`,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  alertDetails: {
+    marginBottom: 16,
+  },
+  alertDescription: {
+    fontSize: 16,
+    color: theme.colors.text.primary,
+    marginBottom: 8,
+    lineHeight: 22,
+  },
   alertDate: {
-    fontSize: 12,
+    fontSize: 14,
     color: theme.colors.text.secondary,
   },
   alertFooter: {
@@ -400,58 +442,71 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   statusIndicator: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
     backgroundColor: theme.colors.accent.avocado,
-    marginRight: 6,
+    marginRight: 8,
   },
   statusText: {
-    fontSize: 12,
+    fontSize: 14,
     color: theme.colors.accent.avocado,
     fontWeight: '600',
   },
   editButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: theme.colors.primary,
+    backgroundColor: theme.colors.primary,
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
   },
   editButtonText: {
-    fontSize: 12,
-    color: theme.colors.primary,
+    fontSize: 14,
+    color: 'white',
     fontWeight: '600',
   },
   emptyState: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 60,
   },
+  emptyStateCard: {
+    backgroundColor: theme.colors.background.secondary,
+    borderRadius: 12,
+    padding: 40,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: theme.colors.border.primary,
+    maxWidth: '90%',
+  },
   emptyStateTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
+    fontWeight: '600',
     color: theme.colors.text.primary,
-    marginTop: 16,
-    marginBottom: 8,
+    marginTop: 20,
+    marginBottom: 12,
+    textAlign: 'center',
   },
   emptyStateText: {
     fontSize: 16,
     color: theme.colors.text.secondary,
     textAlign: 'center',
-    marginBottom: 24,
-    paddingHorizontal: 20,
+    marginBottom: 32,
+    lineHeight: 24,
   },
   createFirstButton: {
     backgroundColor: theme.colors.primary,
-    borderRadius: 12,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
+    borderRadius: 8,
+    paddingHorizontal: 32,
+    paddingVertical: 16,
   },
   createFirstButtonText: {
     fontSize: 16,
     fontWeight: '600',
     color: 'white',
+  },
+  bottomSpacing: {
+    height: 40,
   },
   modalContainer: {
     flex: 1,
@@ -505,6 +560,30 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 16,
     color: theme.colors.text.primary,
+  },
+  stockInputContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'center',
+  },
+  stockInput: {
+    flex: 1,
+  },
+  stockPickerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.background.secondary,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 6,
+  },
+  stockPickerButtonText: {
+    fontSize: 14,
+    color: theme.colors.primary,
+    fontWeight: '600',
   },
   ruleTypeOption: {
     flexDirection: 'row',

@@ -9,18 +9,14 @@ import {
   TextInput,
   Alert,
   ActivityIndicator,
-  Dimensions,
-  StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
 import { theme } from '../theme';
 import { useRiskStore } from '../stores';
 import { UpdateRiskConfigInput } from '../apollo/types';
 
-const { width, height } = Dimensions.get('window');
+
 
 interface RiskManagementScreenProps {
   navigation: any;
@@ -169,48 +165,24 @@ export default function RiskManagementScreen({ navigation }: RiskManagementScree
   );
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
-      
-      {/* Gradient Background */}
-      {/* <LinearGradient
-        colors={[theme.colors.surface.primary, theme.colors.primaryDark]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.gradientBackground}
-      /> */}
-
-      <SafeAreaView style={styles.safeArea}>
-        {/* Modern Header */}
-        <BlurView intensity={20} tint="light" style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-          >
-            <View style={styles.iconContainer}>
-              <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
-            </View>
-          </TouchableOpacity>
-          
-          <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle}>Risk Management</Text>
-            <Text style={styles.headerSubtitle}>Protect your portfolio</Text>
-          </View>
-          
-          <TouchableOpacity
-            style={styles.editButton}
-            onPress={isEditing ? handleCancel : handleEdit}
-            disabled={updateLoading}
-          >
-            <View style={[styles.iconContainer, isEditing && styles.editingIcon]}>
-              <Ionicons 
-                name={isEditing ? "close" : "create-outline"} 
-                size={24} 
-                color="#FFFFFF" 
-              />
-            </View>
-          </TouchableOpacity>
-        </BlurView>
+    <SafeAreaView style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Ionicons name="chevron-back" size={24} color={theme.colors.text.primary} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Risk Management</Text>
+        <TouchableOpacity
+          onPress={isEditing ? handleCancel : handleEdit}
+          disabled={updateLoading}
+        >
+          <Ionicons 
+            name={isEditing ? "close" : "create-outline"} 
+            size={24} 
+            color={theme.colors.text.primary} 
+          />
+        </TouchableOpacity>
+      </View>
 
         <ScrollView
           style={styles.content}
@@ -227,10 +199,10 @@ export default function RiskManagementScreen({ navigation }: RiskManagementScree
           {/* Error Message */}
           {error && (
             <View style={styles.errorContainer}>
-              <BlurView intensity={40} tint="light" style={styles.errorBlur}>
-                <Ionicons name="warning" size={24} color="#FF6B6B" />
+              <View style={styles.errorCard}>
+                <Ionicons name="warning" size={24} color={theme.colors.accent.folly} />
                 <Text style={styles.errorText}>{error}</Text>
-              </BlurView>
+              </View>
             </View>
           )}
 
@@ -241,57 +213,49 @@ export default function RiskManagementScreen({ navigation }: RiskManagementScree
               
               <View style={styles.overviewGrid}>
                 <View style={styles.overviewCard}>
-                  <BlurView intensity={40} tint="light" style={styles.cardBlur}>
-                    <View style={styles.cardIcon}>
-                      <Ionicons name="wallet" size={28} color="#4ECDC4" />
-                    </View>
-                    <Text style={styles.cardLabel}>Portfolio Value</Text>
-                    <Text style={styles.cardValue}>
-                      {formatCurrency(riskReport.portfolioValue)}
-                    </Text>
-                  </BlurView>
+                  <View style={styles.cardIcon}>
+                    <Ionicons name="wallet" size={28} color={theme.colors.primary} />
+                  </View>
+                  <Text style={styles.cardLabel}>Portfolio Value</Text>
+                  <Text style={styles.cardValue}>
+                    {formatCurrency(riskReport.portfolioValue)}
+                  </Text>
                 </View>
                 
                 <View style={styles.overviewCard}>
-                  <BlurView intensity={40} tint="light" style={styles.cardBlur}>
-                    <View style={styles.cardIcon}>
-                      <Ionicons name="speedometer" size={28} color={getRiskColor(riskReport.portfolioRisk, riskReport.riskConfig.maxPortfolioRisk)} />
-                    </View>
-                    <Text style={styles.cardLabel}>Current Risk</Text>
-                    <Text style={[
-                      styles.cardValue,
-                      { color: getRiskColor(riskReport.portfolioRisk, riskReport.riskConfig.maxPortfolioRisk) }
-                    ]}>
-                      {formatPercentage(riskReport.portfolioRisk)}
-                    </Text>
-                  </BlurView>
+                  <View style={styles.cardIcon}>
+                    <Ionicons name="speedometer" size={28} color={getRiskColor(riskReport.portfolioRisk, riskReport.riskConfig.maxPortfolioRisk)} />
+                  </View>
+                  <Text style={styles.cardLabel}>Current Risk</Text>
+                  <Text style={[
+                    styles.cardValue,
+                    { color: getRiskColor(riskReport.portfolioRisk, riskReport.riskConfig.maxPortfolioRisk) }
+                  ]}>
+                    {formatPercentage(riskReport.portfolioRisk)}
+                  </Text>
                 </View>
                 
                 <View style={styles.overviewCard}>
-                  <BlurView intensity={40} tint="light" style={styles.cardBlur}>
-                    <View style={styles.cardIcon}>
-                      <Ionicons name="resize" size={28} color="#FFD93D" />
-                    </View>
-                    <Text style={styles.cardLabel}>Max Position</Text>
-                    <Text style={styles.cardValue}>
-                      {formatCurrency(riskReport.maxPositionSize)}
-                    </Text>
-                  </BlurView>
+                  <View style={styles.cardIcon}>
+                    <Ionicons name="resize" size={28} color={theme.colors.accent.gamboge} />
+                  </View>
+                  <Text style={styles.cardLabel}>Max Position</Text>
+                  <Text style={styles.cardValue}>
+                    {formatCurrency(riskReport.maxPositionSize)}
+                  </Text>
                 </View>
                 
                 <View style={styles.overviewCard}>
-                  <BlurView intensity={40} tint="light" style={styles.cardBlur}>
-                    <View style={styles.cardIcon}>
-                      <Ionicons name="analytics" size={28} color="#FF6B6B" />
-                    </View>
-                    <Text style={styles.cardLabel}>Risk Usage</Text>
-                    <Text style={[
-                      styles.cardValue,
-                      { color: getRiskColor(riskReport.portfolioRisk, riskReport.riskConfig.maxPortfolioRisk) }
-                    ]}>
-                      {formatPercentage((riskReport.portfolioRisk / riskReport.riskConfig.maxPortfolioRisk) * 100)}
-                    </Text>
-                  </BlurView>
+                  <View style={styles.cardIcon}>
+                    <Ionicons name="analytics" size={28} color={theme.colors.accent.folly} />
+                  </View>
+                  <Text style={styles.cardLabel}>Risk Usage</Text>
+                  <Text style={[
+                    styles.cardValue,
+                    { color: getRiskColor(riskReport.portfolioRisk, riskReport.riskConfig.maxPortfolioRisk) }
+                  ]}>
+                    {formatPercentage((riskReport.portfolioRisk / riskReport.riskConfig.maxPortfolioRisk) * 100)}
+                  </Text>
                 </View>
               </View>
             </View>
@@ -308,24 +272,19 @@ export default function RiskManagementScreen({ navigation }: RiskManagementScree
                     onPress={handleSave}
                     disabled={updateLoading}
                   >
-                    <LinearGradient
-                      colors={['#4ECDC4', '#44A08D']}
-                      style={styles.saveGradient}
-                    >
-                      {updateLoading ? (
-                        <ActivityIndicator size="small" color="#FFFFFF" />
-                      ) : (
-                        <>
-                          <Ionicons name="checkmark" size={18} color="#FFFFFF" />
-                          <Text style={styles.saveButtonText}>Save</Text>
-                        </>
-                      )}
-                    </LinearGradient>
+                    {updateLoading ? (
+                      <ActivityIndicator size="small" color="white" />
+                    ) : (
+                      <>
+                        <Ionicons name="checkmark" size={18} color="white" />
+                        <Text style={styles.saveButtonText}>Save</Text>
+                      </>
+                    )}
                   </TouchableOpacity>
                 )}
               </View>
 
-              <BlurView intensity={40} tint="light" style={styles.configContainer}>
+              <View style={styles.configContainer}>
                 {renderConfigItem(
                   'Max Position Size',
                   riskConfig.maxPositionSizePercent,
@@ -365,14 +324,14 @@ export default function RiskManagementScreen({ navigation }: RiskManagementScree
                   'x',
                   'layers-outline'
                 )}
-              </BlurView>
+              </View>
             </View>
           )}
 
           {/* Risk Guidelines */}
           <View style={styles.guidelinesSection}>
             <Text style={styles.sectionTitle}>Risk Guidelines</Text>
-            <BlurView intensity={40} tint="light" style={styles.guidelinesContainer}>
+            <View style={styles.guidelinesContainer}>
               {[
                 { icon: 'shield-checkmark', color: '#4ECDC4', text: `Keep portfolio risk below ${riskConfig?.maxPortfolioRisk || 20}%` },
                 { icon: 'trending-down', color: '#FFD93D', text: 'Use stop losses to limit downside risk' },
@@ -386,103 +345,65 @@ export default function RiskManagementScreen({ navigation }: RiskManagementScree
                   <Text style={styles.guidelineText}>{guideline.text}</Text>
                 </View>
               ))}
-            </BlurView>
+            </View>
           </View>
 
           <View style={styles.bottomSpacing} />
         </ScrollView>
-      </SafeAreaView>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
-  },
-  gradientBackground: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: 0,
-    bottom: 0,
-  },
-  safeArea: {
-    flex: 1,
+    backgroundColor: theme.colors.background.primary,
   },
   header: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 16,
-    borderRadius: 0,
-    overflow: 'hidden',
-  },
-  backButton: {
-    zIndex: 1,
-  },
-  iconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backdropFilter: 'blur(10px)',
-  },
-  editingIcon: {
-    backgroundColor: 'rgba(255,107,107,0.3)',
-  },
-  headerCenter: {
-    flex: 1,
-    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border.primary,
   },
   headerTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    textAlign: 'center',
-  },
-  headerSubtitle: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.8)',
-    marginTop: 2,
-  },
-  editButton: {
-    zIndex: 1,
+    fontSize: 18,
+    fontWeight: '600',
+    color: theme.colors.text.primary,
   },
   content: {
     flex: 1,
-    paddingHorizontal: 20,
+    padding: 20,
   },
   errorContainer: {
-    marginVertical: 16,
+    marginBottom: 16,
   },
-  errorBlur: {
+  errorCard: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: theme.colors.background.secondary,
+    borderRadius: 12,
     padding: 16,
-    borderRadius: 16,
     gap: 12,
-    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: theme.colors.accent.folly,
   },
   errorText: {
-    color: '#FF6B6B',
+    color: theme.colors.accent.folly,
     fontSize: 14,
     fontWeight: '500',
     flex: 1,
   },
   overviewSection: {
-    marginTop: 20,
+    marginBottom: 24,
   },
   sectionTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    color: theme.colors.text.primary,
     marginBottom: 16,
-    textAlign: 'center',
   },
   overviewGrid: {
     flexDirection: 'row',
@@ -491,39 +412,39 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   overviewCard: {
-    width: (width - 52) / 2,
-    height: 120,
-  },
-  cardBlur: {
     flex: 1,
-    borderRadius: 20,
+    minWidth: '45%',
+    backgroundColor: theme.colors.background.secondary,
+    borderRadius: 12,
     padding: 16,
-    overflow: 'hidden',
-    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: theme.colors.border.primary,
+    alignItems: 'center',
   },
   cardIcon: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: `${theme.colors.primary}15`,
     alignItems: 'center',
     justifyContent: 'center',
-    alignSelf: 'flex-start',
+    marginBottom: 12,
   },
   cardLabel: {
     fontSize: 12,
-    color: 'rgba(255,255,255,0.8)',
+    color: theme.colors.text.secondary,
     fontWeight: '500',
-    marginTop: 8,
+    marginBottom: 4,
+    textAlign: 'center',
   },
   cardValue: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    marginTop: 4,
+    fontSize: 16,
+    fontWeight: '600',
+    color: theme.colors.text.primary,
+    textAlign: 'center',
   },
   configSection: {
-    marginTop: 32,
+    marginBottom: 24,
   },
   configHeader: {
     flexDirection: 'row',
@@ -532,25 +453,25 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   saveButton: {
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  saveGradient: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: theme.colors.primary,
+    borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 10,
     gap: 6,
   },
   saveButtonText: {
-    color: '#FFFFFF',
+    color: 'white',
     fontSize: 14,
     fontWeight: '600',
   },
   configContainer: {
-    borderRadius: 20,
+    backgroundColor: theme.colors.background.secondary,
+    borderRadius: 12,
     padding: 20,
-    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: theme.colors.border.primary,
     gap: 20,
   },
   configItem: {
@@ -568,7 +489,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: 'rgba(102,126,234,0.2)',
+    backgroundColor: `${theme.colors.primary}15`,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -578,11 +499,11 @@ const styles = StyleSheet.create({
   configLabel: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: theme.colors.text.primary,
   },
   configDescription: {
     fontSize: 12,
-    color: 'rgba(255,255,255,0.6)',
+    color: theme.colors.text.secondary,
     marginTop: 2,
   },
   configRight: {
@@ -591,8 +512,10 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 12,
+    backgroundColor: theme.colors.background.primary,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: theme.colors.border.primary,
     paddingHorizontal: 12,
     paddingVertical: 8,
     gap: 4,
@@ -600,13 +523,13 @@ const styles = StyleSheet.create({
   configInput: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: theme.colors.text.primary,
     textAlign: 'right',
     minWidth: 40,
   },
   inputSuffix: {
     fontSize: 14,
-    color: 'rgba(255,255,255,0.7)',
+    color: theme.colors.text.secondary,
     fontWeight: '500',
   },
   valueContainer: {
@@ -615,23 +538,24 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   configValue: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#4ECDC4',
+    fontSize: 16,
+    fontWeight: '600',
+    color: theme.colors.primary,
   },
   valueSuffix: {
     fontSize: 14,
-    color: 'rgba(255,255,255,0.7)',
+    color: theme.colors.text.secondary,
     fontWeight: '500',
   },
   guidelinesSection: {
-    marginTop: 32,
     marginBottom: 20,
   },
   guidelinesContainer: {
-    borderRadius: 20,
+    backgroundColor: theme.colors.background.secondary,
+    borderRadius: 12,
     padding: 20,
-    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: theme.colors.border.primary,
     gap: 16,
   },
   guidelineItem: {
@@ -648,7 +572,7 @@ const styles = StyleSheet.create({
   },
   guidelineText: {
     fontSize: 14,
-    color: '#FFFFFF',
+    color: theme.colors.text.primary,
     fontWeight: '500',
     flex: 1,
     lineHeight: 20,

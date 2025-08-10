@@ -236,7 +236,7 @@ export default function TradingScreen({ navigation, route }: TradingScreenProps)
                     </View>
                   </View>
 
-                  <View style={styles.marketSparkline}>{renderBars(s.marketData || [])}</View>
+                  {/* <View style={styles.marketSparkline}>{renderBars(s.marketData || [])}</View> */}
 
                   <View style={styles.marketRight}>
                     <Text style={styles.marketPrice}>{formatCurrency(s.last || 0)}</Text>
@@ -502,7 +502,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   activeTab: {
-    backgroundColor: theme.colors.primary,
+    backgroundColor: theme.colors.text.primary,
   },
   tabText: {
     color: theme.colors.text.secondary,

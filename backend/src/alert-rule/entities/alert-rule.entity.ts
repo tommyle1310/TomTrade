@@ -1,4 +1,5 @@
 import { ObjectType, Field, ID, Float } from '@nestjs/graphql';
+import { AlertRuleType } from '../dto/create-alert-rule.input';
 
 @ObjectType()
 export class AlertRule {
@@ -8,8 +9,8 @@ export class AlertRule {
   @Field()
   ticker: string;
 
-  @Field()
-  ruleType: string;
+  @Field(() => AlertRuleType)
+  ruleType: AlertRuleType;
 
   @Field(() => Float)
   targetValue: number;

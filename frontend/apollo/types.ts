@@ -171,17 +171,24 @@ export interface AddStockToWatchlistInput {
   ticker: string;
 }
 
+export enum AlertRuleType {
+  PRICE_ABOVE = 'PRICE_ABOVE',
+  PRICE_BELOW = 'PRICE_BELOW',
+  VOLUME_SPIKE = 'VOLUME_SPIKE',
+  PERCENT_CHANGE = 'PERCENT_CHANGE',
+}
+
 export interface AlertRule {
   id: string;
   ticker: string;
-  ruleType: string;
+  ruleType: AlertRuleType;
   targetValue: number;
   createdAt: string;
 }
 
 export interface CreateAlertRuleInput {
   ticker: string;
-  ruleType: string;
+  ruleType: AlertRuleType;
   targetValue: number;
 }
 

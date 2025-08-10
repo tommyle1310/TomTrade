@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Alert, Button } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@apollo/client';
@@ -401,7 +401,13 @@ export default function StockDetailScreen({ navigation, route }: StockDetailScre
                 ))}
               </View>
             </View>
-            <Button title="View Order Book" onPress={() => navigation.navigate('OrderBook', { ticker })} />
+            <TouchableOpacity 
+              style={styles.orderBookButton}
+              onPress={() => navigation.navigate('OrderBook', { ticker, companyName: stock?.companyName })}
+            >
+              <Ionicons name="bar-chart" size={20} color="white" />
+              <Text style={styles.orderBookButtonText}>View Full Order Book</Text>
+            </TouchableOpacity>
           </View>
         )}
       </ScrollView>
@@ -752,6 +758,22 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.accent.folly,
   },
   actionButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: 'white',
+  },
+  orderBookButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.primary,
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    marginTop: 16,
+    gap: 8,
+  },
+  orderBookButtonText: {
     fontSize: 16,
     fontWeight: '600',
     color: 'white',

@@ -10,9 +10,17 @@ input AddStockToWatchlistInput {
 type AlertRule {
   createdAt: DateTime!
   id: ID!
-  ruleType: String!
+  ruleType: AlertRuleType!
   targetValue: Float!
   ticker: String!
+}
+
+"""The type of alert rule"""
+enum AlertRuleType {
+  PERCENT_CHANGE
+  PRICE_ABOVE
+  PRICE_BELOW
+  VOLUME_SPIKE
 }
 
 type AuthPayload {
@@ -32,7 +40,7 @@ type BuyStockPayload {
 }
 
 input CreateAlertRuleInput {
-  ruleType: String!
+  ruleType: AlertRuleType!
   targetValue: Float!
   ticker: String!
 }

@@ -13,6 +13,7 @@ interface StockPickerScreenProps {
   route: {
     params: {
       onSelect: (ticker: string) => void;
+      navigateAfterSelect?: boolean; // Optional flag to control navigation behavior
     };
   };
 }
@@ -22,7 +23,7 @@ export default function StockPickerScreen({ navigation, route }: StockPickerScre
   const [selectedSector, setSelectedSector] = useState<string | null>(null);
 
   const { data, loading, refetch } = useQuery<{stocks: Stock[]}>(GET_STOCKS);
-  const { onSelect } = route.params;
+  const { onSelect, navigateAfterSelect = true } = route.params;
 
   const stocks = data?.stocks || [];
 
@@ -47,7 +48,10 @@ export default function StockPickerScreen({ navigation, route }: StockPickerScre
 
   const handleSelectStock = (ticker: string) => {
     onSelect(ticker);
-    navigation.goBack();
+    if (navigateAfterSelect) {
+      navigation.goBack();
+    }
+    // If navigateAfterSelect is false, the onSelect callback handles navigation
   };
 
   const clearFilters = () => {
@@ -124,7 +128,7 @@ export default function StockPickerScreen({ navigation, route }: StockPickerScre
                 styles.sectorChip,
                 selectedSector === sector && styles.selectedSectorChip,
               ]}
-              onPress={() => setSelectedSector(sector)}
+              onPress={() => setSelectedSector(sector || null)}
             >
               <Text style={[
                 styles.sectorChipText,
