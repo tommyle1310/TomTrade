@@ -26,6 +26,8 @@ import { DashboardModule } from './dashboard/dashboard.module';
 import { AdminModule } from './admin/admin.module';
 import { RedisModule } from './redis/redis.module';
 import { RiskModule } from './risk/risk.module';
+import { TestGateway } from './common/gateway/test/test.gateway';
+import { StockGateway } from './common/gateway/stock/stock.gateway';
 @Module({
   imports: [
     GraphQLModule.forRoot<ApolloDriverConfig>({
@@ -61,6 +63,8 @@ import { RiskModule } from './risk/risk.module';
     ConfigService,
     JwtService,
     SocketService,
+    TestGateway,
+    StockGateway,
   ],
   exports: [],
 })

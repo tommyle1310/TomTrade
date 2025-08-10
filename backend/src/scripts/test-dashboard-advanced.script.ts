@@ -74,7 +74,7 @@ async function testDashboardAdvanced() {
       prisma,
       new PortfolioService(prisma),
       new TransactionService(prisma, new PortfolioService(prisma)),
-      new StockService(prisma, null as any),
+      new StockService(prisma, null as any, null as any),
       new BalanceService(prisma),
     );
 
@@ -178,7 +178,7 @@ async function testDashboardAdvanced() {
       prisma,
       new PortfolioService(prisma),
       new TransactionService(prisma, new PortfolioService(prisma)),
-      new StockService(prisma, null as any),
+      new StockService(prisma, null as any, null as any),
       new BalanceService(prisma),
     );
 
@@ -275,7 +275,7 @@ async function testDashboardAdvanced() {
       prisma,
       new PortfolioService(prisma),
       new TransactionService(prisma, new PortfolioService(prisma)),
-      new StockService(prisma, null as any),
+      new StockService(prisma, null as any, null as any),
       new BalanceService(prisma),
     );
 

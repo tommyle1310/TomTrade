@@ -7,17 +7,25 @@ export class AppController {
 
   @Get()
   getHello(): string {
-    const instanceId = process.env.INSTANCE_ID || 'unknown';
-    return `${this.appService.getHello()} - Served by: ${instanceId}`;
+    return this.appService.getHello();
   }
 
   @Get('health')
-  getHealth(): object {
-    const instanceId = process.env.INSTANCE_ID || 'unknown';
+  getHealth() {
     return {
       status: 'ok',
-      instance: instanceId,
       timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      environment: process.env.NODE_ENV || 'development',
+    };
+  }
+
+  @Get('socket-test')
+  getSocketTest() {
+    return {
+      message: 'Socket.IO server should be running',
+      timestamp: new Date().toISOString(),
+      note: 'Check the console logs for Socket.IO initialization',
     };
   }
 }

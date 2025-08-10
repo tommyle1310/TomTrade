@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,6 +7,8 @@ import { spacing, theme } from '../theme';
 import { PLACE_ORDER, PLACE_STOP_ORDER, GET_MY_BALANCE, GET_STOCKS_WITH_MARKET, MY_ORDERS, MY_WATCHLISTS, GET_DASHBOARD } from '../apollo/queries';
 import { OrderSide, OrderType, TimeInForce, PlaceOrderInput, PlaceStopOrderInput } from '../apollo/types';
 import { usePortfolioStore } from '../stores';
+import { useSocket, OrderNotification } from '../hooks/useSocket';
+import { testSocketConnection } from '../utils/socketTest';
 
 interface TradingScreenProps {
   navigation: any;
@@ -45,6 +47,35 @@ export default function TradingScreen({ navigation, route }: TradingScreenProps)
   const { fetchBalance, fetchDashboard, fetchOrders } = usePortfolioStore();
 
   const balance = balanceData?.getMyBalance || 0;
+
+  // Socket event handlers
+  const handleOrderNotification = useCallback((data: OrderNotification) => {
+    const typeText = data.type === 'ORDER_FILLED' ? 'filled' : 
+                     data.type === 'ORDER_PARTIAL' ? 'partially filled' : 'cancelled';
+    
+    Alert.alert(
+      'Order Update',
+      `Your ${data.side} order for ${data.quantity} shares of ${data.ticker} has been ${typeText} at $${data.price}`,
+      [
+        { 
+          text: 'View Orders', 
+          onPress: () => navigation.navigate('Orders') 
+        },
+        { text: 'OK' }
+      ]
+    );
+    
+    // Refresh data after order notification
+    fetchDashboard();
+    fetchBalance();
+    fetchOrders();
+  }, [navigation, fetchDashboard, fetchBalance, fetchOrders]);
+
+  // Initialize socket connection for order notifications
+  const { isConnected } = useSocket({
+    onOrderNotification: handleOrderNotification,
+    autoConnect: true,
+  });
 
   // Handle prefilled data from navigation
   React.useEffect(() => {
@@ -151,7 +182,7 @@ export default function TradingScreen({ navigation, route }: TradingScreenProps)
         });
       }
 
-      Alert.alert('Success', 'Order placed successfully');
+      Alert.alert('Success', 'Order placed successfully! You will receive real-time updates on order status.');
       
       // Update the global portfolio store state
       await fetchBalance();
@@ -189,10 +220,28 @@ export default function TradingScreen({ navigation, route }: TradingScreenProps)
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Trading</Text>
-        <View style={styles.balanceContainer}>
-          <Text style={styles.balanceLabel}>Available Balance</Text>
-          <Text style={styles.balanceValue}>{formatCurrency(balance)}</Text>
-        </View>
+                  <View style={styles.headerRight}>
+            <TouchableOpacity 
+              style={[styles.connectionIndicator, isConnected && styles.connected]}
+              onPress={() => {
+                if (!isConnected) {
+                  testSocketConnection();
+                } else {
+                  Alert.alert('Connection Status', 'Socket is connected and ready for real-time updates!');
+                }
+              }}
+            >
+              <Ionicons 
+                name={isConnected ? "wifi" : "wifi-outline"} 
+                size={16} 
+                color={isConnected ? theme.colors.accent.avocado : theme.colors.text.secondary} 
+              />
+            </TouchableOpacity>
+            <View style={styles.balanceContainer}>
+              <Text style={styles.balanceLabel}>Available Balance</Text>
+              <Text style={styles.balanceValue}>{formatCurrency(balance)}</Text>
+            </View>
+          </View>
       </View>
 
       {/* Top Tabs */}
@@ -435,6 +484,19 @@ export default function TradingScreen({ navigation, route }: TradingScreenProps)
           </View>
         )}
 
+        {/* Real-time Status */}
+        {isConnected && (
+          <View style={styles.realTimeStatus}>
+            <View style={styles.statusHeader}>
+              <Ionicons name="wifi" size={16} color={theme.colors.accent.avocado} />
+              <Text style={styles.statusText}>Real-time updates enabled</Text>
+            </View>
+            <Text style={styles.statusSubtext}>
+              You'll receive instant notifications when your orders are filled, partially filled, or cancelled.
+            </Text>
+          </View>
+        )}
+
         {/* Place Order Button */}
         <TouchableOpacity
           style={[
@@ -474,6 +536,22 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     color: theme.colors.text.primary,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  connectionIndicator: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: theme.colors.background.secondary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  connected: {
+    backgroundColor: theme.colors.accent.avocado + '20',
   },
   balanceContainer: {
     alignItems: 'flex-end',
@@ -814,6 +892,30 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: 'white',
+  },
+  realTimeStatus: {
+    backgroundColor: theme.colors.accent.avocado + '10',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: theme.colors.accent.avocado + '30',
+  },
+  statusHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  statusText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.colors.accent.avocado,
+  },
+  statusSubtext: {
+    fontSize: 12,
+    color: theme.colors.text.secondary,
+    lineHeight: 16,
   },
 });
 

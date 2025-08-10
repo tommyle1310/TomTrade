@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'prisma/prisma.service';
-import { StockGateway } from '../common/gateway/stock/stock.gateway';
+import { SocketService } from '../core/socket-gateway.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { AlertDispatcherService } from 'src/alert-rule/alert-dispatcher.service';
 
@@ -9,6 +9,7 @@ export class StockService {
   constructor(
     private prisma: PrismaService,
     private alertDispatcherService: AlertDispatcherService,
+    private socketService: SocketService,
   ) {}
 
   async getStock(ticker: string) {
@@ -69,8 +70,13 @@ export class StockService {
     // 2. Trigger alert evaluation
     await this.alertDispatcherService.handleStockPriceUpdate(ticker, price);
 
-    
-    
+    // 3. Broadcast market data update to all connected clients
+    this.socketService.broadcastMarketDataUpdate({
+      ticker,
+      price,
+      volume,
+      timestamp: new Date().toISOString(),
+    });
 
     return marketData;
   }

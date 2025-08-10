@@ -3,17 +3,21 @@ import { Server } from 'socket.io';
 
 @Injectable()
 export class SocketService {
-  private server: Server;
+  private _server: Server;
   private sentIds = new Set<string>();
 
+  get server(): Server | undefined {
+    return this._server;
+  }
+
   setServer(server: Server) {
-    if (!this.server) {
-      this.server = server;
+    if (!this._server) {
+      this._server = server;
     }
   }
 
   sendAlert(alert: { userId: string; data: any }) {
-    if (!this.server) {
+    if (!this._server) {
       console.error('Socket server not initialized!');
       return;
     }
@@ -22,7 +26,7 @@ export class SocketService {
     if (this.sentIds.has(id)) return;
     this.sentIds.add(id);
 
-    this.server.to(alert.userId).emit('priceAlert', alert.data);
+    this._server!.to(alert.userId).emit('priceAlert', alert.data);
     console.log(`✅ Alert sent to user ${alert.userId}`);
   }
 
@@ -38,7 +42,7 @@ export class SocketService {
       message: string;
     },
   ) {
-    if (!this.server) {
+    if (!this._server) {
       console.error('Socket server not initialized!');
       return;
     }
@@ -47,7 +51,7 @@ export class SocketService {
       `🔔 Attempting to send order notification to user ${userId}:`,
       notification,
     );
-    this.server.to(userId).emit('orderNotification', notification);
+    this._server!.to(userId).emit('orderNotification', notification);
     console.log(
       `✅ Order notification sent to user ${userId}: ${notification.type}`,
     );
@@ -69,7 +73,7 @@ export class SocketService {
       }>;
     },
   ) {
-    if (!this.server) {
+    if (!this._server) {
       console.error('Socket server not initialized!');
       return;
     }
@@ -78,7 +82,7 @@ export class SocketService {
       `📊 Attempting to send portfolio update to user ${userId}:`,
       portfolioData,
     );
-    this.server.to(userId).emit('portfolioUpdate', portfolioData);
+    this._server!.to(userId).emit('portfolioUpdate', portfolioData);
     console.log(`✅ Portfolio update sent to user ${userId}`);
   }
 
@@ -89,7 +93,7 @@ export class SocketService {
       totalAssets: number;
     },
   ) {
-    if (!this.server) {
+    if (!this._server) {
       console.error('Socket server not initialized!');
       return;
     }
@@ -98,7 +102,25 @@ export class SocketService {
       `💰 Attempting to send balance update to user ${userId}:`,
       balanceData,
     );
-    this.server.to(userId).emit('balanceUpdate', balanceData);
+    this._server!.to(userId).emit('balanceUpdate', balanceData);
     console.log(`✅ Balance update sent to user ${userId}`);
+  }
+
+  broadcastMarketDataUpdate(marketData: {
+    ticker: string;
+    price: number;
+    volume: number;
+    timestamp: string;
+  }) {
+    if (!this._server) {
+      console.error('Socket server not initialized!');
+      return;
+    }
+
+    console.log(
+      `📊 Broadcasting market data update: ${marketData.ticker} at $${marketData.price}`,
+    );
+    this._server.emit('marketDataUpdate', marketData);
+    console.log(`✅ Market data update broadcasted to all clients`);
   }
 }

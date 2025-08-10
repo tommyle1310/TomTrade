@@ -1,17 +1,19 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../theme';
-import { usePortfolioStore } from '../stores';
+import { usePortfolioStore, useAuthStore } from '../stores';
 import { Transaction } from '../apollo/types';
 import Avatar from '../components/Avatar';
+import { useSocket, PortfolioUpdate, BalanceUpdate } from '../hooks/useSocket';
 
 interface PortfolioScreenProps {
   navigation: any;
 }
 
 export default function PortfolioScreen({ navigation }: PortfolioScreenProps) {
+  const { user } = useAuthStore();
   const { 
     dashboard, 
     portfolio, 
@@ -22,10 +24,13 @@ export default function PortfolioScreen({ navigation }: PortfolioScreenProps) {
     fetchDashboard,
     fetchPortfolio,
     fetchTransactions,
-    refreshAll
+    refreshAll,
+    setDashboard,
+    setBalance
   } = usePortfolioStore();
 
   const [activeTab, setActiveTab] = useState<'Overview' | 'Positions' | 'Transactions'>('Overview');
+  const [lastUpdateTime, setLastUpdateTime] = useState<Date | null>(null);
 
   const isLoading = dashboardLoading || portfolioLoading || transactionsLoading;
 
@@ -34,12 +39,68 @@ export default function PortfolioScreen({ navigation }: PortfolioScreenProps) {
     return [...transactions].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   }, [transactions]);
 
+  // Socket event handlers
+  const handlePortfolioUpdate = useCallback((data: PortfolioUpdate) => {
+    console.log('📊 Portfolio screen received real-time update:', data);
+    setLastUpdateTime(new Date());
+    
+    // Update the dashboard with real-time portfolio data
+    if (dashboard) {
+      const updatedDashboard = {
+        ...dashboard,
+        totalPortfolioValue: data.totalValue,
+        totalPnL: data.totalPnL,
+        stockPositions: data.positions.map(pos => ({
+          ticker: pos.ticker,
+          companyName: `${pos.ticker} Company`,
+          quantity: pos.quantity,
+          averageBuyPrice: pos.averagePrice,
+          currentPrice: pos.currentPrice,
+          marketValue: pos.marketValue,
+          unrealizedPnL: pos.unrealizedPnL,
+          unrealizedPnLPercent: pos.pnlPercentage,
+          avatar: null,
+        }))
+      };
+      setDashboard(updatedDashboard);
+    }
+  }, [dashboard, setDashboard]);
+
+  const handleBalanceUpdate = useCallback((data: BalanceUpdate) => {
+    console.log('💰 Portfolio screen received balance update:', data);
+    setBalance(data.balance);
+    
+    // Also update dashboard cash balance if available
+    if (dashboard) {
+      const updatedDashboard = {
+        ...dashboard,
+        cashBalance: data.balance,
+      };
+      setDashboard(updatedDashboard);
+    }
+  }, [dashboard, setBalance, setDashboard]);
+
+  // Initialize socket connection
+  const { isConnected, requestPortfolioUpdate } = useSocket({
+    onPortfolioUpdate: handlePortfolioUpdate,
+    onBalanceUpdate: handleBalanceUpdate,
+    autoConnect: true,
+  });
+
   // Fetch data on component mount
   useEffect(() => {
     fetchDashboard();
     fetchPortfolio();
     fetchTransactions();
   }, [fetchDashboard, fetchPortfolio, fetchTransactions]);
+
+  // Request real-time portfolio update when connected
+  useEffect(() => {
+    if (isConnected && user?.id) {
+      console.log('🔄 Portfolio screen requesting real-time update...');
+      requestPortfolioUpdate();
+    }
+  }, [isConnected, user?.id, requestPortfolioUpdate]);
 
   const handleRefresh = () => {
     refreshAll();
@@ -64,13 +125,34 @@ export default function PortfolioScreen({ navigation }: PortfolioScreenProps) {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Portfolio</Text>
-        <TouchableOpacity 
-          style={styles.refreshButton}
-          onPress={handleRefresh}
-        >
-          <Ionicons name="refresh" size={24} color={theme.colors.text.primary} />
-        </TouchableOpacity>
+        <View>
+          <Text style={styles.headerTitle}>Portfolio</Text>
+          {lastUpdateTime && (
+            <Text style={styles.lastUpdateText}>
+              Last updated: {lastUpdateTime.toLocaleTimeString()}
+            </Text>
+          )}
+        </View>
+        <View style={styles.headerActions}>
+          <View style={[styles.connectionIndicator, isConnected && styles.connected]}>
+            <Ionicons 
+              name={isConnected ? "wifi" : "wifi-outline"} 
+              size={16} 
+              color={isConnected ? theme.colors.accent.avocado : theme.colors.text.secondary} 
+            />
+          </View>
+          <TouchableOpacity 
+            style={styles.refreshButton}
+            onPress={() => {
+              handleRefresh();
+              if (isConnected && user?.id) {
+                requestPortfolioUpdate();
+              }
+            }}
+          >
+            <Ionicons name="refresh" size={24} color={theme.colors.text.primary} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Top Tabs */}
@@ -272,6 +354,27 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     color: theme.colors.text.primary,
+  },
+  lastUpdateText: {
+    fontSize: 12,
+    color: theme.colors.text.secondary,
+    marginTop: 2,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  connectionIndicator: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: theme.colors.background.secondary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  connected: {
+    backgroundColor: theme.colors.accent.avocado + '20',
   },
   refreshButton: {
     padding: 8,

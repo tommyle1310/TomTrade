@@ -109,7 +109,7 @@ async function testDashboard() {
     // Initialize services
     const portfolioService = new PortfolioService(prisma);
     const transactionService = new TransactionService(prisma, portfolioService);
-    const stockService = new StockService(prisma, null as any);
+    const stockService = new StockService(prisma, null as any, null as any);
     const balanceService = new BalanceService(prisma);
     const dashboardService = new DashboardService(
       prisma,

@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, useState } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   RefreshControl,
+  Alert,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -14,6 +15,7 @@ import { theme } from '../theme';
 import { useAuthStore, usePortfolioStore } from '../stores';
 import { DashboardResult } from '../apollo/types';
 import Avatar from '../components/Avatar';
+import { useSocket, PriceAlert, OrderNotification, PortfolioUpdate, BalanceUpdate } from '../hooks/useSocket';
 
 interface HomeScreenProps {
   navigation: any;
@@ -28,9 +30,90 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
     fetchDashboard,
     fetchBalance,
     refreshAll,
+    setDashboard,
+    setBalance,
   } = usePortfolioStore();
 
+  const [socketConnected, setSocketConnected] = useState(false);
   const isLoading = dashboardLoading;
+
+  // Socket event handlers
+  const handlePriceAlert = useCallback((data: PriceAlert) => {
+    Alert.alert(
+      'Price Alert',
+      `${data.alert.ticker} has reached $${data.currentPrice}. ${data.message}`,
+      [{ text: 'OK' }]
+    );
+  }, []);
+
+  const handleOrderNotification = useCallback((data: OrderNotification) => {
+    const typeText = data.type === 'ORDER_FILLED' ? 'filled' : 
+                     data.type === 'ORDER_PARTIAL' ? 'partially filled' : 'cancelled';
+    
+    Alert.alert(
+      'Order Update',
+      `Your ${data.side} order for ${data.quantity} shares of ${data.ticker} has been ${typeText} at $${data.price}`,
+      [{ text: 'OK' }]
+    );
+    
+    // Refresh data after order notification
+    fetchDashboard();
+    fetchBalance();
+  }, [fetchDashboard, fetchBalance]);
+
+  const handlePortfolioUpdate = useCallback((data: PortfolioUpdate) => {
+    console.log('📊 Updating portfolio with real-time data:', data);
+    
+    // Update the dashboard with real-time portfolio data
+    if (dashboard) {
+      const updatedDashboard = {
+        ...dashboard,
+        totalPortfolioValue: data.totalValue,
+        totalPnL: data.totalPnL,
+        stockPositions: data.positions.map(pos => ({
+          ticker: pos.ticker,
+          companyName: `${pos.ticker} Company`, // You might want to store this properly
+          quantity: pos.quantity,
+          averageBuyPrice: pos.averagePrice,
+          currentPrice: pos.currentPrice,
+          marketValue: pos.marketValue,
+          unrealizedPnL: pos.unrealizedPnL,
+          unrealizedPnLPercent: pos.pnlPercentage,
+          avatar: null, // You might want to store this properly
+        }))
+      };
+      setDashboard(updatedDashboard);
+    }
+  }, [dashboard, setDashboard]);
+
+  const handleBalanceUpdate = useCallback((data: BalanceUpdate) => {
+    console.log('💰 Updating balance with real-time data:', data);
+    setBalance(data.balance);
+    
+    // Also update dashboard cash balance if available
+    if (dashboard) {
+      const updatedDashboard = {
+        ...dashboard,
+        cashBalance: data.balance,
+      };
+      setDashboard(updatedDashboard);
+    }
+  }, [dashboard, setBalance, setDashboard]);
+
+  const handleConnectionTest = useCallback((data: any) => {
+    console.log('✅ Socket connection test successful:', data);
+    setSocketConnected(true);
+  }, []);
+
+  // Initialize socket connection
+  const { isConnected, requestPortfolioUpdate } = useSocket({
+    onPriceAlert: handlePriceAlert,
+    onOrderNotification: handleOrderNotification,
+    onPortfolioUpdate: handlePortfolioUpdate,
+    onBalanceUpdate: handleBalanceUpdate,
+    onConnectionTest: handleConnectionTest,
+    autoConnect: true,
+  });
 
   // Fetch data on component mount
   useEffect(() => {
@@ -38,12 +121,25 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
     fetchBalance();
   }, [fetchDashboard, fetchBalance]);
 
+  // Request real-time portfolio update when connected
+  useEffect(() => {
+    if (isConnected && user?.id) {
+      console.log('🔄 Requesting portfolio update via socket...');
+      requestPortfolioUpdate();
+    }
+  }, [isConnected, user?.id, requestPortfolioUpdate]);
+
   // Refresh data when screen comes into focus (e.g., after navigating back from other screens)
   useFocusEffect(
     useCallback(() => {
       fetchDashboard();
       fetchBalance();
-    }, [fetchDashboard, fetchBalance])
+      
+      // Also request real-time update if socket is connected
+      if (isConnected && user?.id) {
+        requestPortfolioUpdate();
+      }
+    }, [fetchDashboard, fetchBalance, isConnected, user?.id, requestPortfolioUpdate])
   );
 
   const quickActions = [
@@ -126,11 +222,24 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
               {user?.email?.split('@')[0] || 'Trader'}
             </Text>
           </View>
-          <TouchableOpacity style={styles.notificationButton}>
+          <TouchableOpacity 
+            style={[
+              styles.notificationButton,
+              isConnected && { backgroundColor: theme.colors.accent.avocado + '20' }
+            ]}
+            onPress={() => {
+              if (isConnected && user?.id) {
+                requestPortfolioUpdate();
+                Alert.alert('Portfolio Update', 'Requesting real-time portfolio update...');
+              } else {
+                Alert.alert('Connection Status', isConnected ? 'Connected to real-time updates' : 'Not connected to real-time updates');
+              }
+            }}
+          >
             <Ionicons
-              name="notifications-outline"
+              name={isConnected ? "wifi" : "wifi-outline"}
               size={24}
-              color={theme.colors.text.primary}
+              color={isConnected ? theme.colors.accent.avocado : theme.colors.text.primary}
             />
           </TouchableOpacity>
         </View>

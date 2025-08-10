@@ -42,6 +42,10 @@ interface PortfolioState {
   fetchOrders: () => Promise<void>;
   refreshAll: () => Promise<void>;
   clearError: () => void;
+
+  // Real-time update actions
+  setDashboard: (dashboard: DashboardResult) => void;
+  setBalance: (balance: number) => void;
 }
 
 export const usePortfolioStore = create<PortfolioState>((set, get) => ({
@@ -177,4 +181,8 @@ export const usePortfolioStore = create<PortfolioState>((set, get) => ({
   },
 
   clearError: () => set({ error: null }),
+
+  // Real-time update actions
+  setDashboard: (dashboard: DashboardResult) => set({ dashboard }),
+  setBalance: (balance: number) => set({ balance }),
 }));
