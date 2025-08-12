@@ -36,7 +36,7 @@ export default function MostTradedPie() {
               data={chartData}
               dataKey="volume"
               nameKey="symbol"
-              innerRadius={30}
+              innerRadius={0}
               strokeWidth={5}
               activeIndex={0}
               activeShape={({ outerRadius = 0, ...props }: PieSectorDataItem) => <Sector {...props} outerRadius={outerRadius + 10} />}

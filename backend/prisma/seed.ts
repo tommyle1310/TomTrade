@@ -154,6 +154,30 @@ async function main() {
   });
   console.log(`✅ Seeded balance for ${user.email}`);
 
+  // 2.1. Seed admin user
+  const adminPassword = 'admin123';
+  const adminHash = await bcrypt.hash(adminPassword, 8);
+  const adminUser = await prisma.user.upsert({
+    where: { email: 'admin@example.com' },
+    update: {},
+    create: {
+      email: 'admin@example.com',
+      passwordHash: adminHash,
+      role: 'ADMIN',
+      avatar: 'https://i.pravatar.cc/200?u=admin',
+    },
+  });
+  console.log(`✅ Created admin user: ${adminUser.email} / ${adminPassword}`);
+  await prisma.balance.upsert({
+    where: { userId: adminUser.id },
+    update: {},
+    create: {
+      userId: adminUser.id,
+      amount: 500000, // 500k USD for admin user
+    },
+  });
+  console.log(`✅ Seeded balance for ${adminUser.email}`);
+
   // 3. Add users for the 'buy-limit-multiple-sell' test script
   const simplePassword = '123456';
   const passwordHash = await bcrypt.hash(simplePassword, 8);

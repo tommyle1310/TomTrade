@@ -2,14 +2,14 @@
 // scripts/test-utils.ts
 
 import { request, GraphQLClient } from 'graphql-request';
-import { OrderStatus, PrismaClient } from '@prisma/client';
+// import { PrismaClient } from '@prisma/client';
 import { PrismaService } from 'prisma/prisma.service';
 import { Test } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import { AppModule } from 'src/app.module';
 const gql = String.raw;
 const endpoint = 'http://127.0.0.1:3000/graphql';
-export const prisma = new PrismaClient();
+export const prisma = new PrismaService();
 
 export async function getTestApp(): Promise<INestApplication> {
   const moduleRef = await Test.createTestingModule({
@@ -21,9 +21,9 @@ export async function getTestApp(): Promise<INestApplication> {
 
   // Làm sạch database nếu cần
   const prisma = app.get(PrismaService);
-  await prisma.$executeRawUnsafe(`DELETE FROM "Order";`);
-  await prisma.$executeRawUnsafe(`DELETE FROM "Transaction";`);
-  await prisma.$executeRawUnsafe(`DELETE FROM "Portfolio";`);
+  await prisma.order.deleteMany();
+  await prisma.transaction.deleteMany();
+  await prisma.portfolio.deleteMany();
 
   return app;
 }
@@ -34,7 +34,7 @@ export interface PlaceOrderInput {
   ticker: string;
   quantity: number;
   price: number;
-  status?: OrderStatus;
+  status?: string;
 }
 
 export async function login(email: string, password: string): Promise<string> {
@@ -44,7 +44,11 @@ export async function login(email: string, password: string): Promise<string> {
         accessToken
         user {
           id
+          name
           email
+          role
+          avatar
+          createdAt
         }
       }
     }
@@ -156,10 +160,10 @@ export async function seedPortfolio(
   quantity: number,
   averagePrice: number,
 ) {
-  const user = await prisma.user.findUnique({ where: { email } });
+  const user = await (prisma as any).user.findUnique({ where: { email } });
   if (!user) throw new Error(`User with email ${email} not found`);
 
-  await prisma.portfolio.upsert({
+  await (prisma as any).portfolio.upsert({
     where: {
       userId_ticker: {
         userId: user.id,
@@ -184,10 +188,10 @@ export async function seedPortfolio(
 }
 
 export async function updateBalance(email: string, amount: number) {
-  const user = await prisma.user.findUnique({ where: { email } });
+  const user = await (prisma as any).user.findUnique({ where: { email } });
   if (!user) throw new Error(`User with email ${email} not found`);
 
-  await prisma.balance.upsert({
+  await (prisma as any).balance.upsert({
     where: { userId: user.id },
     update: { amount },
     create: {

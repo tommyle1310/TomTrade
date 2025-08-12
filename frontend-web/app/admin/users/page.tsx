@@ -6,6 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { ArrowUpDown, Ban, Check, Crown, Search, Shield, UserMinus } from "lucide-react";
+import { useAuthStore } from "@/lib/authStore";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { ForbiddenPage } from "@/components/ui/forbidden-page";
 
 type Role = "user" | "moderator" | "admin";
 type Status = "active" | "banned";
@@ -27,6 +30,7 @@ const INITIAL_USERS: AdminUser[] = [
 ];
 
 export default function AdminUsersPage() {
+  const { isAuthenticated, isAdmin, loading, initialized, user } = useAuthStore();
   const [query, setQuery] = useState("");
   const [users, setUsers] = useState<AdminUser[]>(INITIAL_USERS);
   const [sortAsc, setSortAsc] = useState(true);
@@ -54,6 +58,25 @@ export default function AdminUsersPage() {
   function demote(id: string) {
     setUsers((prev) =>
       prev.map((u) => (u.id === id ? { ...u, role: u.role === "admin" ? "moderator" : "user" } : u)),
+    );
+  }
+
+  // Show loading spinner while initializing auth state
+  if (!initialized || loading) {
+    return (
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
+        <LoadingSpinner size="lg" />
+      </div>
+    );
+  }
+
+  // Check if user is authenticated and has ADMIN role
+  if (!isAuthenticated || !user || user.role !== 'ADMIN') {
+    return (
+      <ForbiddenPage 
+        title="Admin Access Required" 
+        message="You need admin privileges to access this page. Please contact your administrator if you believe this is an error."
+      />
     );
   }
 
@@ -120,5 +143,3 @@ export default function AdminUsersPage() {
     </div>
   );
 }
-
-

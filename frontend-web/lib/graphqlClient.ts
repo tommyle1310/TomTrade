@@ -51,12 +51,29 @@ export async function loginMutation(input: {
     mutation Login($input: LoginInput!) {
       login(input: $input) {
         accessToken
-        user { id email }
+        user { 
+          id 
+          name
+          email 
+          role 
+          avatar 
+          createdAt 
+        }
       }
     }
   `;
   return gqlRequest<{
-    login: { accessToken: string; user: { id: string; email: string } };
+    login: {
+      accessToken: string;
+      user: {
+        id: string;
+        name?: string | null;
+        email: string;
+        role: string;
+        avatar?: string | null;
+        createdAt: string;
+      };
+    };
   }>(query, { input });
 }
 
@@ -69,11 +86,28 @@ export async function signUpMutation(input: {
     mutation SignUp($input: SignUpInput!) {
       signUp(input: $input) {
         accessToken
-        user { id email }
+        user { 
+          id 
+          name
+          email 
+          role 
+          avatar 
+          createdAt 
+        }
       }
     }
   `;
   return gqlRequest<{
-    signUp: { accessToken: string; user: { id: string; email: string } };
+    signUp: {
+      accessToken: string;
+      user: {
+        id: string;
+        name?: string | null;
+        email: string;
+        role: string;
+        avatar?: string | null;
+        createdAt: string;
+      };
+    };
   }>(query, { input });
 }
