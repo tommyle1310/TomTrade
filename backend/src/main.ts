@@ -6,18 +6,33 @@ import { IoAdapter } from '@nestjs/platform-socket.io';
 async function bootstrap() {
   try {
     const app = await NestFactory.create(AppModule);
-    
+
     // Set up Socket.IO adapter
     const ioAdapter = new IoAdapter(app);
     app.useWebSocketAdapter(ioAdapter);
-    
+
+    // Enable CORS for all origins and allow credentials
+    app.enableCors({
+      origin: ['http://localhost:3000', 'http://127.0.0.1:3000'],
+      credentials: true,
+      methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+      allowedHeaders: [
+        'Content-Type',
+        'Authorization',
+        'Accept',
+        'X-Requested-With',
+      ],
+      exposedHeaders: ['Content-Length'],
+    });
+
     console.log('✅ Socket.IO adapter configured successfully');
-    
+
     const instanceId = process.env.INSTANCE_ID || 'unknown';
-    await app.listen(process.env.PORT ?? 3000, '0.0.0.0', () => {
+    const port = Number(process.env.PORT) || 4000;
+    await app.listen(port, '0.0.0.0', () => {
       console.log(
         `[${instanceId}] Server is running successfully on PORT`,
-        process.env.PORT ?? 3000,
+        port,
         '🚀 TomTrade đã deploy tự động',
       );
       console.log('✅ Socket.IO server should be ready');

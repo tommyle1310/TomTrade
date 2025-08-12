@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 
 export default function Sidebar() {
   return (
-    <aside className="h-full border-r bg-sidebar">
+    <aside className="fixed left-0 top-0 h-screen w-54 border-r bg-sidebar z-50">
       <div className="h-full flex flex-col">
         <div className="px-6 py-6 border-b">
           <div className="text-xl font-bold tracking-tight">TomTrade Admin</div>

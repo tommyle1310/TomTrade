@@ -178,11 +178,11 @@ export default function AdminOverview() {
       <section className="grid grid-cols-1  xl:grid-cols-12 gap-3">
         {/* Section 1: Shadcn DataTable */}
         <div className="xl:col-span-7">
-          <Card>
-            <CardHeader className="pb-2">
+          <Card className="px-2">
+            <CardHeader className="pb-2 px-2">
               <CardTitle className="text-sm">Platform Metrics</CardTitle>
             </CardHeader>
-            <CardContent className="-mt-6">
+            <CardContent className="-mt-6 px-2">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -208,11 +208,11 @@ export default function AdminOverview() {
         <div className="xl:col-span-5 flex-grow">
           <div className="space-y-4">
             {/* Quick Actions */}
-            <Card className="bg-gradient-to-br from-slate-50 to-slate-100 border-0 shadow-sm">
-              <CardHeader className="pb-3">
+            <Card className="bg-gradient-to-br px-2 from-slate-50 to-slate-100 border-0 shadow-sm">
+              <CardHeader className="pb-3 px-2">
                 <CardTitle className="text-sm font-semibold text-slate-700">Quick Actions</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="px-2">
                                   <div className="grid grid-cols-2 gap-3">
                     {quickActions.map((action) => {
                       const getColorClasses = (color: string) => {
@@ -233,7 +233,7 @@ export default function AdminOverview() {
                         return (
                           <Dialog key={action.id}>
                             <DialogTrigger asChild>
-                              <button className={`${baseClasses} py-0 ${getColorClasses(action.color)}`} onClick={action.action}>
+                              <button className={`${baseClasses} items-center justify-center py-0 ${getColorClasses(action.color)}`} onClick={action.action}>
                                 <span>{action.icon}</span>
                                 <span className="text-xs font-semibold">{action.label}</span>
                               </button>

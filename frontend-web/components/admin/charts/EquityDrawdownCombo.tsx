@@ -22,14 +22,14 @@ const chartConfig: ChartConfig = {
 
 export default function EquityDrawdownCombo() {
   return (
-    <Card className="h-full">
-      <CardHeader>
+    <Card className="h-full py-3 gap-2">
+      <CardHeader className="px-3 ">
         <CardTitle>Equity & Drawdown</CardTitle>
         <CardDescription>Aug 1–Aug 31, 2025</CardDescription>
       </CardHeader>
-      <CardContent>
-        <ChartContainer config={chartConfig} className="h-[120px]">
-          <LineChart accessibilityLayer data={chartData} margin={{ left: 12, right: 12 }}>
+      <CardContent className="px-3 my-0 ">
+        <ChartContainer config={chartConfig} className="h-[120px] ">
+          <LineChart accessibilityLayer data={chartData} >
             <CartesianGrid vertical={false} />
             <XAxis dataKey="day" tickLine={false} axisLine={false} tickMargin={8} />
             <YAxis yAxisId="left" orientation="left" tickLine={false} axisLine={false} width={40} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
@@ -40,7 +40,7 @@ export default function EquityDrawdownCombo() {
           </LineChart>
         </ChartContainer>
       </CardContent>
-      <CardFooter>
+      <CardFooter className="px-3 my-0 ">
         <div className="flex w-full items-start gap-2 text-sm">
           <div className="grid gap-1">
             <div className="flex items-center gap-2 leading-none font-medium">

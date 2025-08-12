@@ -23,12 +23,12 @@ const chartConfig: ChartConfig = {
 
 export default function PnLBar() {
   return (
-    <Card className="h-full">
-      <CardHeader>
+    <Card className="h-full py-3 gap-2">
+      <CardHeader className="px-3">
         <CardTitle>P&amp;L Over Time</CardTitle>
         <CardDescription>Last 7 days</CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="px-3">
         <ChartContainer config={chartConfig} className="h-[120px]">
           <BarChart accessibilityLayer data={chartData}>
             <CartesianGrid vertical={false} />
@@ -46,7 +46,7 @@ export default function PnLBar() {
           </BarChart>
         </ChartContainer>
       </CardContent>
-      <CardFooter className="flex-col items-start gap-2 text-sm">
+      <CardFooter className="px-3 flex-col items-start gap-2 text-sm">
         <div className="flex gap-2 leading-none font-medium">
           Trending up overall <TrendingUp className="h-4 w-4" />
         </div>

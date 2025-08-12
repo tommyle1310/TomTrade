@@ -23,12 +23,12 @@ const chartConfig: ChartConfig = {
 
 export default function MostTradedPie() {
   return (
-    <Card className="flex flex-col">
-      <CardHeader className="items-center pb-0">
+    <Card className="flex flex-col py-3 gap-2">
+      <CardHeader className="items-center pb-0 px-3">
         <CardTitle>Most Traded Stocks</CardTitle>
         <CardDescription>By share of volume</CardDescription>
       </CardHeader>
-      <CardContent className="flex-1 pb-0">
+      <CardContent className="flex-1 pb-0 px-3">
         <ChartContainer config={chartConfig} className="mx-auto h-[120px] w-[120px] ">
           <PieChart>
             <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
@@ -36,7 +36,7 @@ export default function MostTradedPie() {
               data={chartData}
               dataKey="volume"
               nameKey="symbol"
-              innerRadius={36}
+              innerRadius={30}
               strokeWidth={5}
               activeIndex={0}
               activeShape={({ outerRadius = 0, ...props }: PieSectorDataItem) => <Sector {...props} outerRadius={outerRadius + 10} />}
@@ -44,7 +44,7 @@ export default function MostTradedPie() {
           </PieChart>
         </ChartContainer>
       </CardContent>
-      <CardFooter className="flex-col gap-2 text-sm">
+      <CardFooter className="flex-col gap-2 text-sm px-3">
         <div className="flex items-center gap-2 leading-none font-medium">
           Trending up for AAPL <TrendingUp className="h-4 w-4" />
         </div>
