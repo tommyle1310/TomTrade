@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Modal } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useToast } from '../components/Toast';
+import { useModal } from '../components/Modal';
 
 
 import { useQuery, useMutation } from '@apollo/client';
@@ -24,6 +26,9 @@ export default function AlertsScreen({ navigation }: AlertsScreenProps) {
     ruleType: AlertRuleType.PRICE_ABOVE,
     targetValue: '',
   });
+  
+  const { showToast } = useToast();
+  const { showModal } = useModal();
 
   const { data, loading, refetch } = useQuery<{getMyAlertRules: AlertRule[]}>(GET_MY_ALERT_RULES);
   const [createAlert, { loading: creating }] = useMutation(CREATE_ALERT_RULE);
@@ -40,7 +45,10 @@ export default function AlertsScreen({ navigation }: AlertsScreenProps) {
 
   const handleCreateAlert = async () => {
     if (!newAlert.ticker || !newAlert.targetValue) {
-      Alert.alert('Error', 'Please fill in all fields');
+      showToast({
+        type: 'error',
+        message: 'Please fill in all fields',
+      });
       return;
     }
 
@@ -58,35 +66,44 @@ export default function AlertsScreen({ navigation }: AlertsScreenProps) {
 
       setNewAlert({ ticker: '', ruleType: AlertRuleType.PRICE_ABOVE, targetValue: '' });
       setShowCreateModal(false);
-      Alert.alert('Success', 'Alert created successfully');
+      showToast({
+        type: 'success',
+        message: 'Alert created successfully',
+      });
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to create alert');
+      showToast({
+        type: 'error',
+        message: error.message || 'Failed to create alert',
+      });
     }
   };
 
   const handleDeleteAlert = async (alertId: string, ticker: string) => {
-    Alert.alert(
-      'Delete Alert',
-      `Delete alert for ${ticker}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteAlert({
-                variables: { id: alertId },
-                refetchQueries: [{ query: GET_MY_ALERT_RULES }],
-              });
-              Alert.alert('Success', 'Alert deleted successfully');
-            } catch (error: any) {
-              Alert.alert('Error', error.message || 'Failed to delete alert');
-            }
-          },
-        },
-      ]
-    );
+    showModal({
+      title: 'Delete Alert',
+      message: `Delete alert for ${ticker}?`,
+      type: 'confirm',
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      showCancel: true,
+      onConfirm: async () => {
+        try {
+          await deleteAlert({
+            variables: { id: alertId },
+            refetchQueries: [{ query: GET_MY_ALERT_RULES }],
+          });
+          showToast({
+            type: 'success',
+            message: 'Alert deleted successfully',
+          });
+        } catch (error: any) {
+          showToast({
+            type: 'error',
+            message: error.message || 'Failed to delete alert',
+          });
+        }
+      },
+    });
   };
 
   const formatDate = (dateString: string) => {

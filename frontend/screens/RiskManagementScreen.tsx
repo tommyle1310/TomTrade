@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   RefreshControl,
   TextInput,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -15,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../theme';
 import { useRiskStore } from '../stores';
 import { UpdateRiskConfigInput } from '../apollo/types';
+import { useToast } from '../components/Toast';
 
 
 
@@ -36,6 +36,8 @@ export default function RiskManagementScreen({ navigation }: RiskManagementScree
     refreshAll,
     clearError,
   } = useRiskStore();
+  
+  const { showToast } = useToast();
 
   const [isEditing, setIsEditing] = useState(false);
   const [editedConfig, setEditedConfig] = useState<UpdateRiskConfigInput>({});
@@ -88,9 +90,15 @@ export default function RiskManagementScreen({ navigation }: RiskManagementScree
     try {
       await updateRiskConfig(editedConfig);
       setIsEditing(false);
-      Alert.alert('Success', 'Risk configuration updated successfully');
+      showToast({
+        type: 'success',
+        message: 'Risk configuration updated successfully',
+      });
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to update risk configuration');
+      showToast({
+        type: 'error',
+        message: error.message || 'Failed to update risk configuration',
+      });
     }
   };
 

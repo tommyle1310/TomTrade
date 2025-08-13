@@ -8,12 +8,14 @@ export interface PriceAlert {
   alert: {
     id: string;
     ticker: string;
-    ruleType: string;
-    targetValue: number;
-    createdAt: string;
+    ruleId: string;
+    userId: string;
+    sentAt: string;
+    deliveryMethod: string;
   };
   currentPrice: number;
   message: string;
+  createdAt: string;
 }
 
 export interface OrderNotification {
@@ -24,6 +26,7 @@ export interface OrderNotification {
   quantity: number;
   price: number;
   message: string;
+  createdAt: string;
 }
 
 export interface PortfolioUpdate {
@@ -38,11 +41,13 @@ export interface PortfolioUpdate {
     unrealizedPnL: number;
     pnlPercentage: number;
   }>;
+  createdAt: string;
 }
 
 export interface BalanceUpdate {
   balance: number;
   totalAssets: number;
+  createdAt: string;
 }
 
 interface UseSocketOptions {

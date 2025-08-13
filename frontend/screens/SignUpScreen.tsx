@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../theme';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../components/Toast';
 
 interface SignUpScreenProps {
   navigation: any;
@@ -18,20 +19,30 @@ export default function SignUpScreen({ navigation }: SignUpScreenProps) {
   const [loading, setLoading] = useState(false);
   
   const { signup, error } = useAuth();
+  const { showToast } = useToast();
 
   const handleSignUp = async () => {
     if (!email || !password || !confirmPassword) {
-      Alert.alert('Error', 'Please fill in all fields');
+      showToast({
+        type: 'error',
+        message: 'Please fill in all fields',
+      });
       return;
     }
 
     if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
+      showToast({
+        type: 'error',
+        message: 'Passwords do not match',
+      });
       return;
     }
 
     if (password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters long');
+      showToast({
+        type: 'error',
+        message: 'Password must be at least 6 characters long',
+      });
       return;
     }
 
@@ -40,7 +51,10 @@ export default function SignUpScreen({ navigation }: SignUpScreenProps) {
       await signup({ email, password });
       // Navigation will be handled by AuthContext
     } catch (err) {
-      Alert.alert('Signup Failed', error || 'Please try again');
+      showToast({
+        type: 'error',
+        message: error || 'Please try again',
+      });
     } finally {
       setLoading(false);
     }

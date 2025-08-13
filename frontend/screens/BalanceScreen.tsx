@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation } from '@apollo/client';
 import { theme } from '../theme';
 import { GET_MY_BALANCE, DEPOSIT, DEDUCT, GET_DASHBOARD } from '../apollo/queries';
 import { usePortfolioStore } from '../stores';
+import { useToast } from '../components/Toast';
 
 interface BalanceScreenProps {
   navigation: any;
@@ -15,6 +16,8 @@ export default function BalanceScreen({ navigation }: BalanceScreenProps) {
   const [activeTab, setActiveTab] = useState<'deposit' | 'withdraw'>('deposit');
   const [amount, setAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('bank');
+  
+  const { showToast } = useToast();
 
   const { data, loading, refetch } = useQuery(GET_MY_BALANCE);
   const [deposit, { loading: depositing }] = useMutation(DEPOSIT);
@@ -32,12 +35,18 @@ export default function BalanceScreen({ navigation }: BalanceScreenProps) {
     const transactionAmount = parseFloat(amount);
     
     if (!transactionAmount || transactionAmount <= 0) {
-      Alert.alert('Error', 'Please enter a valid amount');
+      showToast({
+        type: 'error',
+        message: 'Please enter a valid amount',
+      });
       return;
     }
 
     if (activeTab === 'withdraw' && transactionAmount > balance) {
-      Alert.alert('Error', 'Insufficient balance');
+      showToast({
+        type: 'error',
+        message: 'Insufficient balance',
+      });
       return;
     }
 
@@ -50,7 +59,10 @@ export default function BalanceScreen({ navigation }: BalanceScreenProps) {
             { query: GET_DASHBOARD }, // Refetch dashboard to update home screen
           ],
         });
-        Alert.alert('Success', `$${transactionAmount} deposited successfully`);
+        showToast({
+          type: 'success',
+          message: `$${transactionAmount} deposited successfully`,
+        });
       } else {
         await withdraw({
           variables: { amount: transactionAmount },
@@ -59,7 +71,10 @@ export default function BalanceScreen({ navigation }: BalanceScreenProps) {
             { query: GET_DASHBOARD }, // Refetch dashboard to update home screen
           ],
         });
-        Alert.alert('Success', `$${transactionAmount} withdrawn successfully`);
+        showToast({
+          type: 'success',
+          message: `$${transactionAmount} withdrawn successfully`,
+        });
       }
       
       // Force refetch the balance data immediately
@@ -71,7 +86,10 @@ export default function BalanceScreen({ navigation }: BalanceScreenProps) {
       
       setAmount('');
     } catch (error: any) {
-      Alert.alert('Error', error.message || `Failed to ${activeTab}`);
+      showToast({
+        type: 'error',
+        message: error.message || `Failed to ${activeTab}`,
+      });
     }
   };
 

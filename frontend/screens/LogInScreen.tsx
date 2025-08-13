@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../theme';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../components/Toast';
 
 interface LogInScreenProps {
   navigation: any;
@@ -16,10 +17,14 @@ export default function LogInScreen({ navigation }: LogInScreenProps) {
   const [loading, setLoading] = useState(false);
   
   const { login, error } = useAuth();
+  const { showToast } = useToast();
 
   const handleLogIn = async () => {
     if (!email || !password) {
-      Alert.alert('Error', 'Please fill in all fields');
+      showToast({
+        type: 'error',
+        message: 'Please fill in all fields',
+      });
       return;
     }
 
@@ -28,7 +33,10 @@ export default function LogInScreen({ navigation }: LogInScreenProps) {
       await login({ email, password });
       // Navigation will be handled by AuthContext
     } catch (err) {
-      Alert.alert('Login Failed', error || 'Please check your credentials');
+      showToast({
+        type: 'error',
+        message: error || 'Please check your credentials',
+      });
     } finally {
       setLoading(false);
     }

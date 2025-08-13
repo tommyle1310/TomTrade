@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Alert, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation } from '@apollo/client';
@@ -12,6 +12,8 @@ import {
 } from '../apollo/queries';
 import { Watchlist, CreateWatchlistInput, AddStockToWatchlistInput } from '../apollo/types';
 import Avatar from '../components/Avatar';
+import { useToast } from '../components/Toast';
+import { useModal } from '../components/Modal';
 
 interface WatchlistScreenProps {
   navigation: any;
@@ -21,6 +23,9 @@ export default function WatchlistScreen({ navigation }: WatchlistScreenProps) {
   const [selectedWatchlist, setSelectedWatchlist] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newWatchlistName, setNewWatchlistName] = useState('');
+  
+  const { showToast } = useToast();
+  const { showModal } = useModal();
 
   const { data, loading, refetch } = useQuery<{myWatchlists: Watchlist[]}>(MY_WATCHLISTS);
   const [createWatchlist, { loading: creating }] = useMutation(CREATE_WATCHLIST);
@@ -32,7 +37,10 @@ export default function WatchlistScreen({ navigation }: WatchlistScreenProps) {
 
   const handleCreateWatchlist = async () => {
     if (!newWatchlistName.trim()) {
-      Alert.alert('Error', 'Please enter a watchlist name');
+      showToast({
+        type: 'error',
+        message: 'Please enter a watchlist name',
+      });
       return;
     }
 
@@ -48,15 +56,24 @@ export default function WatchlistScreen({ navigation }: WatchlistScreenProps) {
 
       setNewWatchlistName('');
       setShowCreateForm(false);
-      Alert.alert('Success', 'Watchlist created successfully');
+      showToast({
+        type: 'success',
+        message: 'Watchlist created successfully',
+      });
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to create watchlist');
+      showToast({
+        type: 'error',
+        message: error.message || 'Failed to create watchlist',
+      });
     }
   };
 
   const handleAddStock = () => {
     if (!currentWatchlist) {
-      Alert.alert('Error', 'Please select a watchlist first');
+      showToast({
+        type: 'error',
+        message: 'Please select a watchlist first',
+      });
       return;
     }
 
@@ -73,9 +90,15 @@ export default function WatchlistScreen({ navigation }: WatchlistScreenProps) {
             refetchQueries: [{ query: MY_WATCHLISTS }],
           });
 
-          Alert.alert('Success', `${ticker} added to watchlist`);
+          showToast({
+            type: 'success',
+            message: `${ticker} added to watchlist`,
+          });
         } catch (error: any) {
-          Alert.alert('Error', error.message || 'Failed to add stock');
+          showToast({
+            type: 'error',
+            message: error.message || 'Failed to add stock',
+          });
         }
       },
     });
@@ -84,34 +107,37 @@ export default function WatchlistScreen({ navigation }: WatchlistScreenProps) {
   const handleRemoveStock = async (ticker: string) => {
     if (!currentWatchlist) return;
 
-    Alert.alert(
-      'Remove Stock',
-      `Remove ${ticker} from ${currentWatchlist.name}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Remove',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const input: AddStockToWatchlistInput = {
-                watchlistId: currentWatchlist.id,
-                ticker,
-              };
+    showModal({
+      title: 'Remove Stock',
+      message: `Remove ${ticker} from ${currentWatchlist.name}?`,
+      type: 'confirm',
+      confirmText: 'Remove',
+      cancelText: 'Cancel',
+      showCancel: true,
+      onConfirm: async () => {
+        try {
+          const input: AddStockToWatchlistInput = {
+            watchlistId: currentWatchlist.id,
+            ticker,
+          };
 
-              await removeStock({
-                variables: { input },
-                refetchQueries: [{ query: MY_WATCHLISTS }],
-              });
+          await removeStock({
+            variables: { input },
+            refetchQueries: [{ query: MY_WATCHLISTS }],
+          });
 
-              Alert.alert('Success', `${ticker} removed from watchlist`);
-            } catch (error: any) {
-              Alert.alert('Error', error.message || 'Failed to remove stock');
-            }
-          },
-        },
-      ]
-    );
+          showToast({
+            type: 'success',
+            message: `${ticker} removed from watchlist`,
+          });
+        } catch (error: any) {
+          showToast({
+            type: 'error',
+            message: error.message || 'Failed to remove stock',
+          });
+        }
+      },
+    });
   };
 
   const formatDate = (dateString: string) => {

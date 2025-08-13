@@ -19,7 +19,10 @@ export class AlertDispatcherService {
       console.log(`📤 Sending alert to user ${alert.userId}: ${alert.data.message}`);
       await this.socketService.sendAlert({
         userId: alert.userId,
-        data: alert.data,
+        data: {
+          ...alert.data,
+          currentPrice: price, // Add the current price to the alert data
+        },
       });
     }
   }

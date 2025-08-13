@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQuery } from '@apollo/client';
@@ -9,6 +9,8 @@ import { OrderSide, OrderType, TimeInForce, PlaceOrderInput, PlaceStopOrderInput
 import { usePortfolioStore } from '../stores';
 import { useSocket, OrderNotification } from '../hooks/useSocket';
 import { testSocketConnection } from '../utils/socketTest';
+import { useToast } from '../components/Toast';
+import { useModal } from '../components/Modal';
 
 interface TradingScreenProps {
   navigation: any;
@@ -26,6 +28,9 @@ interface TradingScreenProps {
 export default function TradingScreen({ navigation, route }: TradingScreenProps) {
   // Top-level tabs
   const [activeTab, setActiveTab] = useState<'Markets' | 'PlaceOrder'>('Markets');
+  
+  const { showToast } = useToast();
+  const { showModal } = useModal();
 
   // Order form state
   const [selectedStock, setSelectedStock] = useState('');
@@ -53,23 +58,21 @@ export default function TradingScreen({ navigation, route }: TradingScreenProps)
     const typeText = data.type === 'ORDER_FILLED' ? 'filled' : 
                      data.type === 'ORDER_PARTIAL' ? 'partially filled' : 'cancelled';
     
-    Alert.alert(
-      'Order Update',
-      `Your ${data.side} order for ${data.quantity} shares of ${data.ticker} has been ${typeText} at $${data.price}`,
-      [
-        { 
-          text: 'View Orders', 
-          onPress: () => navigation.navigate('Orders') 
-        },
-        { text: 'OK' }
-      ]
-    );
+    showModal({
+      title: 'Order Update',
+      message: `Your ${data.side} order for ${data.quantity} shares of ${data.ticker} has been ${typeText} at $${data.price}`,
+      type: 'info',
+      confirmText: 'View Orders',
+      cancelText: 'OK',
+      showCancel: true,
+      onConfirm: () => navigation.navigate('Orders'),
+    });
     
     // Refresh data after order notification
     fetchDashboard();
     fetchBalance();
     fetchOrders();
-  }, [navigation, fetchDashboard, fetchBalance, fetchOrders]);
+  }, [navigation, fetchDashboard, fetchBalance, fetchOrders, showModal]);
 
   // Initialize socket connection for order notifications
   const { isConnected } = useSocket({
@@ -133,12 +136,18 @@ export default function TradingScreen({ navigation, route }: TradingScreenProps)
   const handlePlaceOrder = async () => {
     console.log('check here')
     if (!selectedStock || !quantity || !price) {
-      Alert.alert('Error', 'Please fill in all required fields');
+      showToast({
+        type: 'error',
+        message: 'Please fill in all required fields',
+      });
       return;
     }
 
     if (isStopOrder && !triggerPrice) {
-      Alert.alert('Error', 'Please enter trigger price for stop orders');
+      showToast({
+        type: 'error',
+        message: 'Please enter trigger price for stop orders',
+      });
       return;
     }
 
@@ -182,7 +191,10 @@ export default function TradingScreen({ navigation, route }: TradingScreenProps)
         });
       }
 
-      Alert.alert('Success', 'Order placed successfully! You will receive real-time updates on order status.');
+      showToast({
+        type: 'success',
+        message: 'Order placed successfully! You will receive real-time updates on order status.',
+      });
       
       // Update the global portfolio store state
       await fetchBalance();
@@ -198,7 +210,10 @@ export default function TradingScreen({ navigation, route }: TradingScreenProps)
       // Navigate to orders screen
       navigation.navigate('Orders');
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to place order');
+      showToast({
+        type: 'error',
+        message: error.message || 'Failed to place order',
+      });
     }
   };
 
@@ -227,7 +242,10 @@ export default function TradingScreen({ navigation, route }: TradingScreenProps)
                 if (!isConnected) {
                   testSocketConnection();
                 } else {
-                  Alert.alert('Connection Status', 'Socket is connected and ready for real-time updates!');
+                  showToast({
+                    type: 'success',
+                    message: 'Socket is connected and ready for real-time updates!',
+                  });
                 }
               }}
             >

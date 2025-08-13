@@ -74,6 +74,7 @@ export class SocketService {
     data: {
       message: string;
       alert: any;
+      currentPrice?: number;
     };
   }) {
     if (!this._server) {
@@ -86,7 +87,13 @@ export class SocketService {
       alert.data,
     );
 
-    this.sendToUser(alert.userId, 'priceAlert', alert.data);
+    // Add createdAt timestamp to the alert data
+    const alertDataWithTimestamp = {
+      ...alert.data,
+      createdAt: new Date().toISOString(),
+    };
+
+    this.sendToUser(alert.userId, 'priceAlert', alertDataWithTimestamp);
 
     console.log(`✅ Price alert sent to user ${alert.userId}`);
   }
@@ -113,7 +120,13 @@ export class SocketService {
       notification,
     );
 
-    this.sendToUser(userId, 'orderNotification', notification);
+    // Add createdAt timestamp to the notification
+    const notificationWithTimestamp = {
+      ...notification,
+      createdAt: new Date().toISOString(),
+    };
+
+    this.sendToUser(userId, 'orderNotification', notificationWithTimestamp);
 
     console.log(
       `✅ Order notification sent to user ${userId}: ${notification.type}`,
@@ -146,7 +159,13 @@ export class SocketService {
       portfolioData,
     );
 
-    this.sendToUser(userId, 'portfolioUpdate', portfolioData);
+    // Add createdAt timestamp to the portfolio data
+    const portfolioDataWithTimestamp = {
+      ...portfolioData,
+      createdAt: new Date().toISOString(),
+    };
+
+    this.sendToUser(userId, 'portfolioUpdate', portfolioDataWithTimestamp);
 
     console.log(`✅ Portfolio update sent to user ${userId}`);
   }
@@ -168,7 +187,13 @@ export class SocketService {
       balanceData,
     );
 
-    this.sendToUser(userId, 'balanceUpdate', balanceData);
+    // Add createdAt timestamp to the balance data
+    const balanceDataWithTimestamp = {
+      ...balanceData,
+      createdAt: new Date().toISOString(),
+    };
+
+    this.sendToUser(userId, 'balanceUpdate', balanceDataWithTimestamp);
 
     console.log(`✅ Balance update sent to user ${userId}`);
   }
@@ -187,7 +212,14 @@ export class SocketService {
     console.log(
       `📊 Broadcasting market data update: ${marketData.ticker} at $${marketData.price}`,
     );
-    this._server.emit('marketDataUpdate', marketData);
+    
+    // Add createdAt timestamp to the market data
+    const marketDataWithTimestamp = {
+      ...marketData,
+      createdAt: new Date().toISOString(),
+    };
+    
+    this._server.emit('marketDataUpdate', marketDataWithTimestamp);
     console.log(`✅ Market data update broadcasted to all clients`);
   }
 }

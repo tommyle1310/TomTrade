@@ -6,7 +6,6 @@ import {
   ScrollView,
   TouchableOpacity,
   RefreshControl,
-  Alert,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -16,6 +15,8 @@ import { useAuthStore, usePortfolioStore } from '../stores';
 import { DashboardResult } from '../apollo/types';
 import Avatar from '../components/Avatar';
 import { useSocket, PriceAlert, OrderNotification, PortfolioUpdate, BalanceUpdate } from '../hooks/useSocket';
+import { useToast } from '../components/Toast';
+import { Animated } from 'react-native';
 
 interface HomeScreenProps {
   navigation: any;
@@ -35,31 +36,43 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
   } = usePortfolioStore();
 
   const [socketConnected, setSocketConnected] = useState(false);
+  const { showToast } = useToast();
+  const portfolioPulse = useState(new Animated.Value(0))[0];
+  const balancePulse = useState(new Animated.Value(0))[0];
   const isLoading = dashboardLoading;
 
   // Socket event handlers
   const handlePriceAlert = useCallback((data: PriceAlert) => {
-    Alert.alert(
-      'Price Alert',
-      `${data.alert.ticker} has reached $${data.currentPrice}. ${data.message}`,
-      [{ text: 'OK' }]
-    );
-  }, []);
-
+    showToast({
+      type: 'warning',
+      message: `${data.alert.ticker} is now $${data.currentPrice}`,
+      durationMs: 3200,
+      createdAt: data.createdAt,
+    });
+  }, [showToast]);
   const handleOrderNotification = useCallback((data: OrderNotification) => {
     const typeText = data.type === 'ORDER_FILLED' ? 'filled' : 
                      data.type === 'ORDER_PARTIAL' ? 'partially filled' : 'cancelled';
-    
-    Alert.alert(
-      'Order Update',
-      `Your ${data.side} order for ${data.quantity} shares of ${data.ticker} has been ${typeText} at $${data.price}`,
-      [{ text: 'OK' }]
-    );
-    
-    // Refresh data after order notification
+
+    showToast({
+      type: data.type === 'ORDER_CANCELLED' ? 'warning' : 'success',
+      message: `${data.side} ${data.quantity} ${data.ticker} ${typeText} @ $${data.price}`,
+      createdAt: data.createdAt,
+    });
+
+    // Subtle highlight animations to indicate real-time updates
+    Animated.sequence([
+      Animated.timing(portfolioPulse, { toValue: 1, duration: 250, useNativeDriver: false }),
+      Animated.timing(portfolioPulse, { toValue: 0, duration: 450, useNativeDriver: false }),
+    ]).start();
+    Animated.sequence([
+      Animated.timing(balancePulse, { toValue: 1, duration: 250, useNativeDriver: false }),
+      Animated.timing(balancePulse, { toValue: 0, duration: 450, useNativeDriver: false }),
+    ]).start();
+
     fetchDashboard();
     fetchBalance();
-  }, [fetchDashboard, fetchBalance]);
+  }, [fetchDashboard, fetchBalance, showToast, portfolioPulse, balancePulse]);
 
   const handlePortfolioUpdate = useCallback((data: PortfolioUpdate) => {
     console.log('📊 Updating portfolio with real-time data:', data);
@@ -79,11 +92,15 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
           marketValue: pos.marketValue,
           unrealizedPnL: pos.unrealizedPnL,
           unrealizedPnLPercent: pos.pnlPercentage,
-          avatar: null, // You might want to store this properly
+          avatar: undefined,
         }))
       };
       setDashboard(updatedDashboard);
     }
+    Animated.sequence([
+      Animated.timing(portfolioPulse, { toValue: 1, duration: 250, useNativeDriver: false }),
+      Animated.timing(portfolioPulse, { toValue: 0, duration: 450, useNativeDriver: false }),
+    ]).start();
   }, [dashboard, setDashboard]);
 
   const handleBalanceUpdate = useCallback((data: BalanceUpdate) => {
@@ -98,6 +115,10 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
       };
       setDashboard(updatedDashboard);
     }
+    Animated.sequence([
+      Animated.timing(balancePulse, { toValue: 1, duration: 250, useNativeDriver: false }),
+      Animated.timing(balancePulse, { toValue: 0, duration: 450, useNativeDriver: false }),
+    ]).start();
   }, [dashboard, setBalance, setDashboard]);
 
   const handleConnectionTest = useCallback((data: any) => {
@@ -230,9 +251,17 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
             onPress={() => {
               if (isConnected && user?.id) {
                 requestPortfolioUpdate();
-                Alert.alert('Portfolio Update', 'Requesting real-time portfolio update...');
+                showToast({
+                  type: 'info',
+                  message: 'Requesting real-time portfolio update...',
+                  durationMs: 2000,
+                });
               } else {
-                Alert.alert('Connection Status', isConnected ? 'Connected to real-time updates' : 'Not connected to real-time updates');
+                showToast({
+                  type: isConnected ? 'success' : 'warning',
+                  message: isConnected ? 'Connected to real-time updates' : 'Not connected to real-time updates',
+                  durationMs: 2000,
+                });
               }
             }}
           >
@@ -245,7 +274,15 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
         </View>
 
         {/* Portfolio Summary Card */}
-        <View style={styles.portfolioCard}>
+         <Animated.View style={[
+           styles.portfolioCard,
+           { backgroundColor: portfolioPulse.interpolate({
+               inputRange: [0, 1],
+               outputRange: [theme.colors.primary, theme.colors.primary]
+             }),
+             opacity: portfolioPulse.interpolate({ inputRange: [0,1], outputRange: [1, 0.92] })
+           }
+         ]}>
           <Text style={styles.portfolioLabel}>Total Portfolio Value</Text>
           <Text style={styles.portfolioValue}>
             {dashboard
@@ -283,17 +320,20 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
               </View>
             )}
           </View>
-        </View>
+        </Animated.View>
 
         {/* Balance Card */}
-        <View style={styles.balanceCard}>
+        <Animated.View style={[
+          styles.balanceCard,
+          { opacity: balancePulse.interpolate({ inputRange: [0,1], outputRange: [1, 0.92] }) }
+        ]}>
           <Text style={styles.balanceLabel}>Available Cash</Text>
           <Text style={styles.balanceValue}>
             {dashboard
               ? formatCurrency(dashboard.cashBalance)
               : formatCurrency(balance)}
           </Text>
-        </View>
+        </Animated.View>
 
         {/* Quick Actions */}
         <View style={styles.section}>

@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@apollo/client';
 import { theme } from '../theme';
 import { GET_ORDER_BOOK } from '../apollo/queries';
+import { useToast } from '../components/Toast';
 
 interface OrderBookScreenProps {
   navigation: any;
@@ -37,6 +38,8 @@ interface OrderBookData {
 export default function OrderBookScreen({ navigation, route }: OrderBookScreenProps) {
   const { ticker, companyName } = route.params;
   const [refreshing, setRefreshing] = useState(false);
+  
+  const { showToast } = useToast();
 
   const { data, loading, refetch, error } = useQuery<OrderBookData>(GET_ORDER_BOOK, {
     variables: { ticker },
@@ -67,7 +70,10 @@ export default function OrderBookScreen({ navigation, route }: OrderBookScreenPr
     try {
       await refetch();
     } catch (err) {
-      Alert.alert('Error', 'Failed to refresh order book');
+      showToast({
+        type: 'error',
+        message: 'Failed to refresh order book',
+      });
     } finally {
       setRefreshing(false);
     }
