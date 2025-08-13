@@ -230,6 +230,8 @@ model AlertRule {
   user  User  @relation(fields: [userId], references: [id])
   stock Stock @relation(fields: [ticker], references: [ticker])
   alerts AlertSent[]
+
+  @@unique([userId, ticker, ruleType])
 }
 
 model AlertSent {

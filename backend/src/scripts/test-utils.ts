@@ -8,7 +8,7 @@ import { Test } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import { AppModule } from 'src/app.module';
 const gql = String.raw;
-const endpoint = 'http://127.0.0.1:3000/graphql';
+const endpoint = `http://127.0.0.1:${process.env.PORT || 4000}/graphql`;
 export const prisma = new PrismaService();
 
 export async function getTestApp(): Promise<INestApplication> {

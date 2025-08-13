@@ -1,5 +1,5 @@
 /* eslint-disable */
-// scripts/test-market-order.script.ts
+// scripts/test-websocket-events.script.ts
 
 import { io, Socket } from 'socket.io-client';
 import { login, createClient } from './test-utils';
@@ -13,17 +13,17 @@ async function printSection(title: string) {
 }
 
 async function main() {
-  await printSection('MARKET ORDER TEST');
+  await printSection('WEBSOCKET EVENTS TEST');
 
-  // Login to get tokens
+  // Login to get tokens for both users
   console.log('🔐 Logging in users...');
   const demoToken = await login('demo@example.com', 'password123');
   const buyer2Token = await login('buyer2@example.com', '123456');
 
   console.log('✅ Got tokens for both users');
 
-  // Connect to WebSocket
-  console.log('🔌 Connecting to WebSocket...');
+  // Connect both users to WebSocket
+  console.log('🔌 Connecting users to WebSocket...');
 
   const demoSocket: Socket = io('http://127.0.0.1:4000', {
     auth: {
@@ -39,9 +39,9 @@ async function main() {
     transports: ['websocket'],
   });
 
-  // Set up event listeners
+  // Set up event listeners for demo user
   demoSocket.on('connect', () => {
-    console.log('✅ Demo connected:', demoSocket.id);
+    console.log('✅ Demo user connected:', demoSocket.id);
   });
 
   demoSocket.on('connectionTest', (data) => {
@@ -60,8 +60,17 @@ async function main() {
     console.log('📊 Demo received portfolioUpdate:', data.totalValue);
   });
 
+  demoSocket.on('priceAlert', (data) => {
+    console.log('🚨 Demo received priceAlert:', data.message);
+  });
+
+  demoSocket.on('marketDataUpdate', (data) => {
+    console.log('📈 Demo received marketDataUpdate:', data.ticker, data.price);
+  });
+
+  // Set up event listeners for buyer2 user
   buyer2Socket.on('connect', () => {
-    console.log('✅ Buyer2 connected:', buyer2Socket.id);
+    console.log('✅ Buyer2 user connected:', buyer2Socket.id);
   });
 
   buyer2Socket.on('connectionTest', (data) => {
@@ -84,7 +93,19 @@ async function main() {
     console.log('📊 Buyer2 received portfolioUpdate:', data.totalValue);
   });
 
-  // Wait for connections
+  buyer2Socket.on('priceAlert', (data) => {
+    console.log('🚨 Buyer2 received priceAlert:', data.message);
+  });
+
+  buyer2Socket.on('marketDataUpdate', (data) => {
+    console.log(
+      '📈 Buyer2 received marketDataUpdate:',
+      data.ticker,
+      data.price,
+    );
+  });
+
+  // Wait for both connections
   await new Promise<void>((resolve) => {
     let connected = 0;
     const checkConnection = () => {
@@ -95,54 +116,18 @@ async function main() {
     buyer2Socket.on('connect', checkConnection);
   });
 
-  console.log('⏳ Waiting 2 seconds...');
-  await delay(2000);
+  console.log('⏳ Waiting 3 seconds for connectionTest events...');
+  await delay(3000);
 
   // Create GraphQL clients
   const demoClient = createClient(demoToken);
   const buyer2Client = createClient(buyer2Token);
 
-  // Test: Place a SELL LIMIT order first, then a BUY MARKET order to match it
-  console.log('\n🧪 Test: Placing SELL LIMIT + BUY MARKET orders...');
+  // Test 1: Place an order (should trigger orderNotification, balanceUpdate, portfolioUpdate)
+  console.log('\n🧪 Test 1: Placing order...');
 
   try {
-    // First, place a SELL LIMIT order
-    console.log('📤 Placing SELL LIMIT order...');
-    const sellOrder = await buyer2Client.request(
-      `
-      mutation PlaceOrder($input: PlaceOrderInput!) {
-        placeOrder(input: $input) {
-          id
-          side
-          ticker
-          quantity
-          price
-          status
-        }
-      }
-    `,
-      {
-        input: {
-          side: 'SELL',
-          type: 'LIMIT',
-          ticker: 'AAPL',
-          quantity: 5,
-          price: 150,
-        },
-      },
-    );
-
-    console.log(
-      '✅ SELL order placed:',
-      sellOrder.placeOrder.id,
-      'Status:',
-      sellOrder.placeOrder.status,
-    );
-    await delay(1000);
-
-    // Then, place a BUY MARKET order to match it
-    console.log('📤 Placing BUY MARKET order to match...');
-    const buyOrder = await demoClient.request(
+    const orderResult = await demoClient.request(
       `
       mutation PlaceOrder($input: PlaceOrderInput!) {
         placeOrder(input: $input) {
@@ -158,24 +143,96 @@ async function main() {
       {
         input: {
           side: 'BUY',
-          type: 'MARKET',
+          type: 'LIMIT',
           ticker: 'AAPL',
           quantity: 5,
-          price: 0, // Ignored for MARKET orders
+          price: 150,
         },
       },
     );
 
-    console.log(
-      '✅ BUY order placed:',
-      buyOrder.placeOrder.id,
-      'Status:',
-      buyOrder.placeOrder.status,
-    );
-    console.log('⏳ Waiting 5 seconds for events...');
-    await delay(5000);
+    console.log('✅ Order placed:', orderResult.placeOrder.id);
+    console.log('⏳ Waiting 3 seconds for events...');
+    await delay(3000);
   } catch (error) {
     console.log('⚠️ Order placement failed:', error.message);
+  }
+
+  // Test 2: Update market data (should trigger marketDataUpdate and priceAlert)
+  console.log('\n🧪 Test 2: Updating market data...');
+
+  try {
+    await demoClient.request(
+      `
+      mutation UpdateMarketData($ticker: String!, $price: Float!) {
+        updateMarketData(ticker: $ticker, price: $price) {
+          ticker
+          close
+          timestamp
+        }
+      }
+    `,
+      {
+        ticker: 'AAPL',
+        price: 140,
+      },
+    );
+
+    console.log('✅ Market data updated');
+    console.log('⏳ Waiting 3 seconds for events...');
+    await delay(3000);
+  } catch (error) {
+    console.log('⚠️ Market data update failed:', error.message);
+  }
+
+  // Test 3: Create price alert (should trigger priceAlert when market data updates)
+  console.log('\n🧪 Test 3: Creating price alert...');
+
+  try {
+    await demoClient.request(
+      `
+      mutation CreateAlertRule($input: CreateAlertRuleInput!) {
+        createAlertRule(input: $input) {
+          id
+          ticker
+          ruleType
+          targetValue
+        }
+      }
+    `,
+      {
+        input: {
+          ticker: 'AAPL',
+          ruleType: 'PRICE_BELOW',
+          targetValue: 145,
+        },
+      },
+    );
+
+    console.log('✅ Price alert created');
+
+    // Trigger the alert
+    await demoClient.request(
+      `
+      mutation UpdateMarketData($ticker: String!, $price: Float!) {
+        updateMarketData(ticker: $ticker, price: $price) {
+          ticker
+          close
+          timestamp
+        }
+      }
+    `,
+      {
+        ticker: 'AAPL',
+        price: 140,
+      },
+    );
+
+    console.log('✅ Market data updated to trigger alert');
+    console.log('⏳ Waiting 3 seconds for events...');
+    await delay(3000);
+  } catch (error) {
+    console.log('⚠️ Price alert test failed:', error.message);
   }
 
   // Disconnect
@@ -186,8 +243,8 @@ async function main() {
   await printSection('TEST COMPLETE');
   console.log('📋 Summary:');
   console.log('- WebSocket connections: ✅ Both users connected');
-  console.log('- Order placement: ✅ Orders placed');
-  console.log('- Order matching: ✅ MARKET order should execute immediately');
+  console.log('- Event listening: ✅ Set up for all events');
+  console.log('- Business logic: ✅ Triggered');
   console.log('- Events received: Check logs above');
 }
 

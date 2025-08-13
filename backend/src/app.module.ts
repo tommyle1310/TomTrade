@@ -17,7 +17,7 @@ import { AlertRuleModule } from './alert-rule/alert-rule.module';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { EventEmitterModule } from '@nestjs/event-emitter';
-import { SocketService } from './core/socket-gateway.service';
+
 import { CoreModule } from './core/core.module';
 import { UserModule } from './user/user.module';
 import { BalanceModule } from './balance/balance.module';
@@ -27,7 +27,7 @@ import { AdminModule } from './admin/admin.module';
 import { RedisModule } from './redis/redis.module';
 import { RiskModule } from './risk/risk.module';
 import { TestGateway } from './common/gateway/test/test.gateway';
-import { StockGateway } from './common/gateway/stock/stock.gateway';
+import { GatewayModule } from './common/gateway/gateway.module';
 @Module({
   imports: [
     GraphQLModule.forRoot<ApolloDriverConfig>({
@@ -55,6 +55,7 @@ import { StockGateway } from './common/gateway/stock/stock.gateway';
     DashboardModule,
     AdminModule,
     RiskModule,
+    GatewayModule,
   ],
   controllers: [AppController],
   providers: [
@@ -62,9 +63,7 @@ import { StockGateway } from './common/gateway/stock/stock.gateway';
     AppResolver,
     ConfigService,
     JwtService,
-    SocketService,
     TestGateway,
-    StockGateway,
   ],
   exports: [],
 })

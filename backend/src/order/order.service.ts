@@ -42,6 +42,10 @@ export class OrderService {
     this.eventEmitter.on('order.matched', ({ orderId }) => {
       this.logger.log(`Order matched event received: ${orderId}`);
     });
+    
+    // Debug: Check if SocketService is properly injected
+    this.logger.log('🔧 OrderService.onModuleInit - socketService instance:', this.socketService ? 'injected' : 'null');
+    this.logger.log('🔧 OrderService.onModuleInit - socketService.server:', this.socketService?.server ? 'initialized' : 'not initialized');
   }
 
   async placeOrder(userId: string, input: PlaceOrderInput): Promise<Order> {
@@ -547,6 +551,18 @@ export class OrderService {
       this.logger.log(
         `📤 Sending notification to taker ${taker.userId}: ${takerNotificationType}`,
       );
+
+      // Debug: Check if socket service is available
+      if (!this.socketService) {
+        this.logger.error('❌ SocketService is not injected!');
+        return;
+      }
+
+      if (!this.socketService.server) {
+        this.logger.error('❌ SocketService server is not initialized!');
+        return;
+      }
+
       this.socketService.sendOrderNotification(taker.userId, {
         type: takerNotificationType as
           | 'ORDER_FILLED'
@@ -682,6 +698,17 @@ export class OrderService {
     // Note: No balance refund needed for BUY orders since balance is not pre-deducted
     // Balance is only deducted when trades actually execute
     this.logger.log(`📋 Order ${orderId} cancelled - no balance refund needed`);
+
+    // Send order cancellation notification
+    this.socketService.sendOrderNotification(userId, {
+      type: 'ORDER_CANCELLED',
+      orderId: order.id,
+      ticker: order.ticker,
+      side: order.side,
+      quantity: order.quantity,
+      price: order.price,
+      message: `${order.side} order for ${order.quantity} ${order.ticker} @ $${order.price} was cancelled`,
+    });
 
     // TODO: If implementing a reservation system in the future,
     // release reserved funds here for BUY orders

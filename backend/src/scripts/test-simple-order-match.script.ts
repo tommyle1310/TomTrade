@@ -1,5 +1,5 @@
 /* eslint-disable */
-// scripts/test-market-order.script.ts
+// scripts/test-simple-order-match.script.ts
 
 import { io, Socket } from 'socket.io-client';
 import { login, createClient } from './test-utils';
@@ -13,7 +13,7 @@ async function printSection(title: string) {
 }
 
 async function main() {
-  await printSection('MARKET ORDER TEST');
+  await printSection('SIMPLE ORDER MATCH TEST');
 
   // Login to get tokens
   console.log('🔐 Logging in users...');
@@ -102,12 +102,12 @@ async function main() {
   const demoClient = createClient(demoToken);
   const buyer2Client = createClient(buyer2Token);
 
-  // Test: Place a SELL LIMIT order first, then a BUY MARKET order to match it
-  console.log('\n🧪 Test: Placing SELL LIMIT + BUY MARKET orders...');
+  // Test: Place a SELL order first, then a BUY order to match it
+  console.log('\n🧪 Test: Placing matching orders...');
 
   try {
-    // First, place a SELL LIMIT order
-    console.log('📤 Placing SELL LIMIT order...');
+    // First, place a SELL order
+    console.log('📤 Placing SELL order...');
     const sellOrder = await buyer2Client.request(
       `
       mutation PlaceOrder($input: PlaceOrderInput!) {
@@ -126,7 +126,7 @@ async function main() {
           side: 'SELL',
           type: 'LIMIT',
           ticker: 'AAPL',
-          quantity: 5,
+          quantity: 10,
           price: 150,
         },
       },
@@ -140,8 +140,8 @@ async function main() {
     );
     await delay(1000);
 
-    // Then, place a BUY MARKET order to match it
-    console.log('📤 Placing BUY MARKET order to match...');
+    // Then, place a BUY order to match it
+    console.log('📤 Placing BUY order to match...');
     const buyOrder = await demoClient.request(
       `
       mutation PlaceOrder($input: PlaceOrderInput!) {
@@ -158,10 +158,10 @@ async function main() {
       {
         input: {
           side: 'BUY',
-          type: 'MARKET',
+          type: 'LIMIT',
           ticker: 'AAPL',
-          quantity: 5,
-          price: 0, // Ignored for MARKET orders
+          quantity: 10,
+          price: 150,
         },
       },
     );
@@ -187,7 +187,7 @@ async function main() {
   console.log('📋 Summary:');
   console.log('- WebSocket connections: ✅ Both users connected');
   console.log('- Order placement: ✅ Orders placed');
-  console.log('- Order matching: ✅ MARKET order should execute immediately');
+  console.log('- Order matching: ✅ Should have matched');
   console.log('- Events received: Check logs above');
 }
 

@@ -23,7 +23,7 @@ const backendPort =
   Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_PORT ||
   '4000';
 const graphqlUri = `http://${backendUrl}:${backendPort}/graphql`;
-
+console.log('ehck graphqlUri', graphqlUri);
 // console.log('Apollo Client Configuration:', {
 //   backendUrl,
 //   backendPort,

@@ -11,23 +11,84 @@ export class SocketService {
   }
 
   setServer(server: Server) {
+    console.log(
+      '🔧 SocketService.setServer called with server:',
+      server ? 'valid server instance' : 'null/undefined',
+    );
+
     if (!this._server) {
       this._server = server;
+      console.log('✅ SocketService._server set successfully');
+    } else {
+      console.log('⚠️ SocketService._server already set, skipping');
     }
   }
 
-  sendAlert(alert: { userId: string; data: any }) {
+  // Helper method to send to userId room (which clients are actually joining)
+  private sendToUser(userId: string, event: string, data: any) {
     if (!this._server) {
       console.error('Socket server not initialized!');
       return;
     }
 
-    const id = alert.data.alert?.id;
-    if (this.sentIds.has(id)) return;
-    this.sentIds.add(id);
+    // Try to send directly without accessing sockets.adapter.rooms
+    try {
+      // Send to userId room (which clients are actually joining)
+      this._server.to(userId).emit(event, data);
+      console.log(`✅ ${event} sent to user ${userId}`);
+    } catch (error) {
+      console.error(
+        `❌ Error sending ${event} to user ${userId}:`,
+        error.message,
+      );
+    }
+  }
 
-    this._server!.to(alert.userId).emit('priceAlert', alert.data);
-    console.log(`✅ Alert sent to user ${alert.userId}`);
+  // Helper method to send to both userId and userEmail rooms for maximum compatibility
+  private sendToUserWithEmail(
+    userId: string,
+    userEmail: string,
+    event: string,
+    data: any,
+  ) {
+    if (!this._server) {
+      console.error('Socket server not initialized!');
+      return;
+    }
+
+    // Send to both userId and userEmail rooms for maximum compatibility
+    try {
+      this._server.to(userId).emit(event, data);
+      this._server.to(userEmail).emit(event, data);
+      console.log(`✅ ${event} sent to user ${userEmail} (${userId})`);
+    } catch (error) {
+      console.error(
+        `❌ Error sending ${event} to user ${userEmail} (${userId}):`,
+        error.message,
+      );
+    }
+  }
+
+  sendAlert(alert: {
+    userId: string;
+    data: {
+      message: string;
+      alert: any;
+    };
+  }) {
+    if (!this._server) {
+      console.error('Socket server not initialized!');
+      return;
+    }
+
+    console.log(
+      `🚨 Attempting to send price alert to user ${alert.userId}:`,
+      alert.data,
+    );
+
+    this.sendToUser(alert.userId, 'priceAlert', alert.data);
+
+    console.log(`✅ Price alert sent to user ${alert.userId}`);
   }
 
   sendOrderNotification(
@@ -51,7 +112,9 @@ export class SocketService {
       `🔔 Attempting to send order notification to user ${userId}:`,
       notification,
     );
-    this._server!.to(userId).emit('orderNotification', notification);
+
+    this.sendToUser(userId, 'orderNotification', notification);
+
     console.log(
       `✅ Order notification sent to user ${userId}: ${notification.type}`,
     );
@@ -82,7 +145,9 @@ export class SocketService {
       `📊 Attempting to send portfolio update to user ${userId}:`,
       portfolioData,
     );
-    this._server!.to(userId).emit('portfolioUpdate', portfolioData);
+
+    this.sendToUser(userId, 'portfolioUpdate', portfolioData);
+
     console.log(`✅ Portfolio update sent to user ${userId}`);
   }
 
@@ -102,7 +167,9 @@ export class SocketService {
       `💰 Attempting to send balance update to user ${userId}:`,
       balanceData,
     );
-    this._server!.to(userId).emit('balanceUpdate', balanceData);
+
+    this.sendToUser(userId, 'balanceUpdate', balanceData);
+
     console.log(`✅ Balance update sent to user ${userId}`);
   }
 

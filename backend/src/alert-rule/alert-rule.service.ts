@@ -10,6 +10,22 @@ export class AlertRuleService {
   constructor(private prisma: PrismaService) {}
 
   async create(userId: string, input: CreateAlertRuleInput) {
+    // Check if an alert rule already exists for this user, ticker, and rule type
+    const existingRule = await this.prisma.alertRule.findFirst({
+      where: {
+        userId,
+        ticker: input.ticker,
+        ruleType: input.ruleType,
+      },
+    });
+
+    if (existingRule) {
+      console.log(
+        `Alert rule already exists for user ${userId}, ticker ${input.ticker}, type ${input.ruleType}`,
+      );
+      return existingRule;
+    }
+
     return this.prisma.alertRule.create({
       data: {
         ...input,
@@ -56,6 +72,29 @@ export class AlertRuleService {
         triggered = true;
 
       if (triggered) {
+        // Check if we've already sent an alert for this rule recently (within last 2 minutes)
+        // to prevent duplicate alerts for the same price movement
+        const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000);
+        const recentAlert = await this.prisma.alertSent.findFirst({
+          where: {
+            ruleId: rule.id,
+            sentAt: {
+              gte: twoMinutesAgo,
+            },
+          },
+          orderBy: {
+            sentAt: 'desc',
+          },
+        });
+
+        // If we have a recent alert for this rule, skip to prevent duplicates
+        if (recentAlert) {
+          console.log(
+            `Skipping duplicate alert for rule ${rule.id} - recent alert exists within 2 minutes`,
+          );
+          continue;
+        }
+
         const alertSent = await this.prisma.alertSent.create({
           data: {
             ruleId: rule.id,

@@ -9,6 +9,7 @@ import { AlertDispatcherService } from 'src/alert-rule/alert-dispatcher.service'
 import { AlertRuleService } from 'src/alert-rule/alert-rule.service';
 import { IndicatorService } from './indicator.service';
 
+
 @Module({
   imports: [EventEmitterModule],
   providers: [
