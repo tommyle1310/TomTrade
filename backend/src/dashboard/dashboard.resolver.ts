@@ -15,7 +15,12 @@ export class DashboardResolver {
   async getDashboard(
     @CurrentUser() user: { id: string },
   ): Promise<DashboardResult> {
-    return this.dashboardService.getDashboard(user.id);
+    console.log(
+      `🔍 DashboardResolver.getDashboard called for user: ${user.id}`,
+    );
+    const result = await this.dashboardService.getDashboard(user.id);
+    console.log(`🔍 DashboardResolver.getDashboard returning:`, result);
+    return result;
   }
 
   @Query(() => StockPosition, { nullable: true })

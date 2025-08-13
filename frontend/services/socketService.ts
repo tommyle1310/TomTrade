@@ -6,7 +6,7 @@ import Constants from 'expo-constants';
 const backendUrl =
   process.env.EXPO_PUBLIC_BACKEND_URL ||
   Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL ||
-  'localhost';
+  '127.0.0.1'; // CRITICAL FIX: Use 127.0.0.1 instead of localhost
 const backendPort =
   process.env.EXPO_PUBLIC_BACKEND_PORT ||
   Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_PORT ||
@@ -15,13 +15,16 @@ const backendPort =
 class SocketService {
   private socket: Socket | null = null;
   private isConnecting = false;
+  private connectionStatus = 'disconnected'; // CRITICAL FIX: Track connection status
 
   async connect(): Promise<Socket> {
     if (this.socket?.connected) {
+      console.log('✅ Socket already connected');
       return this.socket;
     }
 
     if (this.isConnecting) {
+      console.log('⏳ Socket connection already in progress...');
       // Wait for existing connection attempt
       return new Promise((resolve, reject) => {
         const checkConnection = () => {
@@ -38,6 +41,7 @@ class SocketService {
     }
 
     this.isConnecting = true;
+    this.connectionStatus = 'connecting';
 
     try {
       const token = await AsyncStorage.getItem('accessToken');
@@ -47,7 +51,9 @@ class SocketService {
       );
 
       if (!token) {
-        throw new Error('No access token found');
+        console.log(
+          '⚠️ No access token found, connecting without authentication'
+        );
       }
 
       // Disconnect existing socket if any
@@ -55,16 +61,19 @@ class SocketService {
         this.socket.disconnect();
       }
 
+      const socketUrl = `http://${backendUrl}:${backendPort}`;
+      console.log(`🔌 Connecting to socket server: ${socketUrl}`);
+
       // Create new socket connection
-      this.socket = io(`http://${backendUrl}:${backendPort}`, {
-        auth: {
-          token: `Bearer ${token}`,
-        },
-        extraHeaders: {
-          auth: `Bearer ${token}`,
-          Authorization: `Bearer ${token}`,
-        },
-        transports: ['websocket'],
+      this.socket = io(socketUrl, {
+        auth: token ? { token: `Bearer ${token}` } : undefined,
+        extraHeaders: token
+          ? {
+              auth: `Bearer ${token}`,
+              Authorization: `Bearer ${token}`,
+            }
+          : undefined,
+        transports: ['websocket', 'polling'], // CRITICAL FIX: Allow fallback to polling
         timeout: 20000,
         reconnection: true,
         reconnectionAttempts: 5,
@@ -75,13 +84,15 @@ class SocketService {
 
       // Set up connection event handlers
       this.socket.on('connect', () => {
-        console.log('✅ Socket connected:', this.socket?.id);
+        console.log('✅ Socket connected successfully:', this.socket?.id);
         this.isConnecting = false;
+        this.connectionStatus = 'connected';
       });
 
       this.socket.on('disconnect', (reason) => {
         console.log('❌ Socket disconnected:', reason);
         this.isConnecting = false;
+        this.connectionStatus = 'disconnected';
       });
 
       this.socket.on('connect_error', (error) => {
@@ -91,15 +102,18 @@ class SocketService {
           message: error.message,
         });
         this.isConnecting = false;
+        this.connectionStatus = 'error';
       });
 
       this.socket.on('error', (error) => {
         console.error('❌ Socket error:', error);
         this.isConnecting = false;
+        this.connectionStatus = 'error';
       });
 
       this.socket.on('reconnect', (attemptNumber) => {
         console.log('🔄 Socket reconnected after', attemptNumber, 'attempts');
+        this.connectionStatus = 'connected';
       });
 
       this.socket.on('reconnect_error', (error) => {
@@ -109,8 +123,10 @@ class SocketService {
       this.socket.on('reconnect_failed', () => {
         console.error('❌ Socket reconnection failed');
         this.isConnecting = false;
+        this.connectionStatus = 'failed';
       });
 
+      // CRITICAL FIX: Listen for all socket events and log them
       this.socket.on('connectionTest', (data) => {
         console.log('✅ Connection test received:', data);
       });
@@ -118,8 +134,6 @@ class SocketService {
       // Listen for market data updates
       this.socket.on('marketDataUpdate', (data) => {
         console.log('📊 Market data update received:', data);
-        // You can emit a custom event here to notify other parts of the app
-        // EventEmitter.emit('marketDataUpdate', data);
       });
 
       // Listen for portfolio updates
@@ -169,9 +183,11 @@ class SocketService {
         this.socket!.on('connect_error', onError);
       });
 
+      console.log('✅ Socket connection established successfully');
       return this.socket;
     } catch (error) {
-      console.error('Failed to connect socket:', error);
+      console.error('❌ Failed to connect socket:', error);
+      this.connectionStatus = 'error';
       throw error;
     } finally {
       this.isConnecting = false;
@@ -180,8 +196,10 @@ class SocketService {
 
   disconnect() {
     if (this.socket) {
+      console.log('🔌 Disconnecting socket...');
       this.socket.disconnect();
       this.socket = null;
+      this.connectionStatus = 'disconnected';
     }
   }
 
@@ -190,19 +208,33 @@ class SocketService {
   }
 
   isConnected(): boolean {
-    return this.socket?.connected || false;
+    const connected = this.socket?.connected || false;
+    console.log(
+      `🔍 Socket connection status: ${connected ? 'connected' : 'disconnected'}`
+    );
+    return connected;
+  }
+
+  getConnectionStatus(): string {
+    return this.connectionStatus;
   }
 
   // Emit events to server
   requestPortfolioUpdate(userId: string) {
     if (this.socket?.connected) {
+      console.log(`📊 Requesting portfolio update for user: ${userId}`);
       this.socket.emit('requestPortfolioUpdate', { userId });
+    } else {
+      console.log('❌ Socket not connected, cannot request portfolio update');
     }
   }
 
   sendMockMarketData(ticker: string, price: number) {
     if (this.socket?.connected) {
+      console.log(`📊 Sending mock market data: ${ticker} @ $${price}`);
       this.socket.emit('mockMarketData', { ticker, price });
+    } else {
+      console.log('❌ Socket not connected, cannot send mock market data');
     }
   }
 

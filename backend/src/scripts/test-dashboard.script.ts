@@ -4,6 +4,7 @@ import { PortfolioService } from '../portfolio/portfolio.service';
 import { TransactionService } from '../transaction/transaction.service';
 import { StockService } from '../stock/stock.service';
 import { BalanceService } from '../balance/balance.service';
+import { PortfolioPnLService } from '../portfolio/portfolio-pnl.service';
 
 async function testDashboard() {
   const prisma = new PrismaService();
@@ -117,6 +118,7 @@ async function testDashboard() {
       transactionService,
       stockService,
       balanceService,
+      new PortfolioPnLService(prisma),
     );
 
     // Test dashboard

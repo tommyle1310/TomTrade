@@ -4,6 +4,7 @@ import { PortfolioService } from '../portfolio/portfolio.service';
 import { TransactionService } from '../transaction/transaction.service';
 import { StockService } from '../stock/stock.service';
 import { BalanceService } from '../balance/balance.service';
+import { PortfolioPnLService } from '../portfolio/portfolio-pnl.service';
 
 async function testDashboardAdvanced() {
   const prisma = new PrismaService();
@@ -76,6 +77,7 @@ async function testDashboardAdvanced() {
       new TransactionService(prisma, new PortfolioService(prisma)),
       new StockService(prisma, null as any, null as any),
       new BalanceService(prisma),
+      new PortfolioPnLService(prisma),
     );
 
     const dashboard1 = await dashboardService1.getDashboard(user1.id);
@@ -180,6 +182,7 @@ async function testDashboardAdvanced() {
       new TransactionService(prisma, new PortfolioService(prisma)),
       new StockService(prisma, null as any, null as any),
       new BalanceService(prisma),
+      new PortfolioPnLService(prisma),
     );
 
     const dashboard2 = await dashboardService2.getDashboard(user2.id);
@@ -277,6 +280,7 @@ async function testDashboardAdvanced() {
       new TransactionService(prisma, new PortfolioService(prisma)),
       new StockService(prisma, null as any, null as any),
       new BalanceService(prisma),
+      new PortfolioPnLService(prisma),
     );
 
     const dashboard3 = await dashboardService3.getDashboard(user3.id);

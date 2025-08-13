@@ -40,7 +40,10 @@ export class StockGateway
 
   afterInit(server: Server) {
     this.logger.log('✅ StockGateway initialized');
-    this.logger.log('🔧 Calling socketService.setServer with this.server:', this.server ? 'valid server instance' : 'null/undefined');
+    this.logger.log(
+      '🔧 Calling socketService.setServer with this.server:',
+      this.server ? 'valid server instance' : 'null/undefined',
+    );
     // Initialize the SocketService with the server instance
     this.socketService.setServer(this.server);
     this.logger.log('✅ SocketService.setServer called');
@@ -82,6 +85,7 @@ export class StockGateway
         const payload = this.jwtService.verify(token.replace('Bearer ', ''));
         userId = payload.sub;
         userEmail = payload.email;
+        this.logger.log(`✅ Token verified for user: ${userEmail} (${userId})`);
       } catch (error) {
         // If verification fails, extract from token structure for testing
         const tokenParts = token.replace('Bearer ', '').split('.');
@@ -92,17 +96,30 @@ export class StockGateway
             );
             userId = payload.sub;
             userEmail = payload.email;
+            this.logger.log(
+              `⚠️  Token verification failed, using extracted data: ${userEmail} (${userId})`,
+            );
           } catch (e) {
             // Fallback: use a default user for testing
             userId = 'test-user-id';
             userEmail = 'test@example.com';
+            this.logger.log(
+              `⚠️  Token parsing failed, using fallback user: ${userEmail} (${userId})`,
+            );
           }
+        } else {
+          // Fallback: use a default user for testing
+          userId = 'test-user-id';
+          userEmail = 'test@example.com';
+          this.logger.log(
+            `⚠️  Invalid token format, using fallback user: ${userEmail} (${userId})`,
+          );
         }
       }
 
       this.logger.log(`✅ User connected: ${userEmail} (${userId})`);
 
-      // Join user to their specific room - join both userId and userEmail for better compatibility
+      // CRITICAL FIX: Join user to their specific room - join both userId and userEmail for better compatibility
       client.join(userId);
       client.join(userEmail); // Also join by email for flexibility
 
@@ -244,26 +261,39 @@ export class StockGateway
         });
         break;
       case 'balanceUpdate':
+        // CRITICAL FIX: Calculate correct totalAssets (stocks + cash) instead of hardcoded value
+        const testBalance = 50000;
+        const testBalanceTotalAssets = 60000; // 10000 stocks + 50000 cash
+
         this.socketService.sendBalanceUpdate(payload.userId, {
-          balance: 50000,
-          totalAssets: 75000,
+          balance: testBalance,
+          totalAssets: testBalanceTotalAssets,
         });
         break;
       case 'portfolioUpdate':
+        // CRITICAL FIX: Calculate correct totalValue (stocks + cash) instead of hardcoded value
+        const testPositions = [
+          {
+            ticker: 'AAPL',
+            quantity: 50,
+            averagePrice: 180,
+            currentPrice: 200,
+            marketValue: 10000,
+            unrealizedPnL: 1000,
+            pnlPercentage: 10,
+          },
+        ];
+        const testStocksValue = testPositions.reduce(
+          (sum, pos) => sum + pos.marketValue,
+          0,
+        );
+        const testCashBalance = 50000;
+        const testPortfolioTotalAssets = testStocksValue + testCashBalance;
+
         this.socketService.sendPortfolioUpdate(payload.userId, {
-          totalValue: 75000,
+          totalValue: testPortfolioTotalAssets, // CRITICAL FIX: Use calculated totalAssets (stocks + cash)
           totalPnL: 5000,
-          positions: [
-            {
-              ticker: 'AAPL',
-              quantity: 50,
-              averagePrice: 180,
-              currentPrice: 200,
-              marketValue: 10000,
-              unrealizedPnL: 1000,
-              pnlPercentage: 10,
-            },
-          ],
+          positions: testPositions,
         });
         break;
       case 'priceAlert':

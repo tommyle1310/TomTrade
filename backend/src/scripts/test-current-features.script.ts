@@ -5,6 +5,7 @@ import { TransactionService } from '../transaction/transaction.service';
 import { StockService } from '../stock/stock.service';
 import { BalanceService } from '../balance/balance.service';
 import { IndicatorService } from '../stock/indicator.service';
+import { PortfolioPnLService } from '../portfolio/portfolio-pnl.service';
 
 async function testCurrentFeatures() {
   const prisma = new PrismaService();
@@ -116,6 +117,7 @@ async function testCurrentFeatures() {
       new TransactionService(prisma, new PortfolioService(prisma)),
       new StockService(prisma, null as any, null as any),
       new BalanceService(prisma),
+      new PortfolioPnLService(prisma),
     );
 
     try {

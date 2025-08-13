@@ -53,6 +53,7 @@ input CreateWatchlistInput {
 type DashboardResult {
   cashBalance: Float!
   stockPositions: [StockPosition!]!
+  stocksOnlyValue: Float!
   totalPnL: Float!
   totalPortfolioValue: Float!
   totalRealizedPnL: Float!

@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'prisma/prisma.service';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class BalanceService {
@@ -40,6 +41,38 @@ export class BalanceService {
     return this.prisma.balance.update({
       where: { userId },
       data: { amount: { increment: amount } },
+    });
+  }
+
+  // CRITICAL FIX: Add transaction-safe balance update methods
+  async updateBalanceInTransaction(
+    tx: Prisma.TransactionClient,
+    userId: string,
+    amount: number,
+    operation: 'increment' | 'decrement' | 'set',
+  ) {
+    if (operation === 'set') {
+      return tx.balance.update({
+        where: { userId },
+        data: { amount },
+      });
+    } else if (operation === 'increment') {
+      return tx.balance.update({
+        where: { userId },
+        data: { amount: { increment: amount } },
+      });
+    } else {
+      return tx.balance.update({
+        where: { userId },
+        data: { amount: { decrement: amount } },
+      });
+    }
+  }
+
+  // CRITICAL FIX: Add method to get balance within transaction
+  async getBalanceInTransaction(tx: Prisma.TransactionClient, userId: string) {
+    return tx.balance.findUnique({
+      where: { userId },
     });
   }
 }

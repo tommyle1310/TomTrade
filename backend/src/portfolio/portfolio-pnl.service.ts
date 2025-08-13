@@ -89,11 +89,12 @@ export class PortfolioPnLService {
     const totalAssets = totalPortfolioValue + (balance?.amount || 0);
 
     return {
-      totalPortfolioValue,
+      totalPortfolioValue, // Stocks only
+      stocksOnlyValue: totalPortfolioValue, // Alias for clarity
       totalUnrealizedPnL,
       totalRealizedPnL,
       totalPnL,
-      totalAssets,
+      totalAssets, // Stocks + Cash
       balance: balance?.amount || 0,
       positions,
     };

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
 import { Socket } from 'socket.io-client';
 import { socketService } from '../services/socketService';
 import { useAuthStore } from '../stores';
@@ -72,10 +72,17 @@ export const useSocket = (options: UseSocketOptions = {}) => {
   const { user, isAuthenticated } = useAuthStore();
   const socketRef = useRef<Socket | null>(null);
   const listenersSetupRef = useRef(false);
+  const [connectionStatus, setConnectionStatus] =
+    useState<string>('disconnected');
 
   const setupEventListeners = useCallback(
     (socket: Socket) => {
-      if (listenersSetupRef.current) return;
+      if (listenersSetupRef.current) {
+        console.log('⚠️ Event listeners already set up, skipping...');
+        return;
+      }
+
+      console.log('🔧 Setting up socket event listeners...');
 
       // Price alerts
       socket.on('priceAlert', (data: PriceAlert) => {
@@ -107,7 +114,24 @@ export const useSocket = (options: UseSocketOptions = {}) => {
         onConnectionTest?.(data);
       });
 
+      // CRITICAL FIX: Listen for connection status changes
+      socket.on('connect', () => {
+        console.log('✅ Socket connected in useSocket hook');
+        setConnectionStatus('connected');
+      });
+
+      socket.on('disconnect', (reason) => {
+        console.log('❌ Socket disconnected in useSocket hook:', reason);
+        setConnectionStatus('disconnected');
+      });
+
+      socket.on('connect_error', (error) => {
+        console.error('❌ Socket connection error in useSocket hook:', error);
+        setConnectionStatus('error');
+      });
+
       listenersSetupRef.current = true;
+      console.log('✅ Socket event listeners set up successfully');
     },
     [
       onPriceAlert,
@@ -125,29 +149,39 @@ export const useSocket = (options: UseSocketOptions = {}) => {
     }
 
     try {
+      console.log('🔌 Attempting to connect socket...');
       const socket = await socketService.connect();
       socketRef.current = socket;
       setupEventListeners(socket);
+      setConnectionStatus('connected');
+      console.log('✅ Socket connected successfully in useSocket hook');
       return socket;
     } catch (error) {
-      console.error('❌ Failed to connect socket:', error);
+      console.error('❌ Failed to connect socket in useSocket hook:', error);
+      setConnectionStatus('error');
       return null;
     }
   }, [isAuthenticated, user, setupEventListeners]);
 
   const disconnect = useCallback(() => {
+    console.log('🔌 Disconnecting socket in useSocket hook...');
     socketService.disconnect();
     socketRef.current = null;
     listenersSetupRef.current = false;
+    setConnectionStatus('disconnected');
   }, []);
 
   const requestPortfolioUpdate = useCallback(() => {
     if (user?.id) {
+      console.log(`📊 Requesting portfolio update for user: ${user.id}`);
       socketService.requestPortfolioUpdate(user.id);
+    } else {
+      console.log('❌ No user ID available for portfolio update request');
     }
   }, [user?.id]);
 
   const sendMockMarketData = useCallback((ticker: string, price: number) => {
+    console.log(`📊 Sending mock market data: ${ticker} @ $${price}`);
     socketService.sendMockMarketData(ticker, price);
   }, []);
 
@@ -159,6 +193,7 @@ export const useSocket = (options: UseSocketOptions = {}) => {
       user &&
       !socketRef.current?.connected
     ) {
+      console.log('🔄 Auto-connecting socket...');
       connect();
     }
 
@@ -176,9 +211,11 @@ export const useSocket = (options: UseSocketOptions = {}) => {
     };
   }, [disconnect]);
 
+  // CRITICAL FIX: Return connection status
   return {
     socket: socketRef.current,
     isConnected: socketService.isConnected(),
+    connectionStatus: connectionStatus,
     connect,
     disconnect,
     requestPortfolioUpdate,

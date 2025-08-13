@@ -172,6 +172,38 @@ export class TransactionService {
 
     const now = new Date();
 
+    // CRITICAL FIX: Add unique constraint check to prevent duplicate transactions
+    const existingBuyerTx = await tx.transaction.findFirst({
+      where: {
+        userId: buyerId,
+        ticker,
+        price,
+        shares: quantity,
+        action: 'BUY',
+        timestamp: {
+          gte: new Date(now.getTime() - 1000), // Within 1 second
+        },
+      },
+    });
+
+    const existingSellerTx = await tx.transaction.findFirst({
+      where: {
+        userId: sellerId,
+        ticker,
+        price,
+        shares: quantity,
+        action: 'SELL',
+        timestamp: {
+          gte: new Date(now.getTime() - 1000), // Within 1 second
+        },
+      },
+    });
+
+    if (existingBuyerTx || existingSellerTx) {
+      console.log('⚠️ Duplicate transaction detected, skipping...');
+      return;
+    }
+
     await tx.transaction.createMany({
       data: [
         {

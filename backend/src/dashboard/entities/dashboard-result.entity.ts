@@ -4,7 +4,10 @@ import { StockPosition } from './stock-position.entity';
 @ObjectType()
 export class DashboardResult {
   @Field(() => Float)
-  totalPortfolioValue: number;
+  totalPortfolioValue: number; // Total assets (stocks + cash)
+
+  @Field(() => Float)
+  stocksOnlyValue: number; // Stocks only (excluding cash)
 
   @Field(() => Float)
   totalRealizedPnL: number;

@@ -6,6 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from 'prisma/prisma.service';
+import { Prisma } from '@prisma/client';
 import { PlaceOrderInput } from './dto/place-order.input';
 import { PlaceStopOrderInput } from './dto/place-stop-order.input';
 import { TransactionService } from 'src/transaction/transaction.service';
@@ -42,10 +43,16 @@ export class OrderService {
     this.eventEmitter.on('order.matched', ({ orderId }) => {
       this.logger.log(`Order matched event received: ${orderId}`);
     });
-    
+
     // Debug: Check if SocketService is properly injected
-    this.logger.log('🔧 OrderService.onModuleInit - socketService instance:', this.socketService ? 'injected' : 'null');
-    this.logger.log('🔧 OrderService.onModuleInit - socketService.server:', this.socketService?.server ? 'initialized' : 'not initialized');
+    this.logger.log(
+      '🔧 OrderService.onModuleInit - socketService instance:',
+      this.socketService ? 'injected' : 'null',
+    );
+    this.logger.log(
+      '🔧 OrderService.onModuleInit - socketService.server:',
+      this.socketService?.server ? 'initialized' : 'not initialized',
+    );
   }
 
   async placeOrder(userId: string, input: PlaceOrderInput): Promise<Order> {
@@ -111,32 +118,31 @@ export class OrderService {
       `📝 Order created: ${order.id} - ${side} ${quantity} ${ticker} @ ${price}`,
     );
 
-    // Khớp lệnh sau khi tạo
+    // CRITICAL FIX: Only try to match once to prevent duplicate executions
     await this.tryMatchByOrder(order);
 
-    // Với lệnh MARKET, có thể gọi lại 1 lần nữa vì giá tự động
+    // CRITICAL FIX: Remove the second matching call for MARKET orders
+    // This was causing duplicate executions
     if (type === OrderType.MARKET) {
-      await this.tryMatchByOrder(order);
-
-      const updated = await this.prisma.order.findUnique({
-        where: { id: order.id },
-      });
-      if (!updated) throw new Error('❌ Order not found');
-      this.logger.log(
-        `📈 MARKET order final status: ${updated.status}, remaining quantity: ${updated.quantity}`,
-      );
-      return updated;
+      // For MARKET orders, we already tried matching above
+      // No need to call it again
+      this.logger.log(`📈 MARKET order processed - matching already attempted`);
     }
+
+    // CRITICAL FIX: Remove automatic retry of partial orders
+    // This was causing extra trades when partial orders were retried unnecessarily
+    // Partial orders will be matched naturally when new orders are placed
+    // await this.retryMatchingPartialOrders(ticker);
 
     // Check final order status
     const finalOrder = await this.prisma.order.findUnique({
       where: { id: order.id },
     });
     this.logger.log(
-      `📊 LIMIT order final status: ${finalOrder?.status}, remaining quantity: ${finalOrder?.quantity}`,
+      `📊 Order final status: ${finalOrder?.status}, remaining quantity: ${finalOrder?.quantity}`,
     );
 
-    return order;
+    return finalOrder || order;
   }
 
   async placeStopOrder(
@@ -206,156 +212,195 @@ export class OrderService {
       `🔍 Trying to match order: ${order.id} - ${order.side} ${order.quantity} ${order.ticker} @ ${order.price}`,
     );
 
-    const oppositeSide: OrderSide = order.side === 'BUY' ? 'SELL' : 'BUY';
-    const priceOrder = order.side === 'BUY' ? 'asc' : 'desc';
-
-    const priceFilter =
-      order.type === OrderType.MARKET
-        ? {}
-        : {
-            price:
-              order.side === 'BUY'
-                ? { lte: order.price }
-                : { gte: order.price },
-          };
-
-    this.logger.log(
-      `🔎 Looking for ${oppositeSide} orders for ${order.ticker} with price filter:`,
-      priceFilter,
-    );
-
-    const candidates = await this.prisma.order.findMany({
-      where: {
-        ticker: order.ticker,
-        status: OrderStatus.OPEN,
-        side: oppositeSide,
-        type: OrderType.LIMIT,
-        ...priceFilter,
-      },
-      orderBy: [{ price: priceOrder }, { createdAt: 'asc' }],
-    });
-
-    this.logger.log(
-      `📋 Found ${candidates.length} matching candidates for order ${order.id}`,
-    );
-
-    if (candidates.length > 0) {
-      candidates.forEach((candidate, index) => {
-        this.logger.log(
-          `  ${index + 1}. Order ${candidate.id}: ${candidate.side} ${candidate.quantity} @ ${candidate.price}`,
-        );
-      });
-    }
-
-    if (!candidates.length) {
-      this.logger.log(`❌ No matching orders found for ${order.id}`);
-      // Handle FOK orders that don't get any matches
-      if (order.timeInForce === TimeInForce.FOK) {
-        await this.prisma.order.update({
-          where: { id: order.id },
-          data: { status: OrderStatus.CANCELLED },
-        });
-        this.logger.log(
-          `❌ FOK order ${order.id} cancelled - no matches found`,
-        );
-      }
-      return;
-    }
-
-    let totalMatched = 0;
-    const originalQuantity = order.quantity;
-
-    for (const matched of candidates) {
-      // ⚠️ Always fetch the fresh latest version of the taker
-      const freshOrder = await this.prisma.order.findUnique({
+    // CRITICAL FIX: Use transaction to prevent race conditions and duplicate executions
+    return await this.prisma.$transaction(async (tx) => {
+      // Re-check order status within transaction to prevent duplicate processing
+      const currentOrder = await tx.order.findUnique({
         where: { id: order.id },
+        select: { status: true, quantity: true },
       });
 
-      if (!freshOrder || freshOrder.status !== OrderStatus.OPEN) break;
-
-      const freshMatched = await this.prisma.order.findUnique({
-        where: { id: matched.id },
-      });
-
-      if (!freshMatched || freshMatched.status !== OrderStatus.OPEN) continue;
-
-      const availableQty = Math.min(freshOrder.quantity, freshMatched.quantity);
-
-      // ✅ Check SELLER has enough stock
-      const sellerId =
-        freshOrder.side === 'BUY' ? freshMatched.userId : freshOrder.userId;
-
-      const sellerPortfolio = await this.prisma.portfolio.findUnique({
-        where: {
-          userId_ticker: {
-            userId: sellerId,
-            ticker: freshOrder.ticker,
-          },
-        },
-      });
-
-      if (!sellerPortfolio || sellerPortfolio.quantity < availableQty) {
-        this.logger.warn(`⛔ Seller ${sellerId} không đủ cổ phiếu để bán`);
-        continue;
-      }
-
-      await this.executeTrade(
-        freshOrder,
-        freshMatched,
-        availableQty,
-        freshMatched.price,
-      );
-
-      totalMatched += availableQty;
-
-      // Handle IOC orders - cancel remaining quantity after ANY partial fill
-      if (
-        order.timeInForce === TimeInForce.IOC &&
-        totalMatched > 0 &&
-        totalMatched < originalQuantity
-      ) {
-        const remainingQty = originalQuantity - totalMatched;
-        await this.prisma.order.update({
-          where: { id: order.id },
-          data: {
-            status: OrderStatus.CANCELLED,
-            quantity: remainingQty,
-          },
-        });
+      if (!currentOrder || currentOrder.status !== OrderStatus.OPEN) {
         this.logger.log(
-          `🔄 IOC order ${order.id} partially filled, remaining ${remainingQty} cancelled`,
+          `⚠️ Order ${order.id} is no longer OPEN (status: ${currentOrder?.status}), skipping matching`,
         );
-        break;
+        return;
       }
 
-      // Handle FOK orders - if not fully filled, cancel the entire order
-      if (
-        order.timeInForce === TimeInForce.FOK &&
-        totalMatched < originalQuantity
-      ) {
-        await this.prisma.order.update({
-          where: { id: order.id },
-          data: { status: OrderStatus.CANCELLED },
-        });
-        this.logger.log(
-          `❌ FOK order ${order.id} cancelled - not fully filled`,
-        );
-        break;
-      }
-    }
+      const oppositeSide: OrderSide = order.side === 'BUY' ? 'SELL' : 'BUY';
+      const priceOrder = order.side === 'BUY' ? 'asc' : 'desc';
 
-    // Handle GTC orders - keep OPEN if not fully filled
-    if (
-      order.timeInForce === TimeInForce.GTC &&
-      totalMatched < originalQuantity
-    ) {
+      const priceFilter =
+        order.type === OrderType.MARKET
+          ? {}
+          : {
+              price:
+                order.side === 'BUY'
+                  ? { lte: order.price }
+                  : { gte: order.price },
+            };
+
       this.logger.log(
-        `⏳ GTC order ${order.id} partially filled, remaining OPEN`,
+        `🔎 Looking for ${oppositeSide} orders for ${order.ticker} with price filter:`,
+        priceFilter,
       );
-    }
+
+      const candidates = await tx.order.findMany({
+        where: {
+          ticker: order.ticker,
+          status: OrderStatus.OPEN,
+          side: oppositeSide,
+          type: OrderType.LIMIT,
+          ...priceFilter,
+        },
+        orderBy: [{ price: priceOrder }, { createdAt: 'asc' }],
+      });
+
+      this.logger.log(
+        `📋 Found ${candidates.length} matching candidates for order ${order.id}`,
+      );
+
+      if (candidates.length > 0) {
+        candidates.forEach((candidate, index) => {
+          this.logger.log(
+            `  ${index + 1}. Order ${candidate.id}: ${candidate.side} ${candidate.quantity} @ ${candidate.price}`,
+          );
+        });
+      }
+
+      if (!candidates.length) {
+        this.logger.log(`❌ No matching orders found for ${order.id}`);
+        // Handle FOK orders that don't get any matches
+        if (order.timeInForce === TimeInForce.FOK) {
+          await tx.order.update({
+            where: { id: order.id },
+            data: { status: OrderStatus.CANCELLED },
+          });
+          this.logger.log(
+            `❌ FOK order ${order.id} cancelled - no matches found`,
+          );
+        }
+        return;
+      }
+
+      let totalMatched = 0;
+      const originalQuantity = currentOrder.quantity;
+
+      for (const matched of candidates) {
+        // Re-check both orders within transaction to prevent race conditions
+        const freshOrder = await tx.order.findUnique({
+          where: { id: order.id },
+        });
+
+        if (!freshOrder || freshOrder.status !== OrderStatus.OPEN) {
+          this.logger.log(
+            `⚠️ Order ${order.id} no longer OPEN, stopping matching`,
+          );
+          break;
+        }
+
+        const freshMatched = await tx.order.findUnique({
+          where: { id: matched.id },
+        });
+
+        if (!freshMatched || freshMatched.status !== OrderStatus.OPEN) {
+          this.logger.log(
+            `⚠️ Matched order ${matched.id} no longer OPEN, skipping`,
+          );
+          continue;
+        }
+
+        const availableQty = Math.min(
+          freshOrder.quantity,
+          freshMatched.quantity,
+        );
+
+        if (availableQty <= 0) {
+          this.logger.log(
+            `⚠️ No available quantity for trade between ${freshOrder.id} and ${freshMatched.id}`,
+          );
+          continue;
+        }
+
+        // ✅ Check SELLER has enough stock
+        const sellerId =
+          freshOrder.side === 'BUY' ? freshMatched.userId : freshOrder.userId;
+
+        const sellerPortfolio = await tx.portfolio.findUnique({
+          where: {
+            userId_ticker: {
+              userId: sellerId,
+              ticker: freshOrder.ticker,
+            },
+          },
+        });
+
+        if (!sellerPortfolio || sellerPortfolio.quantity < availableQty) {
+          this.logger.warn(`⛔ Seller ${sellerId} không đủ cổ phiếu để bán`);
+          continue;
+        }
+
+        // Execute trade within the same transaction
+        await this.executeTradeInTransaction(
+          tx,
+          freshOrder,
+          freshMatched,
+          availableQty,
+          freshMatched.price,
+        );
+
+        totalMatched += availableQty;
+
+        // Handle IOC orders - cancel remaining quantity after ANY partial fill
+        if (
+          order.timeInForce === TimeInForce.IOC &&
+          totalMatched > 0 &&
+          totalMatched < originalQuantity
+        ) {
+          const remainingQty = originalQuantity - totalMatched;
+          await tx.order.update({
+            where: { id: order.id },
+            data: {
+              status: OrderStatus.CANCELLED,
+              quantity: remainingQty,
+            },
+          });
+          this.logger.log(
+            `🔄 IOC order ${order.id} partially filled, remaining ${remainingQty} cancelled`,
+          );
+          break;
+        }
+
+        // Handle FOK orders - if not fully filled, cancel the entire order
+        if (
+          order.timeInForce === TimeInForce.FOK &&
+          totalMatched < originalQuantity
+        ) {
+          await tx.order.update({
+            where: { id: order.id },
+            data: { status: OrderStatus.CANCELLED },
+          });
+          this.logger.log(
+            `❌ FOK order ${order.id} cancelled - not fully filled`,
+          );
+          break;
+        }
+      }
+
+      // Handle GTC orders - keep OPEN if not fully filled
+      if (
+        order.timeInForce === TimeInForce.GTC &&
+        totalMatched < originalQuantity
+      ) {
+        this.logger.log(
+          `⏳ GTC order ${order.id} partially filled, remaining OPEN`,
+        );
+      }
+    });
   }
 
   async tryMatchByPrice(ticker: string, currentPrice: number) {
+    // CRITICAL FIX: Only process orders that are still OPEN
     const candidates = await this.prisma.order.findMany({
       where: {
         ticker,
@@ -378,12 +423,29 @@ export class OrderService {
       orderBy: { createdAt: 'asc' },
     });
 
+    // CRITICAL FIX: Process orders one by one to prevent race conditions
     for (const order of limitOrders) {
-      await this.tryMatchByOrder(order);
+      // Double-check order is still OPEN before processing
+      const currentOrder = await this.prisma.order.findUnique({
+        where: { id: order.id },
+        select: { status: true },
+      });
+
+      if (currentOrder && currentOrder.status === OrderStatus.OPEN) {
+        await this.tryMatchByOrder(order);
+      }
     }
 
     for (const order of candidates) {
-      await this.tryMatchByOrder({ ...order, price: currentPrice });
+      // Double-check order is still OPEN before processing
+      const currentOrder = await this.prisma.order.findUnique({
+        where: { id: order.id },
+        select: { status: true },
+      });
+
+      if (currentOrder && currentOrder.status === OrderStatus.OPEN) {
+        await this.tryMatchByOrder({ ...order, price: currentPrice });
+      }
     }
   }
 
@@ -396,109 +458,136 @@ export class OrderService {
 
   private sentNotifications = new Set<string>();
 
-  private async executeTrade(
+  private async executeTradeInTransaction(
+    tx: Prisma.TransactionClient,
     taker: Order,
     maker: Order,
     quantity: number,
     executedPrice: number,
   ) {
     this.logger.log(
-      `🔄 Executing trade: ${taker.id} (${taker.side}) <-> ${maker.id} (${maker.side}) for ${quantity} @ ${executedPrice}`,
+      `🔄 Executing trade in transaction: ${taker.id} (${taker.side}) <-> ${maker.id} (${maker.side}) for ${quantity} @ ${executedPrice}`,
     );
 
     let takerStatus: OrderStatus;
     let makerStatus: OrderStatus;
 
-    await this.prisma.$transaction(async (tx) => {
-      const takerRemaining = taker.quantity - quantity;
-      const makerRemaining = maker.quantity - quantity;
+    const takerRemaining = taker.quantity - quantity;
+    const makerRemaining = maker.quantity - quantity;
 
-      takerStatus =
-        takerRemaining === 0
-          ? OrderStatus.FILLED
-          : takerRemaining < taker.quantity
-            ? OrderStatus.PARTIAL
-            : OrderStatus.OPEN;
+    takerStatus =
+      takerRemaining === 0
+        ? OrderStatus.FILLED
+        : takerRemaining < taker.quantity
+          ? OrderStatus.PARTIAL
+          : OrderStatus.OPEN;
 
-      makerStatus =
-        makerRemaining === 0
-          ? OrderStatus.FILLED
-          : makerRemaining < maker.quantity
-            ? OrderStatus.PARTIAL
-            : OrderStatus.OPEN;
+    makerStatus =
+      makerRemaining === 0
+        ? OrderStatus.FILLED
+        : makerRemaining < maker.quantity
+          ? OrderStatus.PARTIAL
+          : OrderStatus.OPEN;
 
-      // Update taker
-      await tx.order.update({
-        where: { id: taker.id },
-        data: {
-          quantity: takerRemaining,
-          status: takerStatus,
-          matchedAt: new Date(),
-        },
-      });
-
-      // Update maker
-      await tx.order.update({
-        where: { id: maker.id },
-        data: {
-          quantity: makerRemaining,
-          status: makerStatus,
-          matchedAt: new Date(),
-        },
-      });
-
-      const buyerId = taker.side === 'BUY' ? taker.userId : maker.userId;
-      const sellerId = taker.side === 'SELL' ? taker.userId : maker.userId;
-      const ticker = taker.ticker;
-      const totalCost = quantity * executedPrice;
-
-      // Check buyer has sufficient balance before executing trade
-      const buyerBalance = await tx.balance.findUnique({
-        where: { userId: buyerId },
-      });
-
-      if (!buyerBalance || buyerBalance.amount < totalCost) {
-        throw new Error(
-          `❌ Buyer ${buyerId} has insufficient balance for trade: ${buyerBalance?.amount || 0} < ${totalCost}`,
-        );
-      }
-
-      // Update buyer balance (deduct cost)
-      await tx.balance.update({
-        where: { userId: buyerId },
-        data: { amount: { decrement: totalCost } },
-      });
-
-      // Update seller balance (add proceeds)
-      await tx.balance.update({
-        where: { userId: sellerId },
-        data: { amount: { increment: totalCost } },
-      });
-
-      // Update portfolios using transaction client
-      await this.portfolioService.upsertPortfolio(
-        tx,
-        buyerId,
-        ticker,
-        quantity,
-        executedPrice,
-      );
-      await this.portfolioService.updatePortfolioOnSell(
-        tx,
-        sellerId,
-        ticker,
-        quantity,
-      );
-
-      // Record transaction
-      await this.txService.recordTrade(tx, {
-        buyerId,
-        sellerId,
-        ticker,
-        quantity,
-        price: executedPrice,
-      });
+    // Update taker
+    await tx.order.update({
+      where: { id: taker.id },
+      data: {
+        quantity: takerRemaining,
+        status: takerStatus,
+        matchedAt: new Date(),
+      },
     });
+
+    // Update maker
+    await tx.order.update({
+      where: { id: maker.id },
+      data: {
+        quantity: makerRemaining,
+        status: makerStatus,
+        matchedAt: new Date(),
+      },
+    });
+
+    const buyerId = taker.side === 'BUY' ? taker.userId : maker.userId;
+    const sellerId = taker.side === 'SELL' ? taker.userId : maker.userId;
+    const ticker = taker.ticker;
+    const totalCost = quantity * executedPrice;
+
+    // CRITICAL FIX: Check buyer has sufficient balance before executing trade
+    const buyerBalance = await tx.balance.findUnique({
+      where: { userId: buyerId },
+    });
+
+    if (!buyerBalance || buyerBalance.amount < totalCost) {
+      throw new Error(
+        `❌ Buyer ${buyerId} has insufficient balance for trade: ${buyerBalance?.amount || 0} < ${totalCost}`,
+      );
+    }
+
+    // CRITICAL FIX: Update buyer balance (deduct cost) within transaction
+    await tx.balance.update({
+      where: { userId: buyerId },
+      data: { amount: { decrement: totalCost } },
+    });
+
+    // CRITICAL FIX: Update seller balance (add proceeds) within transaction
+    await tx.balance.update({
+      where: { userId: sellerId },
+      data: { amount: { increment: totalCost } },
+    });
+
+    // Update portfolios using transaction client
+    await this.portfolioService.upsertPortfolio(
+      tx,
+      buyerId,
+      ticker,
+      quantity,
+      executedPrice,
+    );
+    await this.portfolioService.updatePortfolioOnSell(
+      tx,
+      sellerId,
+      ticker,
+      quantity,
+    );
+
+    // Record transaction
+    await this.txService.recordTrade(tx, {
+      buyerId,
+      sellerId,
+      ticker,
+      quantity,
+      price: executedPrice,
+    });
+
+    this.logger.log(
+      `✔️ Executed trade ${taker.id} <-> ${maker.id} for ${quantity} @${executedPrice}`,
+    );
+
+    // CRITICAL FIX: Send notifications immediately after transaction completes
+    // This ensures we send the updated data, not stale data
+    this.sendOrderNotifications(
+      taker,
+      maker,
+      quantity,
+      executedPrice,
+      takerStatus,
+      makerStatus,
+    );
+  }
+
+  private async executeTrade(
+    taker: Order,
+    maker: Order,
+    quantity: number,
+    executedPrice: number,
+  ) {
+    // This method is now deprecated - use executeTradeInTransaction instead
+    // But keeping it for backward compatibility
+    this.logger.warn(
+      '⚠️ executeTrade is deprecated, use executeTradeInTransaction instead',
+    );
 
     // Send notifications outside transaction to prevent duplicates
     this.sendOrderNotifications(
@@ -506,12 +595,8 @@ export class OrderService {
       maker,
       quantity,
       executedPrice,
-      takerStatus!,
-      makerStatus!,
-    );
-
-    this.logger.log(
-      `✔️ Executed trade ${taker.id} <-> ${maker.id} for ${quantity} @${executedPrice}`,
+      taker.status,
+      maker.status,
     );
   }
 
@@ -617,70 +702,66 @@ export class OrderService {
       );
     }
 
-    // Send portfolio and balance updates to both users with delay to prevent duplicates
-    setTimeout(async () => {
-      try {
-        this.logger.log(
-          `📊 Sending portfolio/balance updates to taker ${taker.userId}`,
-        );
-        // Get portfolio data for taker
-        const takerPortfolioData =
-          await this.portfolioPnLService.calculatePortfolioPnL(taker.userId, {
-            [taker.ticker]: executedPrice,
-          });
-        const takerBalance = await this.balanceService.getBalance(taker.userId);
+    // Send portfolio and balance updates to both users immediately
+    try {
+      this.logger.log(
+        `📊 Sending portfolio/balance updates to taker ${taker.userId}`,
+      );
+      // Get portfolio data for taker
+      const takerPortfolioData =
+        await this.portfolioPnLService.calculatePortfolioPnL(taker.userId, {
+          [taker.ticker]: executedPrice,
+        });
+      const takerBalance = await this.balanceService.getBalance(taker.userId);
 
-        await this.socketService.sendPortfolioUpdate(taker.userId, {
-          totalValue: takerPortfolioData.totalPortfolioValue,
-          totalPnL: takerPortfolioData.totalPnL,
-          positions: takerPortfolioData.positions,
-        });
-        await this.socketService.sendBalanceUpdate(taker.userId, {
-          balance: takerBalance,
-          totalAssets: takerPortfolioData.totalAssets,
-        });
-        this.logger.log(
-          `✅ Sent portfolio/balance updates to taker ${taker.userId}`,
-        );
-      } catch (error) {
-        this.logger.error(
-          `❌ Failed to send portfolio/balance updates to taker ${taker.userId}:`,
-          error,
-        );
-      }
-    }, 100);
+      await this.socketService.sendPortfolioUpdate(taker.userId, {
+        totalValue: takerPortfolioData.totalAssets, // CRITICAL FIX: Send totalAssets (stocks + cash) instead of totalPortfolioValue
+        totalPnL: takerPortfolioData.totalPnL,
+        positions: takerPortfolioData.positions,
+      });
+      await this.socketService.sendBalanceUpdate(taker.userId, {
+        balance: takerBalance,
+        totalAssets: takerPortfolioData.totalAssets,
+      });
+      this.logger.log(
+        `✅ Sent portfolio/balance updates to taker ${taker.userId}`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `❌ Failed to send portfolio/balance updates to taker ${taker.userId}:`,
+        error,
+      );
+    }
 
-    setTimeout(async () => {
-      try {
-        this.logger.log(
-          `📊 Sending portfolio/balance updates to maker ${maker.userId}`,
-        );
-        // Get portfolio data for maker
-        const makerPortfolioData =
-          await this.portfolioPnLService.calculatePortfolioPnL(maker.userId, {
-            [maker.ticker]: executedPrice,
-          });
-        const makerBalance = await this.balanceService.getBalance(maker.userId);
+    try {
+      this.logger.log(
+        `📊 Sending portfolio/balance updates to maker ${maker.userId}`,
+      );
+      // Get portfolio data for maker
+      const makerPortfolioData =
+        await this.portfolioPnLService.calculatePortfolioPnL(maker.userId, {
+          [maker.ticker]: executedPrice,
+        });
+      const makerBalance = await this.balanceService.getBalance(maker.userId);
 
-        await this.socketService.sendPortfolioUpdate(maker.userId, {
-          totalValue: makerPortfolioData.totalPortfolioValue,
-          totalPnL: makerPortfolioData.totalPnL,
-          positions: makerPortfolioData.positions,
-        });
-        await this.socketService.sendBalanceUpdate(maker.userId, {
-          balance: makerBalance,
-          totalAssets: makerPortfolioData.totalAssets,
-        });
-        this.logger.log(
-          `✅ Sent portfolio/balance updates to maker ${maker.userId}`,
-        );
-      } catch (error) {
-        this.logger.error(
-          `❌ Failed to send portfolio/balance updates to maker ${maker.userId}:`,
-          error,
-        );
-      }
-    }, 200);
+      await this.socketService.sendPortfolioUpdate(maker.userId, {
+        totalValue: makerPortfolioData.totalAssets, // CRITICAL FIX: Send totalAssets (stocks + cash) instead of totalPortfolioValue
+        totalPnL: makerPortfolioData.totalPnL,
+        positions: makerPortfolioData.positions,
+      });
+      await this.socketService.sendBalanceUpdate(maker.userId, {
+        balance: makerBalance,
+        totalAssets: makerPortfolioData.totalAssets,
+      });
+      this.logger.log(
+        `✅ Sent portfolio/balance updates to maker ${maker.userId}`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `❌ Failed to send portfolio/balance updates to maker ${maker.userId}:`,
+        error,
+      );
+    }
   }
 
   async cancelOrder(userId: string, orderId: string) {
@@ -750,5 +831,64 @@ export class OrderService {
       buyOrders: buyOrdersRaw.map(mapOrder),
       sellOrders: sellOrdersRaw.map(mapOrder),
     };
+  }
+
+  // CRITICAL FIX: Retry matching for partial orders
+  private async retryMatchingPartialOrders(ticker: string) {
+    try {
+      // Find all partial orders for this ticker
+      const partialOrders = await this.prisma.order.findMany({
+        where: {
+          ticker,
+          status: OrderStatus.PARTIAL,
+        },
+      });
+
+      this.logger.log(
+        `🔄 Retrying matching for ${partialOrders.length} partial orders in ${ticker}`,
+      );
+
+      // Try to match each partial order
+      for (const partialOrder of partialOrders) {
+        if (partialOrder.quantity > 0) {
+          this.logger.log(
+            `🔄 Retrying match for partial order ${partialOrder.id} (${partialOrder.quantity} remaining)`,
+          );
+          await this.tryMatchByOrder(partialOrder);
+        }
+      }
+    } catch (error) {
+      this.logger.error(`❌ Error retrying partial order matching:`, error);
+    }
+  }
+
+  // CRITICAL FIX: Manually trigger order matching for any remaining open orders
+  async triggerOrderMatching(ticker: string) {
+    try {
+      this.logger.log(`🔄 Manually triggering order matching for ${ticker}`);
+
+      // Find all open orders for this ticker
+      const openOrders = await this.prisma.order.findMany({
+        where: {
+          ticker,
+          status: OrderStatus.OPEN,
+        },
+        orderBy: [{ createdAt: 'asc' }],
+      });
+
+      this.logger.log(
+        `📋 Found ${openOrders.length} open orders for ${ticker}`,
+      );
+
+      // Try to match each open order
+      for (const openOrder of openOrders) {
+        this.logger.log(
+          `🔄 Triggering match for open order ${openOrder.id} (${openOrder.side} ${openOrder.quantity} @ ${openOrder.price})`,
+        );
+        await this.tryMatchByOrder(openOrder);
+      }
+    } catch (error) {
+      this.logger.error(`❌ Error triggering order matching:`, error);
+    }
   }
 }

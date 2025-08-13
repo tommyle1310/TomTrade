@@ -126,6 +126,93 @@ export async function getPortfolio(client: any) {
   return client.request(query);
 }
 
+export async function getDashboard(client: any) {
+  console.log('🔍 test-utils.getDashboard called');
+  console.log('🔍 test-utils.getDashboard client:', client ? 'exists' : 'null');
+  
+  const query = gql`
+    query {
+      getDashboard {
+        totalPortfolioValue
+        stocksOnlyValue
+        cashBalance
+        totalPnL
+        totalRealizedPnL
+        totalUnrealizedPnL
+        stockPositions {
+          ticker
+          quantity
+          averageBuyPrice
+          currentPrice
+          marketValue
+          unrealizedPnL
+        }
+      }
+    }
+  `;
+  
+  try {
+    console.log('🔍 test-utils.getDashboard sending GraphQL request...');
+    const result = await client.request(query);
+    console.log('🔍 test-utils.getDashboard result:', result);
+    return result;
+  } catch (error) {
+    console.error('❌ test-utils.getDashboard error:', error);
+    console.error('❌ Error details:', {
+      name: error.name,
+      message: error.message,
+      stack: error.stack
+    });
+    throw error;
+  }
+}
+
+export async function getCurrentMarketPrice(
+  client: any,
+  ticker: string,
+): Promise<number> {
+  const query = gql`
+    query GetStock($ticker: String!) {
+      stock(ticker: $ticker) {
+        marketData(interval: _1d) {
+          close
+          timestamp
+        }
+      }
+    }
+  `;
+
+  try {
+    const result = await client.request(query, { ticker });
+    const marketData = result.stock?.marketData;
+    if (marketData && marketData.length > 0) {
+      // Get the most recent price
+      return marketData[0].close;
+    }
+  } catch (error) {
+    console.log(`⚠️ Could not get market price for ${ticker}:`, error.message);
+  }
+
+  // Fallback to a default price if market data is not available
+  return 0;
+}
+
+export async function getDetailedTransactions(client: any) {
+  const query = gql`
+    query {
+      myTransactions {
+        id
+        action
+        shares
+        price
+        ticker
+        timestamp
+      }
+    }
+  `;
+  return client.request(query);
+}
+
 export async function getTransactions(client: any) {
   const query = gql`
     query {
@@ -145,6 +232,20 @@ export async function getTransactions(client: any) {
 export async function clearOrders() {
   await prisma.order.deleteMany();
   console.log('🧹 Cleared all orders');
+}
+
+export async function clearAllTestData() {
+  console.log('🧹 Starting comprehensive cleanup...');
+
+  // Clear all test-related data
+  await prisma.order.deleteMany();
+  await prisma.transaction.deleteMany();
+  await prisma.portfolio.deleteMany();
+  await prisma.balance.deleteMany();
+  await prisma.alertSent.deleteMany();
+  await prisma.alertRule.deleteMany();
+
+  console.log('✅ Comprehensive cleanup completed');
 }
 
 export function createClient(token: string) {
@@ -242,4 +343,88 @@ export async function gqlRequest(
 
   const client = new GraphQLClient(endpoint, { headers });
   return client.request(query, variables);
+}
+
+export function calculateExpectedPortfolioValue(
+  initialCash: number,
+  initialPositions: Array<{
+    ticker: string;
+    quantity: number;
+    averagePrice: number;
+  }>,
+  trades: Array<{
+    side: 'BUY' | 'SELL';
+    ticker: string;
+    quantity: number;
+    price: number;
+  }>,
+): {
+  finalCash: number;
+  finalPositions: Array<{
+    ticker: string;
+    quantity: number;
+    averagePrice: number;
+  }>;
+  totalValue: number;
+} {
+  let cash = initialCash;
+  const positions = new Map<string, { quantity: number; totalCost: number }>();
+
+  // Initialize positions
+  for (const pos of initialPositions) {
+    positions.set(pos.ticker, {
+      quantity: pos.quantity,
+      totalCost: pos.quantity * pos.averagePrice,
+    });
+  }
+
+  // Process trades
+  for (const trade of trades) {
+    if (trade.side === 'BUY') {
+      const cost = trade.quantity * trade.price;
+      cash -= cost;
+
+      const existing = positions.get(trade.ticker);
+      if (existing) {
+        existing.quantity += trade.quantity;
+        existing.totalCost += cost;
+      } else {
+        positions.set(trade.ticker, {
+          quantity: trade.quantity,
+          totalCost: cost,
+        });
+      }
+    } else {
+      // SELL
+      const proceeds = trade.quantity * trade.price;
+      cash += proceeds;
+
+      const existing = positions.get(trade.ticker);
+      if (existing) {
+        existing.quantity -= trade.quantity;
+        if (existing.quantity <= 0) {
+          positions.delete(trade.ticker);
+        }
+      }
+    }
+  }
+
+  // Calculate final positions with average prices
+  const finalPositions = Array.from(positions.entries()).map(
+    ([ticker, pos]) => ({
+      ticker,
+      quantity: pos.quantity,
+      averagePrice: pos.totalCost / pos.quantity,
+    }),
+  );
+
+  // Calculate total value (assuming current prices = last trade prices)
+  let totalValue = cash;
+  for (const pos of finalPositions) {
+    const lastTrade = trades.filter((t) => t.ticker === pos.ticker).pop();
+    const currentPrice = lastTrade ? lastTrade.price : pos.averagePrice;
+    totalValue += pos.quantity * currentPrice;
+  }
+
+  return { finalCash: cash, finalPositions, totalValue };
 }
