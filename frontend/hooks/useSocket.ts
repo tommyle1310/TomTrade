@@ -180,6 +180,18 @@ export const useSocket = (options: UseSocketOptions = {}) => {
     }
   }, [user?.id]);
 
+  // CRITICAL FIX: Add method to request portfolio update with current market prices
+  const requestPortfolioUpdateWithCurrentPrices = useCallback(() => {
+    if (user?.id) {
+      console.log(
+        `📊 Requesting portfolio update with current prices for user: ${user.id}`
+      );
+      socketService.requestPortfolioUpdateWithCurrentPrices?.(user.id);
+    } else {
+      console.log('❌ No user ID available for portfolio update request');
+    }
+  }, [user?.id]);
+
   const sendMockMarketData = useCallback((ticker: string, price: number) => {
     console.log(`📊 Sending mock market data: ${ticker} @ $${price}`);
     socketService.sendMockMarketData(ticker, price);
@@ -219,6 +231,7 @@ export const useSocket = (options: UseSocketOptions = {}) => {
     connect,
     disconnect,
     requestPortfolioUpdate,
+    requestPortfolioUpdateWithCurrentPrices,
     sendMockMarketData,
   };
 };

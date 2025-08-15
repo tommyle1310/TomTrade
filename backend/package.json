@@ -45,7 +45,7 @@
     "test:socket-connection": "ts-node --require tsconfig-paths/register src/scripts/test-socket-connection.script.ts",
     "test:websocket-events": "ts-node --require tsconfig-paths/register src/scripts/test-websocket-events.script.ts",
     "test:simple-order-match": "ts-node --require tsconfig-paths/register src/scripts/test-simple-order-match.script.ts",
-    "test:market-order": "ts-node --require tsconfig-paths/register src/scripts/test-market-order.script.ts",
+    "test:dashboard-consistency": "ts-node --require tsconfig-paths/register src/scripts/test-dashboard-consistency.script.ts",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",

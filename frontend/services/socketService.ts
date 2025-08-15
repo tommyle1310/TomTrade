@@ -229,6 +229,21 @@ class SocketService {
     }
   }
 
+  // CRITICAL FIX: Add method to request portfolio update with current market prices
+  requestPortfolioUpdateWithCurrentPrices(userId: string) {
+    if (this.socket?.connected) {
+      console.log(
+        `📊 Requesting portfolio update with current prices for user: ${userId}`
+      );
+      this.socket.emit('requestPortfolioUpdate', {
+        userId,
+        useCurrentPrices: true,
+      });
+    } else {
+      console.log('❌ Socket not connected, cannot request portfolio update');
+    }
+  }
+
   sendMockMarketData(ticker: string, price: number) {
     if (this.socket?.connected) {
       console.log(`📊 Sending mock market data: ${ticker} @ $${price}`);

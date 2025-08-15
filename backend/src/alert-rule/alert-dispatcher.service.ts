@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { AlertRuleService } from './alert-rule.service';
-import { StockGateway } from 'src/common/gateway/stock/stock.gateway';
 import { SocketService } from 'src/core/socket-gateway.service';
 
 @Injectable()
@@ -16,7 +15,9 @@ export class AlertDispatcherService {
     console.log(`📊 Found ${alerts.length} alerts to send for ${ticker}`);
 
     for (const alert of alerts) {
-      console.log(`📤 Sending alert to user ${alert.userId}: ${alert.data.message}`);
+      console.log(
+        `📤 Sending alert to user ${alert.userId}: ${alert.data.message}`,
+      );
       await this.socketService.sendAlert({
         userId: alert.userId,
         data: {

@@ -30,7 +30,18 @@ export class PortfolioPnLService {
     }> = [];
 
     for (const position of portfolio) {
-      const currentPrice = currentPrices[position.ticker] || 0;
+      // Get current price: use provided currentPrices first, then fallback to market data, then average price
+      let currentPrice = currentPrices[position.ticker];
+
+      if (!currentPrice || currentPrice === 0) {
+        // Try to get from market data
+        const latestMarketData = await this.prisma.marketData.findFirst({
+          where: { ticker: position.ticker },
+          orderBy: { timestamp: 'desc' },
+        });
+        currentPrice = latestMarketData?.close || position.averagePrice;
+      }
+
       const marketValue = position.quantity * currentPrice;
       const unrealizedPnL =
         (currentPrice - position.averagePrice) * position.quantity;

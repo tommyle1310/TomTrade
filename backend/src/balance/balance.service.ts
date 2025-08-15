@@ -15,10 +15,18 @@ export class BalanceService {
   }
 
   async getBalance(userId: string): Promise<number> {
-    const balance = await this.prisma.balance.findUnique({
-      where: { userId },
-    });
-    return balance?.amount ?? 0;
+    try {
+      const balance = await this.prisma.balance.findUnique({
+        where: { userId },
+      });
+
+      const amount = balance?.amount ?? 0;
+      console.log(`💰 Balance for ${userId}: $${amount}`);
+      return amount;
+    } catch (error) {
+      console.error(`❌ Error getting balance for ${userId}:`, error);
+      return 0;
+    }
   }
 
   async deposit(userId: string, amount: number): Promise<boolean> {

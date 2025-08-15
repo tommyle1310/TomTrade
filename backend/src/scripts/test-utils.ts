@@ -2,14 +2,13 @@
 // scripts/test-utils.ts
 
 import { request, GraphQLClient } from 'graphql-request';
-// import { PrismaClient } from '@prisma/client';
-import { PrismaService } from 'prisma/prisma.service';
+import { PrismaClient } from '@prisma/client';
 import { Test } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
-import { AppModule } from 'src/app.module';
+import { AppModule } from '../app.module';
 const gql = String.raw;
 const endpoint = `http://127.0.0.1:${process.env.PORT || 4000}/graphql`;
-export const prisma = new PrismaService();
+export const prisma = new PrismaClient();
 
 export async function getTestApp(): Promise<INestApplication> {
   const moduleRef = await Test.createTestingModule({
@@ -20,7 +19,7 @@ export async function getTestApp(): Promise<INestApplication> {
   await app.init();
 
   // Làm sạch database nếu cần
-  const prisma = app.get(PrismaService);
+  const prisma = app.get(PrismaClient);
   await prisma.order.deleteMany();
   await prisma.transaction.deleteMany();
   await prisma.portfolio.deleteMany();
@@ -129,7 +128,7 @@ export async function getPortfolio(client: any) {
 export async function getDashboard(client: any) {
   console.log('🔍 test-utils.getDashboard called');
   console.log('🔍 test-utils.getDashboard client:', client ? 'exists' : 'null');
-  
+
   const query = gql`
     query {
       getDashboard {
@@ -150,7 +149,7 @@ export async function getDashboard(client: any) {
       }
     }
   `;
-  
+
   try {
     console.log('🔍 test-utils.getDashboard sending GraphQL request...');
     const result = await client.request(query);
@@ -161,7 +160,7 @@ export async function getDashboard(client: any) {
     console.error('❌ Error details:', {
       name: error.name,
       message: error.message,
-      stack: error.stack
+      stack: error.stack,
     });
     throw error;
   }

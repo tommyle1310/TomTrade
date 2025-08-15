@@ -34,6 +34,10 @@ interface PortfolioState {
   // Error states
   error: string | null;
 
+  // CRITICAL FIX: Add flag to track if data is from socket (real-time)
+  lastSocketUpdate: number; // timestamp of last socket update
+  isDataFromSocket: boolean; // flag to prevent GraphQL override
+
   // Actions
   fetchDashboard: () => Promise<void>;
   fetchBalance: () => Promise<void>;
@@ -64,6 +68,10 @@ export const usePortfolioStore = create<PortfolioState>((set, get) => ({
 
   error: null,
 
+  // CRITICAL FIX: Add flag to track if data is from socket (real-time)
+  lastSocketUpdate: 0, // timestamp of last socket update
+  isDataFromSocket: false, // flag to prevent GraphQL override
+
   // Actions
   fetchDashboard: async () => {
     try {
@@ -74,9 +82,23 @@ export const usePortfolioStore = create<PortfolioState>((set, get) => ({
         fetchPolicy: 'no-cache', // Always fetch fresh data
       });
 
+      // CRITICAL FIX: Only update if no recent socket update (within 10 seconds)
+      const currentTime = Date.now();
+      const { lastSocketUpdate, isDataFromSocket } = get();
+
+      if (isDataFromSocket && currentTime - lastSocketUpdate < 10000) {
+        console.log(
+          '🔄 Skipping GraphQL dashboard update - recent socket data available (within 10s)'
+        );
+        set({ dashboardLoading: false });
+        return;
+      }
+
+      console.log('🔄 GraphQL dashboard update - no recent socket data');
       set({
         dashboard: data?.getDashboard || null,
         dashboardLoading: false,
+        isDataFromSocket: false, // Mark as GraphQL data
       });
     } catch (error: any) {
       set({
@@ -93,7 +115,22 @@ export const usePortfolioStore = create<PortfolioState>((set, get) => ({
         fetchPolicy: 'no-cache', // Always fetch fresh data
       });
 
-      set({ balance: data?.getMyBalance || 0 });
+      // CRITICAL FIX: Only update if no recent socket update (within 10 seconds)
+      const currentTime = Date.now();
+      const { lastSocketUpdate, isDataFromSocket } = get();
+
+      if (isDataFromSocket && currentTime - lastSocketUpdate < 10000) {
+        console.log(
+          '🔄 Skipping GraphQL balance update - recent socket data available (within 10s)'
+        );
+        return;
+      }
+
+      console.log('🔄 GraphQL balance update - no recent socket data');
+      set({
+        balance: data?.getMyBalance || 0,
+        isDataFromSocket: false, // Mark as GraphQL data
+      });
     } catch (error: any) {
       console.error('Balance fetch error:', error);
     }
@@ -171,6 +208,21 @@ export const usePortfolioStore = create<PortfolioState>((set, get) => ({
       fetchOrders,
     } = get();
 
+    // CRITICAL FIX: Force refresh by clearing socket flags first
+    console.log('🔄 Force refresh - clearing socket flags');
+    set({
+      isDataFromSocket: false,
+      lastSocketUpdate: 0,
+    });
+
+    // CRITICAL FIX: Clear ALL Apollo cache to ensure fresh data
+    console.log('🔄 Clearing Apollo cache...');
+    apolloClient.cache.reset();
+    apolloClient.cache.gc();
+
+    // CRITICAL FIX: Add a small delay to ensure cache is cleared
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
     await Promise.all([
       fetchDashboard(),
       fetchBalance(),
@@ -183,6 +235,30 @@ export const usePortfolioStore = create<PortfolioState>((set, get) => ({
   clearError: () => set({ error: null }),
 
   // Real-time update actions
-  setDashboard: (dashboard: DashboardResult) => set({ dashboard }),
-  setBalance: (balance: number) => set({ balance }),
+  setDashboard: (dashboard: DashboardResult) => {
+    console.log('📊 Socket dashboard update:', dashboard);
+
+    // CRITICAL FIX: Clear Apollo cache to ensure fresh GraphQL data
+    apolloClient.cache.evict({ fieldName: 'getDashboard' });
+    apolloClient.cache.gc();
+
+    set({
+      dashboard,
+      isDataFromSocket: true,
+      lastSocketUpdate: Date.now(),
+    });
+  },
+  setBalance: (balance: number) => {
+    console.log('💰 Socket balance update:', balance);
+
+    // CRITICAL FIX: Clear Apollo cache to ensure fresh GraphQL data
+    apolloClient.cache.evict({ fieldName: 'getMyBalance' });
+    apolloClient.cache.gc();
+
+    set({
+      balance,
+      isDataFromSocket: true,
+      lastSocketUpdate: Date.now(),
+    });
+  },
 }));

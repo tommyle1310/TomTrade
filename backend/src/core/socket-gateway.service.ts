@@ -170,6 +170,28 @@ export class SocketService {
     console.log(`✅ Portfolio update sent to user ${userId}`);
   }
 
+  // CRITICAL FIX: Add method to request portfolio update with current market prices
+  async requestPortfolioUpdateWithCurrentPrices(userId: string) {
+    if (!this._server) {
+      console.error('Socket server not initialized!');
+      return;
+    }
+
+    console.log(
+      `📊 Requesting portfolio update with current prices for user ${userId}`,
+    );
+
+    // This would typically trigger a portfolio calculation with current market prices
+    // For now, just emit the request event
+    this._server.to(userId).emit('requestPortfolioUpdate', {
+      userId,
+      timestamp: new Date().toISOString(),
+      useCurrentPrices: true,
+    });
+
+    console.log(`✅ Portfolio update request sent to user ${userId}`);
+  }
+
   sendBalanceUpdate(
     userId: string,
     balanceData: {
@@ -212,13 +234,13 @@ export class SocketService {
     console.log(
       `📊 Broadcasting market data update: ${marketData.ticker} at $${marketData.price}`,
     );
-    
+
     // Add createdAt timestamp to the market data
     const marketDataWithTimestamp = {
       ...marketData,
       createdAt: new Date().toISOString(),
     };
-    
+
     this._server.emit('marketDataUpdate', marketDataWithTimestamp);
     console.log(`✅ Market data update broadcasted to all clients`);
   }

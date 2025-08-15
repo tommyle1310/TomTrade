@@ -34,6 +34,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
     setDashboard,
     setBalance,
   } = usePortfolioStore();
+  console.log('check portfoloio',dashboard?.totalPortfolioValue, 'check balance', balance, 'check dashdboard balance', dashboard?.cashBalance)
 
   const [socketConnected, setSocketConnected] = useState(false);
   const { showToast } = useToast();
@@ -82,14 +83,21 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
     console.log('📊 HomeScreen: Portfolio update received:', data);
     console.log('📊 HomeScreen: Current dashboard before update:', dashboard);
     
-    // CRITICAL FIX: Create dashboard object even if it doesn't exist
+    // CRITICAL FIX: Calculate cash balance from socket data
+    // totalValue = stocks + cash, so cash = totalValue - stocks
+    const totalStocksValue = data.positions.reduce((sum, pos) => sum + pos.marketValue, 0);
+    const calculatedCashBalance = data.totalValue - totalStocksValue;
+    
+    console.log(`🔍 Calculated cash balance: ${data.totalValue} - ${totalStocksValue} = ${calculatedCashBalance}`);
+    
+    // CRITICAL FIX: Create dashboard object with calculated values from socket
     const updatedDashboard = {
-      totalPortfolioValue: data.totalValue,
+      totalPortfolioValue: data.totalValue, // This is totalAssets (stocks + cash)
       totalPnL: data.totalPnL,
-      cashBalance: dashboard?.cashBalance || 0, // Preserve cash balance if available
+      cashBalance: calculatedCashBalance, // CRITICAL FIX: Use calculated cash balance
       stockPositions: data.positions.map(pos => ({
         ticker: pos.ticker,
-        companyName: `${pos.ticker} Company`, // You might want to store this properly
+        companyName: `${pos.ticker} Company`,
         quantity: pos.quantity,
         averageBuyPrice: pos.averagePrice,
         currentPrice: pos.currentPrice,
@@ -102,41 +110,58 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
       totalUnrealizedPnL: dashboard?.totalUnrealizedPnL || 0,
     };
     console.log('📊 HomeScreen: Updated dashboard after socket update:', updatedDashboard);
+    
+    // CRITICAL FIX: Save with socket flag
     setDashboard(updatedDashboard);
+    
+    // CRITICAL FIX: Also update balance immediately
+    setBalance(calculatedCashBalance);
+    
+    // CRITICAL FIX: Debug after update
+    setTimeout(() => {
+      const { isDataFromSocket, lastSocketUpdate } = usePortfolioStore.getState();
+      console.log('🔍 After portfolio update - isDataFromSocket:', isDataFromSocket, 'lastSocketUpdate:', lastSocketUpdate);
+    }, 100);
     
     Animated.sequence([
       Animated.timing(portfolioPulse, { toValue: 1, duration: 250, useNativeDriver: false }),
       Animated.timing(portfolioPulse, { toValue: 0, duration: 450, useNativeDriver: false }),
     ]).start();
-  }, [dashboard, setDashboard]);
+  }, [dashboard, setDashboard, setBalance]);
 
   const handleBalanceUpdate = useCallback((data: BalanceUpdate) => {
     console.log('💰 HomeScreen: Balance update received:', data);
     console.log('💰 HomeScreen: Current balance before update:', balance);
-    console.log('💰 HomeScreen: Current dashboard before update:', dashboard);
     
-    setBalance(data.balance);
+    // CRITICAL FIX: Only update balance if it's different from current
+    if (data.balance !== balance) {
+      console.log(`💰 Updating balance from ${balance} to ${data.balance}`);
+      setBalance(data.balance);
+      
+      // CRITICAL FIX: Update dashboard cash balance if dashboard exists
+      if (dashboard) {
+        const updatedDashboard = {
+          ...dashboard,
+          cashBalance: data.balance,
+        };
+        console.log('💰 HomeScreen: Updated dashboard after balance update:', updatedDashboard);
+        setDashboard(updatedDashboard);
+      }
+    } else {
+      console.log('💰 Balance unchanged, skipping update');
+    }
     
-    // CRITICAL FIX: Update dashboard cash balance even if dashboard doesn't exist
-    const updatedDashboard = dashboard ? {
-      ...dashboard,
-      cashBalance: data.balance,
-    } : {
-      totalPortfolioValue: data.totalAssets,
-      totalPnL: 0,
-      cashBalance: data.balance,
-      stockPositions: [],
-      totalRealizedPnL: 0,
-      totalUnrealizedPnL: 0,
-    };
-    console.log('💰 HomeScreen: Updated dashboard after balance update:', updatedDashboard);
-    setDashboard(updatedDashboard);
+    // CRITICAL FIX: Debug after update
+    setTimeout(() => {
+      const { isDataFromSocket, lastSocketUpdate } = usePortfolioStore.getState();
+      console.log('🔍 After balance update - isDataFromSocket:', isDataFromSocket, 'lastSocketUpdate:', lastSocketUpdate);
+    }, 100);
     
     Animated.sequence([
       Animated.timing(balancePulse, { toValue: 1, duration: 250, useNativeDriver: false }),
       Animated.timing(balancePulse, { toValue: 0, duration: 450, useNativeDriver: false }),
     ]).start();
-  }, [dashboard, setBalance, setDashboard]);
+  }, [dashboard, balance, setBalance, setDashboard]);
 
   const handleConnectionTest = useCallback((data: any) => {
     console.log('✅ HomeScreen: Socket connection test successful:', data);
@@ -144,7 +169,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
   }, []);
 
   // Initialize socket connection
-  const { isConnected, connectionStatus, requestPortfolioUpdate } = useSocket({
+  const { isConnected, connectionStatus, requestPortfolioUpdate, requestPortfolioUpdateWithCurrentPrices } = useSocket({
     onPriceAlert: handlePriceAlert,
     onOrderNotification: handleOrderNotification,
     onPortfolioUpdate: handlePortfolioUpdate,
@@ -161,7 +186,15 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
 
   // Fetch data on component mount
   useEffect(() => {
-    // CRITICAL FIX: Always fetch initial data, but prioritize socket updates
+    // CRITICAL FIX: Only fetch initial data if no socket data available
+    const { isDataFromSocket, lastSocketUpdate } = usePortfolioStore.getState();
+    const currentTime = Date.now();
+    
+    if (isDataFromSocket && (currentTime - lastSocketUpdate) < 10000) {
+      console.log('🔄 Skipping initial fetch - recent socket data available (within 10s)');
+      return;
+    }
+    
     console.log('🔄 Initial fetch: Fetching data via GraphQL...');
     fetchDashboard();
     fetchBalance();
@@ -171,14 +204,26 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
   useEffect(() => {
     if (isConnected && user?.id) {
       console.log('🔄 Requesting portfolio update via socket...');
-      requestPortfolioUpdate();
+      requestPortfolioUpdateWithCurrentPrices();
     }
-  }, [isConnected, user?.id, requestPortfolioUpdate]);
+  }, [isConnected, user?.id, requestPortfolioUpdateWithCurrentPrices]);
 
   // Refresh data when screen comes into focus (e.g., after navigating back from other screens)
   useFocusEffect(
     useCallback(() => {
-      // CRITICAL FIX: Always fetch fresh data on focus, but socket updates will override if more recent
+      // CRITICAL FIX: Only fetch fresh data if no recent socket data
+      const { isDataFromSocket, lastSocketUpdate } = usePortfolioStore.getState();
+      const currentTime = Date.now();
+      
+      if (isDataFromSocket && (currentTime - lastSocketUpdate) < 10000) {
+        console.log('🔄 Skipping focus fetch - recent socket data available (within 10s)');
+        // Just request fresh socket update
+        if (isConnected && user?.id) {
+          requestPortfolioUpdateWithCurrentPrices();
+        }
+        return;
+      }
+      
       console.log('🔄 Screen focused, fetching fresh data...');
       fetchDashboard();
       fetchBalance();
@@ -186,9 +231,9 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
       // Also request real-time update if socket is connected
       if (isConnected && user?.id) {
         console.log('🔄 Also requesting real-time update via socket...');
-        requestPortfolioUpdate();
+        requestPortfolioUpdateWithCurrentPrices();
       }
-    }, [fetchDashboard, fetchBalance, isConnected, user?.id, requestPortfolioUpdate])
+    }, [fetchDashboard, fetchBalance, isConnected, user?.id, requestPortfolioUpdateWithCurrentPrices])
   );
 
   const quickActions = [
@@ -236,7 +281,50 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
   ];
 
   const handleRefresh = async () => {
+    // CRITICAL FIX: Only refresh if no recent socket data
+    const { isDataFromSocket, lastSocketUpdate } = usePortfolioStore.getState();
+    const currentTime = Date.now();
+    
+    if (isDataFromSocket && (currentTime - lastSocketUpdate) < 10000) {
+      console.log('🔄 Skipping refresh - recent socket data available (within 10s)');
+      // Just request fresh socket update instead
+      if (isConnected && user?.id) {
+        requestPortfolioUpdateWithCurrentPrices();
+      }
+      return;
+    }
+    
+    console.log('🔄 Forcing refresh - no recent socket data');
     await refreshAll();
+  };
+
+  // CRITICAL FIX: Add force refresh method for explicit refresh
+  const handleForceRefresh = async () => {
+    console.log('🔄 Force refreshing all data...');
+    await refreshAll();
+  };
+
+  // CRITICAL FIX: Add debug method to show current state
+  const debugCurrentState = () => {
+    const { isDataFromSocket, lastSocketUpdate, dashboard, balance } = usePortfolioStore.getState();
+    const currentTime = Date.now();
+    console.log('🔍 Current State Debug:');
+    console.log(`  - isDataFromSocket: ${isDataFromSocket}`);
+    console.log(`  - lastSocketUpdate: ${lastSocketUpdate}`);
+    console.log(`  - timeSinceSocketUpdate: ${currentTime - lastSocketUpdate}ms`);
+    console.log(`  - dashboard.totalPortfolioValue: ${dashboard?.totalPortfolioValue}`);
+    console.log(`  - dashboard.cashBalance: ${dashboard?.cashBalance}`);
+    console.log(`  - balance: ${balance}`);
+    console.log(`  - isConnected: ${isConnected}`);
+    console.log(`  - dashboard.stockPositions:`, dashboard?.stockPositions);
+    
+    // CRITICAL FIX: Show the difference between socket and GraphQL data
+    if (dashboard) {
+      const totalStocksValue = dashboard.stockPositions.reduce((sum, pos) => sum + pos.marketValue, 0);
+      const calculatedTotal = totalStocksValue + dashboard.cashBalance;
+      console.log(`  - Calculated total from positions: ${calculatedTotal}`);
+      console.log(`  - Difference: ${dashboard.totalPortfolioValue - calculatedTotal}`);
+    }
   };
 
   const formatCurrency = (amount: number) => {
@@ -277,11 +365,15 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
               isConnected && { backgroundColor: theme.colors.accent.avocado + '20' }
             ]}
             onPress={() => {
+              // CRITICAL FIX: Show debug info first
+              debugCurrentState();
+              
               if (isConnected && user?.id) {
-                requestPortfolioUpdate();
+                // CRITICAL FIX: Use force refresh to get latest data
+                handleForceRefresh();
                 showToast({
                   type: 'info',
-                  message: 'Requesting real-time portfolio update...',
+                  message: 'Force refreshing all data...',
                   durationMs: 2000,
                 });
               } else {

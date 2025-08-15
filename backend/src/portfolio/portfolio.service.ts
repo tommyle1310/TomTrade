@@ -19,34 +19,52 @@ export class PortfolioService {
     shares: number,
     price: number,
   ) {
-    const existingPortfolio = await tx.portfolio.findFirst({
-      where: { userId, ticker },
-    });
-
-    if (existingPortfolio) {
-      const newQuantity = existingPortfolio.quantity + shares;
-      const newAveragePrice =
-        (existingPortfolio.averagePrice * existingPortfolio.quantity +
-          price * shares) /
-        newQuantity;
-
-      return tx.portfolio.update({
-        where: { id: existingPortfolio.id },
-        data: {
-          quantity: newQuantity,
-          averagePrice: newAveragePrice,
-        },
+    try {
+      const existingPortfolio = await tx.portfolio.findFirst({
+        where: { userId, ticker },
       });
-    } else {
-      return tx.portfolio.create({
-        data: {
-          userId,
-          ticker,
-          quantity: shares,
-          averagePrice: price,
-          positionType: 'LONG',
-        },
-      });
+
+      if (existingPortfolio) {
+        const newQuantity = existingPortfolio.quantity + shares;
+        const newAveragePrice =
+          (existingPortfolio.averagePrice * existingPortfolio.quantity +
+            price * shares) /
+          newQuantity;
+
+        const updated = await tx.portfolio.update({
+          where: { id: existingPortfolio.id },
+          data: {
+            quantity: newQuantity,
+            averagePrice: newAveragePrice,
+          },
+        });
+
+        console.log(
+          `📊 Portfolio updated for ${userId} ${ticker}: ${existingPortfolio.quantity} + ${shares} = ${newQuantity} @ avg $${newAveragePrice.toFixed(2)}`,
+        );
+        return updated;
+      } else {
+        const created = await tx.portfolio.create({
+          data: {
+            userId,
+            ticker,
+            quantity: shares,
+            averagePrice: price,
+            positionType: 'LONG',
+          },
+        });
+
+        console.log(
+          `📊 Portfolio created for ${userId} ${ticker}: ${shares} @ $${price}`,
+        );
+        return created;
+      }
+    } catch (error) {
+      console.error(
+        `❌ Error upserting portfolio for ${userId} ${ticker}:`,
+        error,
+      );
+      throw error;
     }
   }
 
@@ -56,25 +74,45 @@ export class PortfolioService {
     ticker: string,
     shares: number,
   ) {
-    const existing = await tx.portfolio.findFirst({
-      where: { userId, ticker },
-    });
-
-    if (!existing) throw new NotFoundException('Portfolio not found');
-
-    const remaining = existing.quantity - shares;
-
-    if (remaining <= 0) {
-      await tx.portfolio.delete({
-        where: { id: existing.id },
+    try {
+      const existing = await tx.portfolio.findFirst({
+        where: { userId, ticker },
       });
-      return null;
-    }
 
-    return tx.portfolio.update({
-      where: { id: existing.id },
-      data: { quantity: remaining },
-    });
+      if (!existing) {
+        console.error(`❌ Portfolio not found for ${userId} ${ticker}`);
+        throw new NotFoundException('Portfolio not found');
+      }
+
+      const remaining = existing.quantity - shares;
+      console.log(
+        `📊 Selling ${shares} shares of ${ticker} for ${userId}: ${existing.quantity} - ${shares} = ${remaining}`,
+      );
+
+      if (remaining <= 0) {
+        await tx.portfolio.delete({
+          where: { id: existing.id },
+        });
+        console.log(`📊 Portfolio position closed for ${userId} ${ticker}`);
+        return null;
+      }
+
+      const updated = await tx.portfolio.update({
+        where: { id: existing.id },
+        data: { quantity: remaining },
+      });
+
+      console.log(
+        `📊 Portfolio updated for ${userId} ${ticker}: remaining ${remaining} shares`,
+      );
+      return updated;
+    } catch (error) {
+      console.error(
+        `❌ Error updating portfolio on sell for ${userId} ${ticker}:`,
+        error,
+      );
+      throw error;
+    }
   }
 
   async addStock(

@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'prisma/prisma.service';
 import { SocketService } from '../core/socket-gateway.service';
-import { EventEmitter2 } from '@nestjs/event-emitter';
 import { AlertDispatcherService } from 'src/alert-rule/alert-dispatcher.service';
 
 @Injectable()
@@ -65,7 +64,7 @@ export class StockService {
         volume,
       },
     });
-    console.log('check even fall here', ticker, price)
+    console.log('check even fall here', ticker, price);
 
     // 2. Trigger alert evaluation
     await this.alertDispatcherService.handleStockPriceUpdate(ticker, price);
