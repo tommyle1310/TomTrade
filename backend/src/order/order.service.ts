@@ -829,22 +829,50 @@ export class OrderService {
       this.logger.log(
         `📊 Sending portfolio/balance updates to taker ${taker.userId}`,
       );
-      // Get portfolio data for taker using current market prices
-      const takerPortfolioData =
-        await this.portfolioPnLService.calculatePortfolioPnL(taker.userId, {
-          [taker.ticker]: executedPrice, // Use executed price as current market price
+      // CRITICAL FIX: Get current market prices for ALL tickers, not just the traded one
+      const currentPrices: Record<string, number> = {};
+
+      // Get all user's portfolio positions to get current prices for each ticker
+      const userPositions = await this.prisma.portfolio.findMany({
+        where: { userId: taker.userId },
+        select: { ticker: true },
+      });
+
+      // Get current market prices for all tickers in user's portfolio
+      for (const position of userPositions) {
+        const latestMarketData = await this.prisma.marketData.findFirst({
+          where: { ticker: position.ticker },
+          orderBy: { timestamp: 'desc' },
+          select: { close: true },
         });
+        currentPrices[position.ticker] = latestMarketData?.close || 0;
+      }
+
+      // CRITICAL FIX: Use executed price for the traded ticker, current prices for others
+      currentPrices[taker.ticker] = executedPrice;
+
+      this.logger.log(
+        `📊 Current prices for taker ${taker.userId}:`,
+        currentPrices,
+      );
+
+      // Get portfolio data for taker using current market prices for ALL tickers
+      const takerPortfolioData =
+        await this.portfolioPnLService.calculatePortfolioPnL(
+          taker.userId,
+          currentPrices,
+        );
       const takerBalance = await this.balanceService.getBalance(taker.userId);
 
       this.logger.log(
         `📊 Taker portfolio data: totalAssets=${takerPortfolioData.totalAssets}, balance=${takerBalance}`,
       );
 
+      // CRITICAL FIX: Update database market data FIRST to ensure GraphQL consistency
+      await this.updateMarketData(taker.ticker, executedPrice);
+
       // CRITICAL FIX: Update dashboard service cache with executed price
       DashboardService.updateLatestPrice(taker.ticker, executedPrice);
-
-      // CRITICAL FIX: Update database market data to ensure GraphQL consistency
-      await this.updateMarketData(taker.ticker, executedPrice);
 
       // CRITICAL FIX: Double-check cache is synchronized
       const cacheCheck = DashboardService.latestPricesCache[taker.ticker];
@@ -852,14 +880,21 @@ export class OrderService {
         `🔍 Cache sync check for ${taker.ticker}: cached=${cacheCheck?.price}, executed=${executedPrice}`,
       );
 
+      // CRITICAL FIX: Re-calculate portfolio with updated market data to ensure consistency
+      const updatedTakerPortfolioData =
+        await this.portfolioPnLService.calculatePortfolioPnL(
+          taker.userId,
+          currentPrices,
+        );
+
       await this.socketService.sendPortfolioUpdate(taker.userId, {
-        totalValue: takerPortfolioData.totalAssets, // CRITICAL FIX: Send totalAssets (stocks + cash) instead of totalPortfolioValue
-        totalPnL: takerPortfolioData.totalPnL,
-        positions: takerPortfolioData.positions,
+        totalValue: updatedTakerPortfolioData.totalAssets, // CRITICAL FIX: Send totalAssets (stocks + cash) instead of totalPortfolioValue
+        totalPnL: updatedTakerPortfolioData.totalPnL,
+        positions: updatedTakerPortfolioData.positions,
       });
       await this.socketService.sendBalanceUpdate(taker.userId, {
         balance: takerBalance,
-        totalAssets: takerPortfolioData.totalAssets,
+        totalAssets: updatedTakerPortfolioData.totalAssets,
       });
       this.logger.log(
         `✅ Sent portfolio/balance updates to taker ${taker.userId}`,
@@ -875,22 +910,50 @@ export class OrderService {
       this.logger.log(
         `📊 Sending portfolio/balance updates to maker ${maker.userId}`,
       );
-      // Get portfolio data for maker using current market prices
-      const makerPortfolioData =
-        await this.portfolioPnLService.calculatePortfolioPnL(maker.userId, {
-          [maker.ticker]: executedPrice, // Use executed price as current market price
+      // CRITICAL FIX: Get current market prices for ALL tickers, not just the traded one
+      const makerCurrentPrices: Record<string, number> = {};
+
+      // Get all user's portfolio positions to get current prices for each ticker
+      const makerPositions = await this.prisma.portfolio.findMany({
+        where: { userId: maker.userId },
+        select: { ticker: true },
+      });
+
+      // Get current market prices for all tickers in user's portfolio
+      for (const position of makerPositions) {
+        const latestMarketData = await this.prisma.marketData.findFirst({
+          where: { ticker: position.ticker },
+          orderBy: { timestamp: 'desc' },
+          select: { close: true },
         });
+        makerCurrentPrices[position.ticker] = latestMarketData?.close || 0;
+      }
+
+      // CRITICAL FIX: Use executed price for the traded ticker, current prices for others
+      makerCurrentPrices[maker.ticker] = executedPrice;
+
+      this.logger.log(
+        `📊 Current prices for maker ${maker.userId}:`,
+        makerCurrentPrices,
+      );
+
+      // Get portfolio data for maker using current market prices for ALL tickers
+      const makerPortfolioData =
+        await this.portfolioPnLService.calculatePortfolioPnL(
+          maker.userId,
+          makerCurrentPrices,
+        );
       const makerBalance = await this.balanceService.getBalance(maker.userId);
 
       this.logger.log(
         `📊 Maker portfolio data: totalAssets=${makerPortfolioData.totalAssets}, balance=${makerBalance}`,
       );
 
+      // CRITICAL FIX: Update database market data FIRST to ensure GraphQL consistency
+      await this.updateMarketData(maker.ticker, executedPrice);
+
       // CRITICAL FIX: Update dashboard service cache with executed price
       DashboardService.updateLatestPrice(maker.ticker, executedPrice);
-
-      // CRITICAL FIX: Update database market data to ensure GraphQL consistency
-      await this.updateMarketData(maker.ticker, executedPrice);
 
       // CRITICAL FIX: Double-check cache is synchronized
       const cacheCheck = DashboardService.latestPricesCache[maker.ticker];
@@ -898,14 +961,21 @@ export class OrderService {
         `🔍 Cache sync check for ${maker.ticker}: cached=${cacheCheck?.price}, executed=${executedPrice}`,
       );
 
+      // CRITICAL FIX: Re-calculate portfolio with updated market data to ensure consistency
+      const updatedMakerPortfolioData =
+        await this.portfolioPnLService.calculatePortfolioPnL(
+          maker.userId,
+          makerCurrentPrices,
+        );
+
       await this.socketService.sendPortfolioUpdate(maker.userId, {
-        totalValue: makerPortfolioData.totalAssets, // CRITICAL FIX: Send totalAssets (stocks + cash) instead of totalPortfolioValue
-        totalPnL: makerPortfolioData.totalPnL,
-        positions: makerPortfolioData.positions,
+        totalValue: updatedMakerPortfolioData.totalAssets, // CRITICAL FIX: Send totalAssets (stocks + cash) instead of totalPortfolioValue
+        totalPnL: updatedMakerPortfolioData.totalPnL,
+        positions: updatedMakerPortfolioData.positions,
       });
       await this.socketService.sendBalanceUpdate(maker.userId, {
         balance: makerBalance,
-        totalAssets: makerPortfolioData.totalAssets,
+        totalAssets: updatedMakerPortfolioData.totalAssets,
       });
       this.logger.log(
         `✅ Sent portfolio/balance updates to maker ${maker.userId}`,
