@@ -19,7 +19,6 @@ export class DashboardResolver {
       `🔍 DashboardResolver.getDashboard called for user: ${user.id}`,
     );
     const result = await this.dashboardService.getDashboard(user.id);
-    console.log(`🔍 DashboardResolver.getDashboard returning:`, result);
     return result;
   }
 

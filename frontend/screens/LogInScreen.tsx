@@ -162,6 +162,16 @@ export default function LogInScreen({ navigation }: LogInScreenProps) {
             <Ionicons name="play-outline" size={20} color={theme.colors.primary} />
             <Text style={styles.demoButtonText}>Use Buỷe Account</Text>
           </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.demoButton}
+            onPress={() => {
+              setEmail('admin@example.com');
+              setPassword('admin123');
+            }}
+          >
+            <Ionicons name="play-outline" size={20} color={theme.colors.primary} />
+            <Text style={styles.demoButtonText}>Use Admin Account</Text>
+          </TouchableOpacity>
 
           {/* Sign Up Link */}
           <View style={styles.signUpContainer}>

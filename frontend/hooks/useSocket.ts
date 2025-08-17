@@ -99,12 +99,17 @@ export const useSocket = (options: UseSocketOptions = {}) => {
       // Portfolio updates
       socket.on('portfolioUpdate', (data: PortfolioUpdate) => {
         console.log('📊 Portfolio update received:', data);
+        console.log('🔍 Portfolio update data type:', typeof data);
+        console.log('🔍 Portfolio update data keys:', Object.keys(data));
+        console.log('🔍 Portfolio update totalValue:', data.totalValue);
+        // CRITICAL FIX: Ensure portfolio updates trigger immediate UI refresh
         onPortfolioUpdate?.(data);
       });
 
       // Balance updates
       socket.on('balanceUpdate', (data: BalanceUpdate) => {
         console.log('💰 Balance update received:', data);
+        // CRITICAL FIX: Ensure balance updates trigger immediate UI refresh
         onBalanceUpdate?.(data);
       });
 
@@ -116,22 +121,32 @@ export const useSocket = (options: UseSocketOptions = {}) => {
 
       // CRITICAL FIX: Listen for connection status changes
       socket.on('connect', () => {
+        console.log('🔍 Socket connect event received in useSocket hook');
         console.log('✅ Socket connected in useSocket hook');
         setConnectionStatus('connected');
       });
 
       socket.on('disconnect', (reason) => {
+        console.log('🔍 Socket disconnect event received in useSocket hook');
         console.log('❌ Socket disconnected in useSocket hook:', reason);
         setConnectionStatus('disconnected');
       });
 
       socket.on('connect_error', (error) => {
+        console.log('🔍 Socket connect_error event received in useSocket hook');
         console.error('❌ Socket connection error in useSocket hook:', error);
         setConnectionStatus('error');
       });
 
       listenersSetupRef.current = true;
       console.log('✅ Socket event listeners set up successfully');
+      console.log('🔍 Event listeners configured for:', {
+        onPriceAlert: !!onPriceAlert,
+        onOrderNotification: !!onOrderNotification,
+        onPortfolioUpdate: !!onPortfolioUpdate,
+        onBalanceUpdate: !!onBalanceUpdate,
+        onConnectionTest: !!onConnectionTest,
+      });
     },
     [
       onPriceAlert,
@@ -143,6 +158,9 @@ export const useSocket = (options: UseSocketOptions = {}) => {
   );
 
   const connect = useCallback(async () => {
+    console.log('🔍 connect function called');
+    console.log('🔍 Authentication check - isAuthenticated:', isAuthenticated, 'user:', !!user);
+    
     if (!isAuthenticated || !user) {
       console.log('❌ Cannot connect socket: user not authenticated');
       return null;
@@ -151,6 +169,7 @@ export const useSocket = (options: UseSocketOptions = {}) => {
     try {
       console.log('🔌 Attempting to connect socket...');
       const socket = await socketService.connect();
+      console.log('🔍 Socket connection successful, setting up event listeners...');
       socketRef.current = socket;
       setupEventListeners(socket);
       setConnectionStatus('connected');
@@ -164,11 +183,13 @@ export const useSocket = (options: UseSocketOptions = {}) => {
   }, [isAuthenticated, user, setupEventListeners]);
 
   const disconnect = useCallback(() => {
+    console.log('🔍 disconnect function called');
     console.log('🔌 Disconnecting socket in useSocket hook...');
     socketService.disconnect();
     socketRef.current = null;
     listenersSetupRef.current = false;
     setConnectionStatus('disconnected');
+    console.log('🔍 Socket disconnection completed');
   }, []);
 
   const requestPortfolioUpdate = useCallback(() => {
@@ -186,7 +207,9 @@ export const useSocket = (options: UseSocketOptions = {}) => {
       console.log(
         `📊 Requesting portfolio update with current prices for user: ${user.id}`
       );
+      console.log('🔍 Calling socketService.requestPortfolioUpdateWithCurrentPrices');
       socketService.requestPortfolioUpdateWithCurrentPrices?.(user.id);
+      console.log('✅ socketService.requestPortfolioUpdateWithCurrentPrices called');
     } else {
       console.log('❌ No user ID available for portfolio update request');
     }
@@ -199,6 +222,9 @@ export const useSocket = (options: UseSocketOptions = {}) => {
 
   // Auto-connect when authenticated
   useEffect(() => {
+    console.log('🔍 useEffect [autoConnect, isAuthenticated, user, connect, disconnect] triggered');
+    console.log('🔍 Auto-connect check - autoConnect:', autoConnect, 'isAuthenticated:', isAuthenticated, 'user:', !!user, 'socketRef.current?.connected:', socketRef.current?.connected);
+    
     if (
       autoConnect &&
       isAuthenticated &&
@@ -207,10 +233,13 @@ export const useSocket = (options: UseSocketOptions = {}) => {
     ) {
       console.log('🔄 Auto-connecting socket...');
       connect();
+    } else {
+      console.log('🔍 Auto-connect conditions not met, skipping connection');
     }
 
     return () => {
       if (!autoConnect) {
+        console.log('🔍 Auto-connect disabled, disconnecting on cleanup...');
         disconnect();
       }
     };
@@ -218,13 +247,16 @@ export const useSocket = (options: UseSocketOptions = {}) => {
 
   // Cleanup on unmount
   useEffect(() => {
+    console.log('🔍 useEffect [] triggered (cleanup on unmount)');
     return () => {
+      console.log('🔍 useSocket hook unmounting, disconnecting socket...');
       disconnect();
     };
   }, [disconnect]);
 
   // CRITICAL FIX: Return connection status
-  return {
+  console.log('🔍 useSocket hook returning values');
+  const returnValue = {
     socket: socketRef.current,
     isConnected: socketService.isConnected(),
     connectionStatus: connectionStatus,
@@ -234,4 +266,10 @@ export const useSocket = (options: UseSocketOptions = {}) => {
     requestPortfolioUpdateWithCurrentPrices,
     sendMockMarketData,
   };
+  console.log('🔍 useSocket hook return value:', {
+    socket: !!returnValue.socket,
+    isConnected: returnValue.isConnected,
+    connectionStatus: returnValue.connectionStatus,
+  });
+  return returnValue;
 };

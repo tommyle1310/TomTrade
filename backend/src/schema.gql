@@ -136,6 +136,10 @@ type Mutation {
   removeStockFromWatchlist(input: AddStockToWatchlistInput!): Boolean!
   sellStock(input: SellStockInput!): SellStockPayload!
   signUp(input: SignUpInput!): AuthPayload!
+  startSimulation: String!
+  stopSimulation: String!
+  triggerOrderNotification(type: String!, userId: String!): Boolean!
+  triggerPriceAlert(ticker: String!, userId: String!): Boolean!
   unbanUser(userId: String!): User!
   updateAvatar(avatarUrl: String!): User!
   updateMarketData(price: Float!, ticker: String!): MarketData!
@@ -248,6 +252,7 @@ type Query {
   myWatchlists: [Watchlist!]!
   orderBook(ticker: String!): OrderBook!
   sayHello: Hello!
+  simulationStatus: String!
   stock(ticker: String!): Stock
   stocks: [Stock!]!
   validatePortfolioRisk: RiskValidation!

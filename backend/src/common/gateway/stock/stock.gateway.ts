@@ -120,16 +120,21 @@ export class StockGateway
       this.logger.log(`✅ User connected: ${userEmail} (${userId})`);
 
       // CRITICAL FIX: Join user to their specific room - join both userId and userEmail for better compatibility
+      console.log(
+        `🔍 Joining client ${client.id} to rooms: ${userId}, ${userEmail}, all-users`,
+      );
       client.join(userId);
       client.join(userEmail); // Also join by email for flexibility
 
       // Join a general room for broadcast events
       client.join('all-users');
+      console.log(`🔍 Client ${client.id} joined rooms successfully`);
 
       // Store user info in socket data for later use
       client.data.userId = userId;
       client.data.userEmail = userEmail;
 
+      console.log(`🔍 Sending connection test to client ${client.id}`);
       client.emit('connectionTest', {
         message: 'Connected successfully with authentication',
         clientId: client.id,
@@ -137,6 +142,7 @@ export class StockGateway
         userEmail: userEmail,
         timestamp: new Date().toISOString(),
       });
+      console.log(`🔍 Connection test sent to client ${client.id}`);
 
       this.logger.log(
         `✅ User ${userEmail} joined rooms: ${userId}, ${userEmail}, all-users`,
@@ -206,20 +212,97 @@ export class StockGateway
   @SubscribeMessage('requestPortfolioUpdate')
   async handleRequestPortfolioUpdate(
     client: Socket,
-    payload: { userId: string },
+    payload: { userId: string; useCurrentPrices?: boolean },
   ) {
     this.logger.log(
-      `📊 Portfolio update requested for user: ${payload.userId}`,
+      `📊 CRITICAL: Portfolio update requested for user: ${payload.userId}, useCurrentPrices: ${payload.useCurrentPrices}`,
     );
+    this.logger.log(
+      `🔍 CRITICAL: This MUST return FRESH portfolio data, not stale data`,
+    );
+    this.logger.log(`🔍 Full payload received:`, payload);
+    this.logger.log(`🔍 Client ID: ${client.id}`);
+    this.logger.log(`🔍 Timestamp: ${new Date().toISOString()}`);
 
-    // This would typically trigger a portfolio calculation
-    // For now, just acknowledge the request
-    client.emit('portfolioUpdateRequested', {
-      userId: payload.userId,
+    // CRITICAL FIX: If useCurrentPrices is true, actually calculate and send portfolio update
+    if (payload.useCurrentPrices) {
+      try {
+        this.logger.log(
+          `📊 CRITICAL: Calculating FRESH portfolio for user: ${payload.userId}`,
+        );
+        this.logger.log(
+          `🔍 This will get the LATEST portfolio data, not stale cached data`,
+        );
+        this.logger.log(
+          `🔍 Calling socketService.requestPortfolioUpdateWithCurrentPrices...`,
+        );
+        this.logger.log(
+          `🔍 CRITICAL: This MUST return FRESH data, not stale data from previous test runs`,
+        );
+
+        // Call the SocketService to calculate and send current portfolio data
+        const result =
+          await this.socketService.requestPortfolioUpdateWithCurrentPrices(
+            payload.userId,
+          );
+
+        this.logger.log(
+          `✅ CRITICAL: FRESH Portfolio update sent to user: ${payload.userId}`,
+        );
+        this.logger.log(`🔍 CRITICAL: Result contains FRESH data:`, result);
+
+        // CRITICAL FIX: Verify the result contains fresh data
+        if (result && result.success) {
+          this.logger.log(`🎉 CRITICAL: SUCCESS! Fresh portfolio data sent:`, {
+            portfolioValue: result.portfolioValue,
+            balance: result.balance,
+            timestamp: result.timestamp,
+          });
+        } else {
+          this.logger.error(
+            `❌ CRITICAL: FAILED! No fresh portfolio data sent:`,
+            result,
+          );
+        }
+      } catch (error) {
+        this.logger.error(
+          `❌ CRITICAL: Failed to send FRESH portfolio update:`,
+          error,
+        );
+        this.logger.error(`🔍 Error details:`, {
+          name: error.name,
+          message: error.message,
+          stack: error.stack,
+        });
+        client.emit('portfolioUpdateError', {
+          userId: payload.userId,
+          error: error.message,
+          timestamp: new Date().toISOString(),
+        });
+      }
+    } else {
+      // Just acknowledge the request
+      this.logger.log(`🔍 Sending portfolioUpdateRequested acknowledgment...`);
+      client.emit('portfolioUpdateRequested', {
+        userId: payload.userId,
+        timestamp: new Date().toISOString(),
+      });
+      this.logger.log(`🔍 portfolioUpdateRequested acknowledgment sent`);
+    }
+
+    // CRITICAL FIX: Return detailed result for debugging
+    const result = {
+      event: 'portfolioUpdateRequested',
+      data: payload,
       timestamp: new Date().toISOString(),
-    });
+      useCurrentPrices: payload.useCurrentPrices,
+      message: payload.useCurrentPrices
+        ? 'Fresh portfolio update requested'
+        : 'Portfolio update acknowledgment sent',
+    };
 
-    return { event: 'portfolioUpdateRequested', data: payload };
+    this.logger.log(`🔍 CRITICAL: Returning result:`, result);
+    return result;
   }
 
   @SubscribeMessage('joinRoom')

@@ -18,6 +18,14 @@ class SocketService {
   private connectionStatus = 'disconnected'; // CRITICAL FIX: Track connection status
 
   async connect(): Promise<Socket> {
+    console.log('🔍 SocketService.connect called');
+    console.log('🔍 Current socket state:', {
+      socket: !!this.socket,
+      connected: this.socket?.connected,
+      isConnecting: this.isConnecting,
+      connectionStatus: this.connectionStatus,
+    });
+
     if (this.socket?.connected) {
       console.log('✅ Socket already connected');
       return this.socket;
@@ -84,18 +92,23 @@ class SocketService {
 
       // Set up connection event handlers
       this.socket.on('connect', () => {
+        console.log('🔍 Socket connect event received in SocketService');
         console.log('✅ Socket connected successfully:', this.socket?.id);
         this.isConnecting = false;
         this.connectionStatus = 'connected';
+        console.log('🔍 Socket connection state updated');
       });
 
       this.socket.on('disconnect', (reason) => {
+        console.log('🔍 Socket disconnect event received in SocketService');
         console.log('❌ Socket disconnected:', reason);
         this.isConnecting = false;
         this.connectionStatus = 'disconnected';
+        console.log('🔍 Socket disconnection state updated');
       });
 
       this.socket.on('connect_error', (error) => {
+        console.log('🔍 Socket connect_error event received in SocketService');
         console.error('❌ Socket connection error:', error);
         console.error('❌ Error details:', {
           name: error.name,
@@ -103,6 +116,7 @@ class SocketService {
         });
         this.isConnecting = false;
         this.connectionStatus = 'error';
+        console.log('🔍 Socket error state updated');
       });
 
       this.socket.on('error', (error) => {
@@ -112,18 +126,27 @@ class SocketService {
       });
 
       this.socket.on('reconnect', (attemptNumber) => {
+        console.log('🔍 Socket reconnect event received in SocketService');
         console.log('🔄 Socket reconnected after', attemptNumber, 'attempts');
         this.connectionStatus = 'connected';
+        console.log('🔍 Socket reconnection state updated');
       });
 
       this.socket.on('reconnect_error', (error) => {
+        console.log(
+          '🔍 Socket reconnect_error event received in SocketService'
+        );
         console.error('❌ Socket reconnection error:', error);
       });
 
       this.socket.on('reconnect_failed', () => {
+        console.log(
+          '🔍 Socket reconnect_failed event received in SocketService'
+        );
         console.error('❌ Socket reconnection failed');
         this.isConnecting = false;
         this.connectionStatus = 'failed';
+        console.log('🔍 Socket reconnection failed state updated');
       });
 
       // CRITICAL FIX: Listen for all socket events and log them
@@ -139,6 +162,8 @@ class SocketService {
       // Listen for portfolio updates
       this.socket.on('portfolioUpdate', (data) => {
         console.log('📊 Portfolio update received:', data);
+        console.log('🔍 Portfolio update data type:', typeof data);
+        console.log('🔍 Portfolio update data keys:', Object.keys(data));
       });
 
       // Listen for balance updates
@@ -235,10 +260,15 @@ class SocketService {
       console.log(
         `📊 Requesting portfolio update with current prices for user: ${userId}`
       );
+      console.log('🔍 Emitting requestPortfolioUpdate with payload:', {
+        userId,
+        useCurrentPrices: true,
+      });
       this.socket.emit('requestPortfolioUpdate', {
         userId,
         useCurrentPrices: true,
       });
+      console.log('✅ requestPortfolioUpdate event emitted');
     } else {
       console.log('❌ Socket not connected, cannot request portfolio update');
     }

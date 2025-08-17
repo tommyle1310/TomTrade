@@ -37,6 +37,15 @@ export class DashboardService {
       timestamp: Date.now(),
     };
     console.log(`📊 Updated latest price for ${ticker}: $${price}`);
+
+    // CRITICAL FIX: Force immediate cache update to ensure consistency
+    setTimeout(() => {
+      DashboardService.latestPricesCache[ticker] = {
+        price,
+        timestamp: Date.now(),
+      };
+      console.log(`📊 Re-confirmed price cache for ${ticker}: $${price}`);
+    }, 100);
   }
 
   // CRITICAL FIX: Method to clear price cache (for debugging)
@@ -236,25 +245,6 @@ export class DashboardService {
       dashboardResult.stockPositions = stockPositions;
 
       // DEBUG: Log calculation details
-      console.log(`🔍 Dashboard Calculation Debug for user ${userId}:`);
-      console.log(`  - Portfolio positions: ${portfolioPositions.length}`);
-      console.log(
-        `  - Total portfolio value (stocks only): $${pnlData.totalPortfolioValue.toFixed(2)}`,
-      );
-      console.log(`  - Cash balance: $${pnlData.balance.toFixed(2)}`);
-      console.log(
-        `  - Total assets (stocks + cash): $${pnlData.totalAssets.toFixed(2)}`,
-      );
-      console.log(
-        `  - Total realized P&L: $${pnlData.totalRealizedPnL.toFixed(2)}`,
-      );
-      console.log(
-        `  - Total unrealized P&L: $${pnlData.totalUnrealizedPnL.toFixed(2)}`,
-      );
-      console.log(`  - Total P&L: $${pnlData.totalPnL.toFixed(2)}`);
-      console.log(
-        `  - Final totalPortfolioValue (for frontend): $${dashboardResult.totalPortfolioValue.toFixed(2)}`,
-      );
 
       return dashboardResult;
     } catch (error) {

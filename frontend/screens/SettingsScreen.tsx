@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -7,6 +7,7 @@ import { theme } from '../theme';
 import { useAuth } from '../contexts/AuthContext';
 import { useUserStore } from '../stores';
 import Avatar from '../components/Avatar';
+import { gql, useQuery, useMutation } from '@apollo/client';
 
 interface SettingsScreenProps {
   navigation?: any;
@@ -17,15 +18,107 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
   const [darkMode, setDarkMode] = useState(false);
   const [biometric, setBiometric] = useState(true);
   const [autoSync, setAutoSync] = useState(true);
+  const [simulationActive, setSimulationActive] = useState(false);
+  const [simulationLoading, setSimulationLoading] = useState(false);
   const { logout } = useAuth();
   const { user, loading, fetchUser } = useUserStore();
+
+  // GraphQL documents
+  const GET_SIMULATION_STATUS = gql`
+    query GetSimulationStatus {
+      simulationStatus
+    }
+  `;
+
+  const START_SIMULATION = gql`
+    mutation StartSimulation {
+      startSimulation
+    }
+  `;
+
+  const STOP_SIMULATION = gql`
+    mutation StopSimulation {
+      stopSimulation
+    }
+  `;
+
+  // Apollo hooks
+  const { data: statusData, refetch: refetchStatus } = useQuery(GET_SIMULATION_STATUS, {
+    skip: true, // We'll call refetch manually
+  });
+  const [startSimulation] = useMutation(START_SIMULATION);
+  const [stopSimulation] = useMutation(STOP_SIMULATION);
 
   // Fetch user data when screen comes into focus
   useFocusEffect(
     React.useCallback(() => {
       fetchUser();
+      checkSimulationStatus();
     }, [fetchUser])
   );
+
+  // Check simulation status on mount
+  useEffect(() => {
+    checkSimulationStatus();
+  }, []);
+
+  const checkSimulationStatus = async () => {
+    try {
+      const result = await refetchStatus();
+      if (result?.data?.simulationStatus) {
+        const status = JSON.parse(result.data.simulationStatus);
+        setSimulationActive(status.isActive);
+      }
+    } catch (error) {
+      console.log('Could not check simulation status:', error);
+    }
+  };
+
+  const toggleSimulation = async () => {
+    if (simulationLoading) return;
+    
+    setSimulationLoading(true);
+    
+    try {
+      if (simulationActive) {
+        // Stop simulation
+        const result = await stopSimulation();
+        if (result?.data?.stopSimulation) {
+          const response = JSON.parse(result.data.stopSimulation);
+          if (response.success) {
+            setSimulationActive(false);
+            Alert.alert('Simulation Stopped', 'Trading simulation has been stopped.');
+          } else {
+            Alert.alert('Error', response.message || 'Failed to stop simulation.');
+          }
+        } else {
+          Alert.alert('Error', 'Failed to stop simulation.');
+        }
+      } else {
+        // Start simulation
+        const result = await startSimulation();
+        if (result?.data?.startSimulation) {
+          const response = JSON.parse(result.data.startSimulation);
+          if (response.success) {
+            setSimulationActive(true);
+            Alert.alert(
+              'Simulation Started', 
+              `Trading simulation is now active!\n\nUsers: ${response.users?.length || 0}\nStocks: ${response.stocks?.length || 0}`
+            );
+          } else {
+            Alert.alert('Error', response.message || 'Failed to start simulation.');
+          }
+        } else {
+          Alert.alert('Error', 'Failed to start simulation.');
+        }
+      }
+    } catch (error) {
+      console.error('Simulation toggle error:', error);
+      Alert.alert('Error', 'Failed to toggle simulation. Please try again.');
+    } finally {
+      setSimulationLoading(false);
+    }
+  };
 
   const settingSections = [
     {
@@ -53,6 +146,21 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
         { id: 'alerts', title: 'Price Alerts', subtitle: 'Manage price notifications', icon: 'alarm-outline', type: 'navigation', screen: 'Alerts' },
         { id: 'balance', title: 'Balance', subtitle: 'Deposit and withdraw funds', icon: 'wallet-outline', type: 'navigation', screen: 'Balance' },
         { id: 'risk', title: 'Risk Management', subtitle: 'Configure risk parameters', icon: 'shield-outline', type: 'navigation', screen: 'RiskManagement' },
+      ]
+    },
+    {
+      title: 'Development',
+      items: [
+        { 
+          id: 'simulation', 
+          title: 'Trading Simulation', 
+          subtitle: simulationActive ? 'Active - Stop simulation' : 'Inactive - Start simulation', 
+          icon: simulationActive ? 'stop-circle-outline' : 'play-circle-outline', 
+          type: 'custom',
+          onPress: toggleSimulation,
+          loading: simulationLoading,
+          active: simulationActive
+        },
       ]
     },
     {
@@ -85,14 +193,32 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
         key={item.id} 
         style={styles.settingItem}
         disabled={item.type === 'info'}
-        onPress={() => item.type === 'navigation' && handleNavigation(item)}
+        onPress={() => {
+          if (item.type === 'navigation') {
+            handleNavigation(item);
+          } else if (item.type === 'custom' && item.onPress) {
+            item.onPress();
+          }
+        }}
       >
         <View style={styles.settingLeft}>
-          <View style={styles.settingIcon}>
-            <Ionicons name={item.icon} size={22} color={theme.colors.primary} />
+          <View style={[
+            styles.settingIcon,
+            item.active && { backgroundColor: `${theme.colors.accent.avocado}15` }
+          ]}>
+            <Ionicons 
+              name={item.icon} 
+              size={22} 
+              color={item.active ? theme.colors.accent.avocado : theme.colors.primary} 
+            />
           </View>
           <View style={styles.settingContent}>
-            <Text style={styles.settingTitle}>{item.title}</Text>
+            <Text style={[
+              styles.settingTitle,
+              item.active && { color: theme.colors.accent.avocado }
+            ]}>
+              {item.title}
+            </Text>
             <Text style={styles.settingSubtitle}>{item.subtitle}</Text>
           </View>
         </View>
@@ -107,6 +233,20 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
           )}
           {item.type === 'navigation' && (
             <Ionicons name="chevron-forward" size={20} color={theme.colors.text.tertiary} />
+          )}
+          {item.type === 'custom' && (
+            <View style={styles.customActionContainer}>
+              {item.loading ? (
+                <View style={styles.loadingSpinner}>
+                  <Ionicons name="refresh" size={16} color={theme.colors.text.secondary} />
+                </View>
+              ) : (
+                <View style={[
+                  styles.statusIndicator,
+                  { backgroundColor: item.active ? theme.colors.accent.avocado : theme.colors.text.tertiary }
+                ]} />
+              )}
+            </View>
           )}
         </View>
       </TouchableOpacity>
@@ -332,5 +472,20 @@ const styles = StyleSheet.create({
   },
   bottomSpacer: {
     height: theme.spacing[20],
+  },
+  customActionContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 24,
+    height: 24,
+  },
+  loadingSpinner: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statusIndicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
 });
