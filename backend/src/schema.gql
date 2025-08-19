@@ -7,6 +7,17 @@ input AddStockToWatchlistInput {
   watchlistId: String!
 }
 
+type AdminUser {
+  avatar: String
+  balance: Float!
+  createdAt: DateTime!
+  email: String!
+  id: ID!
+  isBanned: Boolean!
+  name: String
+  role: String!
+}
+
 type AlertRule {
   createdAt: DateTime!
   id: ID!
@@ -78,6 +89,12 @@ enum DividendFrequency {
   QUARTERLY
 }
 
+type EquityDrawdownPoint {
+  date: String!
+  equity: Float!
+  maxDrawdown: Float!
+}
+
 type ForecastModel {
   confidenceScore: Float!
   id: String!
@@ -116,9 +133,21 @@ type MarketData {
   volume: String!
 }
 
+type MetricWithDateRange {
+  endDate: Float!
+  startDate: Float!
+}
+
+type MostTradedStock {
+  companyName: String!
+  shareOfVolume: Float!
+  ticker: String!
+  volume: Float!
+}
+
 type Mutation {
   addStockToWatchlist(input: AddStockToWatchlistInput!): Boolean!
-  banUser(userId: String!): User!
+  banUser(userId: String!): AdminUser!
   broadcastMarketData(price: Float!, ticker: String!): MarketData!
   buyStock(input: BuyStockInput!): BuyStockPayload!
   cancelOrder(orderId: String!): Order!
@@ -127,20 +156,22 @@ type Mutation {
   createWatchlist(input: CreateWatchlistInput!): Watchlist!
   deduct(amount: Float!): Boolean!
   deleteAlertRule(id: ID!): Boolean!
-  demoteFromAdmin(userId: String!): User!
+  demoteFromAdmin(userId: String!): AdminUser!
   deposit(amount: Float!): Boolean!
   login(input: LoginInput!): AuthPayload!
   placeOrder(input: PlaceOrderInput!): Order!
   placeStopOrder(input: PlaceStopOrderInput!): Order!
-  promoteToAdmin(userId: String!): User!
+  promoteToAdmin(userId: String!): AdminUser!
   removeStockFromWatchlist(input: AddStockToWatchlistInput!): Boolean!
   sellStock(input: SellStockInput!): SellStockPayload!
   signUp(input: SignUpInput!): AuthPayload!
+  startDashboardSeeding(endDate: String!, startDate: String!): String!
   startSimulation: String!
+  stopDashboardSeeding: String!
   stopSimulation: String!
   triggerOrderNotification(type: String!, userId: String!): Boolean!
   triggerPriceAlert(ticker: String!, userId: String!): Boolean!
-  unbanUser(userId: String!): User!
+  unbanUser(userId: String!): AdminUser!
   updateAvatar(avatarUrl: String!): User!
   updateMarketData(price: Float!, ticker: String!): MarketData!
   updateRiskConfig(input: UpdateRiskConfigInput!): RiskConfig!
@@ -215,6 +246,11 @@ input PlaceStopOrderInput {
   type: OrderType!
 }
 
+type PnLPoint {
+  date: String!
+  pnl: Float!
+}
+
 type Portfolio {
   averagePrice: Float!
   quantity: Float!
@@ -229,10 +265,11 @@ type PositionValidation {
 
 type Query {
   calculateRecommendedStopLoss(entryPrice: Float!, side: String!, ticker: String!): Float!
-  getAllUsers: [User!]!
+  getAllUsers: [AdminUser!]!
   getBalance(userId: String!): Float!
   getBollingerBands(interval: Interval! = _1d, period: Float! = 20, stdDev: Float! = 2, ticker: String!): [Float!]!
   getDashboard: DashboardResult!
+  getDashboardSeedingStatus: String!
   getEMA(interval: Interval! = _1d, period: Float! = 20, ticker: String!): [Float!]!
   getMyAlertRules: [AlertRule!]!
   getMyBalance: Float!
@@ -243,8 +280,9 @@ type Query {
   getRiskReport: RiskReport!
   getSMA(interval: Interval! = _1d, period: Float! = 20, ticker: String!): [Float!]!
   getStockPosition(ticker: String!): StockPosition
+  getSystemDashboard(input: SystemDashboardInput!): SystemDashboardResult!
   getTotalPnL: String!
-  getUserById(userId: String!): User!
+  getUserById(userId: String!): AdminUser!
   me: User!
   myOrders: [Order!]!
   myPortfolio: [Portfolio!]!
@@ -331,10 +369,41 @@ type StockPosition {
   unrealizedPnLPercent: Float!
 }
 
+input SystemDashboardInput {
+  compareEndDate: String
+  compareStartDate: String
+  endDate: String!
+  startDate: String!
+}
+
+type SystemDashboardResult {
+  arpu: MetricWithDateRange!
+  averageTradeSize: MetricWithDateRange!
+  churnRate: MetricWithDateRange!
+  equityAndDrawdown: [EquityDrawdownPoint!]!
+  marginCallAlerts: MetricWithDateRange!
+  maxDrawdown: MetricWithDateRange!
+  mostTradedStocks: [MostTradedStock!]!
+  pnlOverTime: [PnLPoint!]!
+  serviceUptime: MetricWithDateRange!
+  topUsers: [TopUser!]!
+  totalRevenue: MetricWithDateRange!
+  totalTradesExecuted: MetricWithDateRange!
+  winRate: MetricWithDateRange!
+}
+
 enum TimeInForce {
   FOK
   GTC
   IOC
+}
+
+type TopUser {
+  avatar: String
+  id: String!
+  name: String!
+  pnl: Float!
+  totalValue: Float!
 }
 
 type Transaction {

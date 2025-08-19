@@ -4,32 +4,44 @@ import { TrendingUp } from "lucide-react";
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { EquityDrawdownPoint } from "@/lib/types";
 
-// Simulated last 30 days for Aug 2025
-const days = Array.from({ length: 30 }, (_, i) => `Aug ${i + 1}`);
-const chartData = days.map((d, i) => {
-  const base = 80000; // $80k
-  const equity = base + i * 1200 - Math.max(0, (i - 18) * 1600) + (i % 5) * 500;
-  const peak = Math.max(...Array.from({ length: i + 1 }, (_, j) => base + j * 1200 + (j % 5) * 500));
-  const drawdown = Math.min(0, ((equity - peak) / peak) * 100); // negative percent
-  return { day: d, equity: Math.round(equity), drawdown: Math.round(Math.abs(drawdown)) };
-});
+interface EquityDrawdownComboProps {
+  data: EquityDrawdownPoint[];
+}
 
 const chartConfig: ChartConfig = {
   equity: { label: "Equity", color: "var(--chart-1)" },
   drawdown: { label: "Max Drawdown", color: "var(--chart-2)" },
 };
 
-export default function EquityDrawdownCombo() {
+export default function EquityDrawdownCombo({ data }: EquityDrawdownComboProps) {
+  // Transform API data to chart format
+  const chartData = data.map((item) => ({
+    day: new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+    equity: Math.round(item.equity),
+    drawdown: Math.round(item.maxDrawdown)
+  }));
+
+  // Fallback data if no API data
+  const fallbackData = chartData.length > 0 ? chartData : [
+    { day: "Aug 1", equity: 80000, drawdown: 0 },
+    { day: "Aug 15", equity: 85000, drawdown: 5 },
+    { day: "Aug 31", equity: 90000, drawdown: 8 },
+  ];
+
+  const startDate = data.length > 0 ? new Date(data[0].date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Aug 1';
+  const endDate = data.length > 0 ? new Date(data[data.length - 1].date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Aug 31';
+
   return (
     <Card className="h-full py-3 gap-2">
       <CardHeader className="px-3 ">
         <CardTitle>Equity & Drawdown</CardTitle>
-        <CardDescription>Aug 1–Aug 31, 2025</CardDescription>
+        <CardDescription>{startDate}–{endDate}</CardDescription>
       </CardHeader>
       <CardContent className="px-3 my-0 ">
         <ChartContainer config={chartConfig} className="h-[120px] ">
-          <LineChart accessibilityLayer data={chartData} >
+          <LineChart accessibilityLayer data={fallbackData} >
             <CartesianGrid vertical={false} />
             <XAxis dataKey="day" tickLine={false} axisLine={false} tickMargin={8} />
             <YAxis yAxisId="left" orientation="left" tickLine={false} axisLine={false} width={40} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />

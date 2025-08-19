@@ -139,6 +139,7 @@ async function main() {
     update: {},
     create: {
       email: 'demo@example.com',
+      name: 'Demo User',
       passwordHash: hash,
       avatar: 'https://i.pravatar.cc/200?u=18284',
     },
@@ -162,6 +163,7 @@ async function main() {
     update: {},
     create: {
       email: 'admin@example.com',
+      name: 'Admin User',
       passwordHash: adminHash,
       role: 'ADMIN',
       avatar: 'https://i.pravatar.cc/200?u=admin',
@@ -188,6 +190,7 @@ async function main() {
     update: {},
     create: {
       email: 'buyer@example.com',
+      name: 'John Buyer',
       passwordHash,
       avatar: 'https://i.pravatar.cc/200?u=1234567890123456789012345678',
     },
@@ -230,16 +233,19 @@ async function main() {
   const sellersData = [
     {
       email: 'seller1@example.com',
+      name: 'Alice Seller',
       shares: 50,
       avatarId: '9876543210987654321098765432',
     },
     {
       email: 'seller2@example.com',
+      name: 'Bob Seller',
       shares: 50,
       avatarId: '5555555555555555555555555555',
     },
     {
       email: 'seller3@example.com',
+      name: 'Carol Seller',
       shares: 50,
       avatarId: '7777777777777777777777777777',
     },
@@ -251,6 +257,7 @@ async function main() {
       update: {},
       create: {
         email: sellerData.email,
+        name: sellerData.name,
         passwordHash,
         avatar: `https://i.pravatar.cc/200?u=${sellerData.avatarId}`,
       },
@@ -293,16 +300,19 @@ async function main() {
   const buyersData = [
     {
       email: 'buyer1@example.com',
+      name: 'David Buyer',
       balance: 100000,
       avatarId: '1111111111111111111111111111',
     },
     {
       email: 'buyer2@example.com',
+      name: 'Emma Buyer',
       balance: 100000,
       avatarId: '2222222222222222222222222222',
     },
     {
       email: 'buyer3@example.com',
+      name: 'Frank Buyer',
       balance: 100000,
       avatarId: '3333333333333333333333333333',
     },
@@ -314,6 +324,7 @@ async function main() {
       update: {},
       create: {
         email: buyerData.email,
+        name: buyerData.name,
         passwordHash,
         avatar: `https://i.pravatar.cc/200?u=${buyerData.avatarId}`,
       },
@@ -337,6 +348,7 @@ async function main() {
     update: {},
     create: {
       email: 'seller@example.com',
+      name: 'Grace Seller',
       passwordHash,
       avatar: 'https://i.pravatar.cc/200?u=8888888888888888888888888888',
     },

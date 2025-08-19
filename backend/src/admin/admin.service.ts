@@ -4,68 +4,181 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from 'prisma/prisma.service';
-import { User, Role } from '@prisma/client';
+import { Role } from '@prisma/client';
+import { AdminUser } from './entities/admin-user.entity';
 
 @Injectable()
 export class AdminService {
   constructor(private prisma: PrismaService) {}
 
-  async getAllUsers(): Promise<User[]> {
-    return this.prisma.user.findMany({
+  async getAllUsers(): Promise<AdminUser[]> {
+    const users = await this.prisma.user.findMany({
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        isBanned: true,
+        avatar: true,
+        createdAt: true,
+        balance: {
+          select: {
+            amount: true,
+          },
+        },
+      },
       orderBy: { createdAt: 'desc' },
     });
+
+    return users.map((user) => ({
+      ...user,
+      balance: user.balance?.amount || 0,
+    }));
   }
 
-  async getUserById(userId: string): Promise<User> {
+  async getUserById(userId: string): Promise<AdminUser> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        isBanned: true,
+        avatar: true,
+        createdAt: true,
+        balance: {
+          select: {
+            amount: true,
+          },
+        },
+      },
     });
 
     if (!user) {
       throw new NotFoundException('User not found');
     }
 
-    return user;
+    return {
+      ...user,
+      balance: user.balance?.amount || 0,
+    };
   }
 
-  async banUser(userId: string): Promise<User> {
+  async banUser(userId: string): Promise<AdminUser> {
     const user = await this.getUserById(userId);
 
     if (user.role === Role.ADMIN) {
       throw new ForbiddenException('Cannot ban admin users');
     }
 
-    return this.prisma.user.update({
+    const updatedUser = await this.prisma.user.update({
       where: { id: userId },
       data: { isBanned: true },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        isBanned: true,
+        avatar: true,
+        createdAt: true,
+        balance: {
+          select: {
+            amount: true,
+          },
+        },
+      },
     });
+
+    return {
+      ...updatedUser,
+      balance: updatedUser.balance?.amount || 0,
+    };
   }
 
-  async unbanUser(userId: string): Promise<User> {
+  async unbanUser(userId: string): Promise<AdminUser> {
     const user = await this.getUserById(userId);
 
-    return this.prisma.user.update({
+    const updatedUser = await this.prisma.user.update({
       where: { id: userId },
       data: { isBanned: false },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        isBanned: true,
+        avatar: true,
+        createdAt: true,
+        balance: {
+          select: {
+            amount: true,
+          },
+        },
+      },
     });
+
+    return {
+      ...updatedUser,
+      balance: updatedUser.balance?.amount || 0,
+    };
   }
 
-  async promoteToAdmin(userId: string): Promise<User> {
+  async promoteToAdmin(userId: string): Promise<AdminUser> {
     const user = await this.getUserById(userId);
 
-    return this.prisma.user.update({
+    const updatedUser = await this.prisma.user.update({
       where: { id: userId },
       data: { role: Role.ADMIN },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        isBanned: true,
+        avatar: true,
+        createdAt: true,
+        balance: {
+          select: {
+            amount: true,
+          },
+        },
+      },
     });
+
+    return {
+      ...updatedUser,
+      balance: updatedUser.balance?.amount || 0,
+    };
   }
 
-  async demoteFromAdmin(userId: string): Promise<User> {
+  async demoteFromAdmin(userId: string): Promise<AdminUser> {
     const user = await this.getUserById(userId);
 
-    return this.prisma.user.update({
+    const updatedUser = await this.prisma.user.update({
       where: { id: userId },
       data: { role: Role.USER },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        isBanned: true,
+        avatar: true,
+        createdAt: true,
+        balance: {
+          select: {
+            amount: true,
+          },
+        },
+      },
     });
+
+    return {
+      ...updatedUser,
+      balance: updatedUser.balance?.amount || 0,
+    };
   }
 
   async getUserPortfolio(userId: string) {

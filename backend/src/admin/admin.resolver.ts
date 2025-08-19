@@ -4,44 +4,44 @@ import { AdminService } from './admin.service';
 import { RolesGuard } from './guards/roles.guard';
 import { Roles } from './decorators/roles.decorator';
 import { GqlAuthGuard } from '../auth/gql-auth.guard';
-import { User } from '../user/entities/user.entity';
+import { AdminUser } from './entities/admin-user.entity';
 
 @Resolver()
 @UseGuards(GqlAuthGuard, RolesGuard)
 export class AdminResolver {
   constructor(private adminService: AdminService) {}
 
-  @Query(() => [User])
+  @Query(() => [AdminUser])
   @Roles('ADMIN')
   async getAllUsers() {
     return this.adminService.getAllUsers();
   }
 
-  @Query(() => User)
+  @Query(() => AdminUser)
   @Roles('ADMIN')
   async getUserById(@Args('userId') userId: string) {
     return this.adminService.getUserById(userId);
   }
 
-  @Mutation(() => User)
+  @Mutation(() => AdminUser)
   @Roles('ADMIN')
   async banUser(@Args('userId') userId: string) {
     return this.adminService.banUser(userId);
   }
 
-  @Mutation(() => User)
+  @Mutation(() => AdminUser)
   @Roles('ADMIN')
   async unbanUser(@Args('userId') userId: string) {
     return this.adminService.unbanUser(userId);
   }
 
-  @Mutation(() => User)
+  @Mutation(() => AdminUser)
   @Roles('ADMIN')
   async promoteToAdmin(@Args('userId') userId: string) {
     return this.adminService.promoteToAdmin(userId);
   }
 
-  @Mutation(() => User)
+  @Mutation(() => AdminUser)
   @Roles('ADMIN')
   async demoteFromAdmin(@Args('userId') userId: string) {
     return this.adminService.demoteFromAdmin(userId);
