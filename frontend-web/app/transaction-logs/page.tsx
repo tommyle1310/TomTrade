@@ -261,7 +261,7 @@ export default function TransactionLogsPage() {
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent className="px-3">
-              <div className="text-2xl font-bold flex-wrap bg-blue-300">
+              <div className="text-2xl font-bold flex-wrap">
                 {(() => {
                   const n = stats.totalVolume;
                   if (n >= 1e12) return '$' + (n / 1e12).toFixed(3).replace(/\.?0+$/, '') + 'T';

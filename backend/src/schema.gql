@@ -147,6 +147,7 @@ type MostTradedStock {
 
 type Mutation {
   addStockToWatchlist(input: AddStockToWatchlistInput!): Boolean!
+  adminForceCancelOrder(orderId: String!): Order!
   banUser(userId: String!): AdminUser!
   broadcastMarketData(price: Float!, ticker: String!): MarketData!
   buyStock(input: BuyStockInput!): BuyStockPayload!
@@ -207,6 +208,29 @@ type OrderBook {
   sellOrders: [Order!]!
 }
 
+input OrderPaginationInput {
+  endDate: String
+  limit: Int! = 20
+  page: Int! = 1
+  side: String
+  startDate: String
+  status: String
+  ticker: String
+  userId: String
+}
+
+type OrderPaginationMeta {
+  currentPage: Int!
+  limit: Int!
+  totalCount: Int!
+  totalPages: Int!
+}
+
+type OrderPaginationResponse {
+  meta: OrderPaginationMeta!
+  orders: [OrderWithUser!]!
+}
+
 enum OrderSide {
   BUY
   SELL
@@ -225,6 +249,28 @@ enum OrderType {
   MARKET
   STOP_LIMIT
   STOP_MARKET
+}
+
+type OrderUserInfo {
+  email: String!
+  id: ID!
+  name: String
+  role: String!
+}
+
+type OrderWithUser {
+  createdAt: DateTime!
+  id: ID!
+  matchedAt: DateTime
+  price: Float!
+  quantity: Float!
+  side: OrderSide!
+  status: OrderStatus!
+  ticker: String!
+  timeInForce: TimeInForce!
+  triggerPrice: Float
+  type: OrderType!
+  user: OrderUserInfo!
 }
 
 input PlaceOrderInput {
@@ -264,7 +310,9 @@ type PositionValidation {
 }
 
 type Query {
+  adminOrders(input: OrderPaginationInput!): OrderPaginationResponse!
   adminTransactions(input: TransactionPaginationInput!): TransactionPaginationResponse!
+  adminUserOrders(input: UserOrderPaginationInput!): OrderPaginationResponse!
   adminUserTransactions(input: UserTransactionPaginationInput!): TransactionPaginationResponse!
   calculateRecommendedStopLoss(entryPrice: Float!, side: String!, ticker: String!): Float!
   getAllUsers: [AdminUser!]!
@@ -495,6 +543,17 @@ type UserInfo {
   id: ID!
   name: String
   role: String!
+}
+
+input UserOrderPaginationInput {
+  endDate: String
+  limit: Int! = 20
+  page: Int! = 1
+  side: String
+  startDate: String
+  status: String
+  ticker: String
+  userId: String!
 }
 
 input UserTransactionPaginationInput {

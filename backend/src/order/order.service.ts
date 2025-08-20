@@ -23,6 +23,11 @@ import { SocketService } from 'src/core/socket-gateway.service';
 import { PortfolioPnLService } from '../portfolio/portfolio-pnl.service';
 import { RiskService } from '../risk/risk.service';
 import { DashboardService } from '../dashboard/dashboard.service';
+import {
+  OrderPaginationInput,
+  UserOrderPaginationInput,
+} from './dto/order-admin.input';
+import { OrderPaginationResponse } from './entities/order-admin.entity';
 
 @Injectable()
 export class OrderService {
@@ -57,6 +62,126 @@ export class OrderService {
     );
   }
 
+  async getAllOrdersWithPagination(
+    input: OrderPaginationInput,
+  ): Promise<OrderPaginationResponse> {
+    const { page, limit, ticker, side, status, userId, startDate, endDate } =
+      input;
+    const skip = (page - 1) * limit;
+
+    const where: Prisma.OrderWhereInput = {};
+
+    if (ticker) {
+      where.ticker = { contains: ticker, mode: 'insensitive' } as any;
+    }
+    if (side) {
+      where.side = side as any;
+    }
+    if (status) {
+      where.status = status as any;
+    }
+    if (userId) {
+      where.userId = userId;
+    }
+    if (startDate || endDate) {
+      where.createdAt = {} as any;
+      if (startDate) (where.createdAt as any).gte = new Date(startDate);
+      if (endDate) (where.createdAt as any).lte = new Date(endDate);
+    }
+
+    const [orders, totalCount] = await Promise.all([
+      this.prisma.order.findMany({
+        where,
+        include: {
+          user: { select: { id: true, email: true, name: true, role: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      this.prisma.order.count({ where }),
+    ]);
+
+    const ordersWithUser = orders.map((o) => ({
+      ...o,
+      user: { ...o.user, name: o.user?.name || null },
+    }));
+
+    return {
+      orders: ordersWithUser as any,
+      meta: {
+        totalCount,
+        totalPages: Math.ceil(totalCount / limit),
+        currentPage: page,
+        limit,
+      },
+    };
+  }
+
+  async getUserOrdersWithPagination(
+    input: UserOrderPaginationInput,
+  ): Promise<OrderPaginationResponse> {
+    const { userId, page, limit, ticker, side, status, startDate, endDate } =
+      input;
+    const skip = (page - 1) * limit;
+
+    const where: Prisma.OrderWhereInput = { userId };
+    if (ticker) where.ticker = { contains: ticker, mode: 'insensitive' } as any;
+    if (side) where.side = side as any;
+    if (status) where.status = status as any;
+    if (startDate || endDate) {
+      where.createdAt = {} as any;
+      if (startDate) (where.createdAt as any).gte = new Date(startDate);
+      if (endDate) (where.createdAt as any).lte = new Date(endDate);
+    }
+
+    const [orders, totalCount] = await Promise.all([
+      this.prisma.order.findMany({
+        where,
+        include: {
+          user: { select: { id: true, email: true, name: true, role: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      this.prisma.order.count({ where }),
+    ]);
+
+    const ordersWithUser = orders.map((o) => ({
+      ...o,
+      user: { ...o.user, name: o.user?.name || null },
+    }));
+
+    return {
+      orders: ordersWithUser as any,
+      meta: {
+        totalCount,
+        totalPages: Math.ceil(totalCount / limit),
+        currentPage: page,
+        limit,
+      },
+    };
+  }
+
+  // Admin-only force cancel regardless of owner
+  async adminForceCancelOrder(orderId: string) {
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+    });
+    if (!order) throw new NotFoundException('Order not found');
+    if (
+      order.status !== OrderStatus.CANCELLED &&
+      order.status !== OrderStatus.FILLED
+    ) {
+      await this.prisma.order.update({
+        where: { id: orderId },
+        data: { status: OrderStatus.CANCELLED },
+      });
+    }
+    // optional: emit socket/admin log
+    return this.prisma.order.findUnique({ where: { id: orderId } });
+  }
   async placeOrder(userId: string, input: PlaceOrderInput): Promise<Order> {
     const { side, ticker, quantity, price, type } = input;
 
