@@ -264,6 +264,8 @@ type PositionValidation {
 }
 
 type Query {
+  adminTransactions(input: TransactionPaginationInput!): TransactionPaginationResponse!
+  adminUserTransactions(input: UserTransactionPaginationInput!): TransactionPaginationResponse!
   calculateRecommendedStopLoss(entryPrice: Float!, side: String!, ticker: String!): Float!
   getAllUsers: [AdminUser!]!
   getBalance(userId: String!): Float!
@@ -293,6 +295,7 @@ type Query {
   simulationStatus: String!
   stock(ticker: String!): Stock
   stocks: [Stock!]!
+  transactionStats: TransactionStats!
   validatePortfolioRisk: RiskValidation!
   validatePositionSize(price: Float!, quantity: Float!, ticker: String!): PositionValidation!
   validateRiskPerTrade(price: Float!, quantity: Float!, stopLossPrice: Float, ticker: String!): RiskValidation!
@@ -420,6 +423,54 @@ enum TransactionAction {
   SELL
 }
 
+input TransactionPaginationInput {
+  action: String
+  endDate: String
+  limit: Int! = 20
+  page: Int! = 1
+  startDate: String
+  ticker: String
+  userId: String
+}
+
+type TransactionPaginationMeta {
+  currentPage: Int!
+  limit: Int!
+  totalAmount: Float!
+  totalBuyAmount: Float!
+  totalBuyCount: Int!
+  totalCount: Int!
+  totalPages: Int!
+  totalSellAmount: Float!
+  totalSellCount: Int!
+}
+
+type TransactionPaginationResponse {
+  meta: TransactionPaginationMeta!
+  transactions: [TransactionWithUser!]!
+}
+
+type TransactionStats {
+  averagePrice: Float!
+  totalBuyVolume: Float!
+  totalSellVolume: Float!
+  totalTransactions: Int!
+  totalVolume: Float!
+  uniqueStocks: Int!
+  uniqueUsers: Int!
+}
+
+type TransactionWithUser {
+  action: TransactionAction!
+  id: ID!
+  price: Float!
+  shares: Float!
+  ticker: String!
+  timestamp: DateTime!
+  totalAmount: Float!
+  user: UserInfo!
+}
+
 input UpdateRiskConfigInput {
   maxLeverage: Float
   maxPortfolioRisk: Float
@@ -437,6 +488,23 @@ type User {
   name: String
   passwordHash: String!
   role: String!
+}
+
+type UserInfo {
+  email: String!
+  id: ID!
+  name: String
+  role: String!
+}
+
+input UserTransactionPaginationInput {
+  action: String
+  endDate: String
+  limit: Int! = 20
+  page: Int! = 1
+  startDate: String
+  ticker: String
+  userId: String!
 }
 
 type Watchlist {

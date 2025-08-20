@@ -1,5 +1,5 @@
 'use client' 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   DollarSign,
   TrendingUp,
@@ -7,7 +7,6 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   BarChart3,
-  Crown,
   Users,
   AlertTriangle,
   RefreshCw,
@@ -24,16 +23,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import EquityDrawdownCombo from "@/components/admin/charts/EquityDrawdownCombo";
 import MostTradedPie from "@/components/admin/charts/MostTradedPie";
 import PnLBar from "@/components/admin/charts/PnLBar";
-import { TweetCard } from "@/components/magicui/tweet-card";
-import { AvatarCircles } from "@/components/magicui/avatar-circles";
-import { RippleButton } from "@/components/magicui/ripple-button";
-import { AnimatedSubscribeButton } from "@/components/magicui/animated-subscribe-button";
 import { useSystemDashboard } from "@/lib/hooks/useSystemDashboard";
 import { useDashboardSeeder } from "@/lib/hooks/useDashboardSeeder";
 import { useAuthStore } from "@/lib/authStore";

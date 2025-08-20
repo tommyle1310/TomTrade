@@ -10,6 +10,16 @@ import {
   SellStockPayload,
 } from './entities/transaction.payload';
 import { User } from '@prisma/client';
+import { RolesGuard } from '../admin/guards/roles.guard';
+import { Roles } from '../admin/decorators/roles.decorator';
+import {
+  TransactionPaginationInput,
+  UserTransactionPaginationInput,
+} from './dto/transaction-admin.input';
+import {
+  TransactionPaginationResponse,
+  TransactionStats,
+} from './entities/transaction-admin.entity';
 
 @Resolver(() => Transaction)
 export class TransactionResolver {
@@ -19,6 +29,28 @@ export class TransactionResolver {
   @UseGuards(GqlAuthGuard)
   myTransactions(@CurrentUser() user: User) {
     return this.transactionService.getByUser(user.id);
+  }
+
+  // Admin queries for transaction monitoring
+  @Query(() => TransactionPaginationResponse, { name: 'adminTransactions' })
+  @UseGuards(GqlAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  adminTransactions(@Args('input') input: TransactionPaginationInput) {
+    return this.transactionService.getAllTransactionsWithPagination(input);
+  }
+
+  @Query(() => TransactionPaginationResponse, { name: 'adminUserTransactions' })
+  @UseGuards(GqlAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  adminUserTransactions(@Args('input') input: UserTransactionPaginationInput) {
+    return this.transactionService.getUserTransactionsWithPagination(input);
+  }
+
+  @Query(() => TransactionStats, { name: 'transactionStats' })
+  @UseGuards(GqlAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  transactionStats() {
+    return this.transactionService.getTransactionStats();
   }
 
   @Mutation(() => BuyStockPayload)

@@ -5,12 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
-import { ArrowUpDown, Ban, Check, Crown, Search, Shield, UserMinus, RefreshCw, AlertTriangle } from "lucide-react";
+import { ArrowUpDown, Ban, Check, Crown, Search, Shield, UserMinus, RefreshCw, AlertTriangle, FileText } from "lucide-react";
 import { useAuthStore } from "@/lib/authStore";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { ForbiddenPage } from "@/components/ui/forbidden-page";
 import { adminApi, AdminUser } from "@/lib/adminQueries";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import Link from "next/link";
 
 export default function AdminUsersPage() {
   const { isAuthenticated, isAdmin, loading, initialized, user, token } = useAuthStore();
@@ -207,6 +208,12 @@ export default function AdminUsersPage() {
                   <TableCell>{formatCurrency(user.balance)}</TableCell>
                   <TableCell>{formatDate(user.createdAt)}</TableCell>
                   <TableCell className="text-right space-x-2">
+                    <Link href={`/admin/users/${user.id}/transactions`}>
+                      <Button variant="outline" size="sm">
+                        <FileText className="size-4 mr-1" />
+                        Transactions
+                      </Button>
+                    </Link>
                     <Button 
                       variant="outline" 
                       size="sm" 

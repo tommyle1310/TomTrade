@@ -1,5 +1,5 @@
 import { ObjectType, Field, Float, ID, registerEnumType } from '@nestjs/graphql';
-import { TransactionAction } from '../enums/transaction-action';
+import { TransactionAction } from '@prisma/client';
 
 @ObjectType()
 export class Transaction {

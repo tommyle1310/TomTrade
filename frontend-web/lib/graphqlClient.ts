@@ -1,11 +1,75 @@
-export type GraphQLResponse<T> = {
-  data?: T;
-  errors?: { message: string }[];
-};
+import {
+  ApolloClient,
+  InMemoryCache,
+  createHttpLink,
+  from,
+} from '@apollo/client';
+import { setContext } from '@apollo/client/link/context';
+import { onError } from '@apollo/client/link/error';
+import { loadErrorMessages, loadDevMessages } from '@apollo/client/dev';
+
+// Load Apollo Client error messages in development
+if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
+  loadDevMessages();
+  loadErrorMessages();
+}
 
 const backendHost = process.env.NEXT_PUBLIC_BACKEND_URL || 'localhost';
 const backendPort = process.env.NEXT_PUBLIC_BACKEND_PORT || '4000';
 export const GRAPHQL_URL = `http://${backendHost}:${backendPort}/graphql`;
+
+// Create HTTP link
+const httpLink = createHttpLink({
+  uri: GRAPHQL_URL,
+  credentials: 'include',
+});
+
+// Create auth link to add token to headers
+const authLink = setContext((_, { headers }) => {
+  // Get token from localStorage if available
+  let token = null;
+  if (typeof window !== 'undefined') {
+    token = localStorage.getItem('accessToken');
+  }
+
+  return {
+    headers: {
+      ...headers,
+      authorization: token ? `Bearer ${token}` : '',
+    },
+  };
+});
+
+// Create error link for better error handling
+const errorLink = onError(({ graphQLErrors, networkError }) => {
+  if (graphQLErrors)
+    graphQLErrors.forEach(({ message, locations, path }) =>
+      console.log(
+        `[GraphQL error]: Message: ${message}, Location: ${locations}, Path: ${path}`
+      )
+    );
+  if (networkError) console.log(`[Network error]: ${networkError}`);
+});
+
+// Create Apollo Client
+export const client = new ApolloClient({
+  link: from([errorLink, authLink, httpLink]),
+  cache: new InMemoryCache(),
+  defaultOptions: {
+    watchQuery: {
+      errorPolicy: 'all',
+    },
+    query: {
+      errorPolicy: 'all',
+    },
+  },
+});
+
+// Legacy gqlRequest function for backward compatibility
+export type GraphQLResponse<T> = {
+  data?: T;
+  errors?: { message: string }[];
+};
 
 export async function gqlRequest<T>(
   query: string,
