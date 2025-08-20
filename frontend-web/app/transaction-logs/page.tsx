@@ -8,8 +8,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
-import { ChevronLeft, ChevronRight, Search, Filter, TrendingUp, TrendingDown, Users, DollarSign } from "lucide-react";
+import { Search, Filter, TrendingUp, TrendingDown, Users, DollarSign } from "lucide-react";
 import { useQuery, gql } from "@apollo/client";
+import DateRangePicker from "@/components/DateRangePicker";
+import IdCell from "@/components/IdCell";
+import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 
 const GET_TRANSACTION_STATS = gql`
   query GetTransactionStats {
@@ -67,7 +71,15 @@ export default function TransactionLogsPage() {
     startDate: "",
     endDate: "",
   });
-  const [limit, setLimit] = useState(20);
+  const [limit] = useState(20);
+
+  // Local date objects for range picking, synced to filters
+  const [startDateObj, setStartDateObj] = useState<Date>(() => {
+    return filters.startDate ? new Date(filters.startDate) : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  });
+  const [endDateObj, setEndDateObj] = useState<Date>(() => {
+    return filters.endDate ? new Date(filters.endDate) : new Date();
+  });
 
   const { data: statsData, loading: statsLoading } = useQuery(GET_TRANSACTION_STATS);
   const { data: transactionsData, loading: transactionsLoading, refetch } = useQuery(GET_ADMIN_TRANSACTIONS, {
@@ -101,12 +113,123 @@ export default function TransactionLogsPage() {
     return new Date(dateString).toLocaleString();
   };
 
+  const formatYmd = (date: Date | null) => {
+    if (!date) return "";
+    const d = new Date(date);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
+  // Keep filters.startDate/endDate in sync with date picker states
+  useEffect(() => {
+    const s = formatYmd(startDateObj);
+    const e = formatYmd(endDateObj);
+    setFilters(prev => {
+      if (prev.startDate === s && prev.endDate === e) return prev;
+      setCurrentPage(1);
+      return { ...prev, startDate: s, endDate: e };
+    });
+  }, [startDateObj, endDateObj]);
+
   const stats = statsData?.transactionStats;
   const transactions = transactionsData?.adminTransactions?.transactions || [];
   const meta = transactionsData?.adminTransactions?.meta;
 
+  type Tx = {
+    id: string;
+    ticker: string;
+    action: string;
+    shares: number;
+    price: number;
+    timestamp: string;
+    totalAmount: number;
+    user: { id: string; email: string; name?: string | null; role: string };
+  };
+
+  const columns: ColumnDef<Tx>[] = [
+    {
+      accessorKey: "timestamp",
+      header: "Time",
+      cell: ({ getValue }) => (
+        <span className="font-mono text-sm">{formatDate(getValue() as string)}</span>
+      ),
+    },
+    {
+      id: "user",
+      header: "User",
+      cell: ({ row }) => {
+        const u = (row.original as Tx).user;
+        return (
+          <HoverCard>
+            <HoverCardTrigger asChild>
+              <div className="cursor-help">
+                <div className="font-medium truncate max-w-[220px]">{u.email}</div>
+                <div className="text-sm text-muted-foreground truncate max-w-[220px]">{u.name || "No name"}</div>
+              </div>
+            </HoverCardTrigger>
+            <HoverCardContent>
+              <div className="space-y-1">
+                <div className="font-medium break-all">{u.email}</div>
+                <div className="text-sm text-muted-foreground">{u.name || "No name"} ({u.role})</div>
+                <div className="pt-1">
+                  <IdCell id={u.id} />
+                </div>
+              </div>
+            </HoverCardContent>
+          </HoverCard>
+        );
+      },
+    },
+    {
+      accessorKey: "ticker",
+      header: "Ticker",
+      cell: ({ getValue }) => (
+        <span className="font-mono font-bold">{getValue() as string}</span>
+      ),
+    },
+    {
+      accessorKey: "action",
+      header: "Action",
+      cell: ({ getValue }) => {
+        const val = getValue() as string;
+        return (
+          <Badge variant={val === "BUY" ? "default" : "secondary"}>{val}</Badge>
+        );
+      },
+    },
+    {
+      accessorKey: "shares",
+      header: "Shares",
+      cell: ({ getValue }) => (
+        <span className="font-mono">{(getValue() as number).toLocaleString()}</span>
+      ),
+    },
+    {
+      accessorKey: "price",
+      header: "Price",
+      cell: ({ getValue }) => (
+        <span className="font-mono">{formatCurrency(getValue() as number)}</span>
+      ),
+    },
+    {
+      accessorKey: "totalAmount",
+      header: "Total",
+      cell: ({ getValue }) => (
+        <span className="font-mono font-bold">{formatCurrency(getValue() as number)}</span>
+      ),
+    },
+  ];
+
+  const table = useReactTable<Tx>({
+    data: (transactions as Tx[]),
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+  });
+
   return (
-    <div className="p-6 space-y-6">
+    <div className=" space-y-4">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Transaction Logs</h1>
@@ -121,45 +244,54 @@ export default function TransactionLogsPage() {
       {/* Stats Cards */}
       {!statsLoading && stats && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <Card className="gap-0 py-3 ">
+            <CardHeader className="flex flex-row items-center px-3 py-0 justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Transactions</CardTitle>
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-3">
               <div className="text-2xl font-bold">{stats.totalTransactions.toLocaleString()}</div>
               <p className="text-xs text-muted-foreground">All time</p>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <Card className="gap-0 py-3">
+            <CardHeader className="flex flex-row items-center px-3 py-0 justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Volume</CardTitle>
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{formatCurrency(stats.totalVolume)}</div>
+            <CardContent className="px-3">
+              <div className="text-2xl font-bold flex-wrap bg-blue-300">
+                {(() => {
+                  const n = stats.totalVolume;
+                  if (n >= 1e12) return '$' + (n / 1e12).toFixed(3).replace(/\.?0+$/, '') + 'T';
+                  if (n >= 1e9) return '$' + (n / 1e9).toFixed(3).replace(/\.?0+$/, '') + 'B';
+                  if (n >= 1e6) return '$' + (n / 1e6).toFixed(3).replace(/\.?0+$/, '') + 'M';
+                  if (n >= 1e3) return '$' + (n / 1e3).toFixed(3).replace(/\.?0+$/, '') + 'K';
+                  return formatCurrency(n);
+                })()}
+              </div>
               <p className="text-xs text-muted-foreground">Trading volume</p>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <Card className="gap-0 py-3">
+            <CardHeader className="flex flex-row items-center px-3 py-0 justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Active Users</CardTitle>
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-3">
               <div className="text-2xl font-bold">{stats.uniqueUsers}</div>
               <p className="text-xs text-muted-foreground">Unique traders</p>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <Card className="gap-0 py-3">
+            <CardHeader className="flex flex-row items-center px-3 py-0 justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Average Price</CardTitle>
               <TrendingDown className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-3">
               <div className="text-2xl font-bold">{formatCurrency(stats.averagePrice)}</div>
               <p className="text-xs text-muted-foreground">Per transaction</p>
             </CardContent>
@@ -168,14 +300,14 @@ export default function TransactionLogsPage() {
       )}
 
       {/* Filters */}
-      <Card>
-        <CardHeader>
+      <Card className="gap-0 py-3">
+        <CardHeader className="px-3">
           <CardTitle className="flex items-center gap-2">
             <Filter className="w-5 h-5" />
             Filters
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-3">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             <div>
               <label className="text-sm font-medium">Ticker</label>
@@ -206,31 +338,26 @@ export default function TransactionLogsPage() {
                 onChange={(e) => handleFilterChange("userId", e.target.value)}
               />
             </div>
-            <div>
-              <label className="text-sm font-medium">Start Date</label>
-              <Input
-                type="date"
-                value={filters.startDate}
-                onChange={(e) => handleFilterChange("startDate", e.target.value)}
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium">End Date</label>
-              <Input
-                type="date"
-                value={filters.endDate}
-                onChange={(e) => handleFilterChange("endDate", e.target.value)}
-              />
+            <div className="lg:col-span-2">
+              <label className="text-sm font-medium">Date Range</label>
+              <div>
+                <DateRangePicker
+                  date1={startDateObj}
+                  setDate1={setStartDateObj}
+                  date2={endDateObj}
+                  setDate2={setEndDateObj}
+                />
+              </div>
             </div>
           </div>
         </CardContent>
       </Card>
 
       {/* Transactions Table */}
-      <Card>
-        <CardHeader>
+      <Card className="gap-0 ">
+        <CardHeader className="px-3">
           <CardTitle>Transactions</CardTitle>
-          <CardDescription>
+          <CardDescription className="mb-2">
             Showing {transactions.length} of {meta?.totalCount || 0} transactions
             {meta && (
               <span className="ml-4">
@@ -241,7 +368,7 @@ export default function TransactionLogsPage() {
             )}
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-3">
           {transactionsLoading ? (
             <div className="flex items-center justify-center h-32">
               <div className="text-muted-foreground">Loading transactions...</div>
@@ -250,47 +377,27 @@ export default function TransactionLogsPage() {
             <>
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>Time</TableHead>
-                    <TableHead>User</TableHead>
-                    <TableHead>Ticker</TableHead>
-                    <TableHead>Action</TableHead>
-                    <TableHead>Shares</TableHead>
-                    <TableHead>Price</TableHead>
-                    <TableHead>Total</TableHead>
-                  </TableRow>
+                  {table.getHeaderGroups().map((headerGroup) => (
+                    <TableRow key={headerGroup.id}>
+                      {headerGroup.headers.map((header) => (
+                        <TableHead key={header.id}>
+                          {header.isPlaceholder ? null : flexRender(
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
+                        </TableHead>
+                      ))}
+                    </TableRow>
+                  ))}
                 </TableHeader>
                 <TableBody>
-                  {transactions.map((transaction: any) => (
-                    <TableRow key={transaction.id}>
-                      <TableCell className="font-mono text-sm">
-                        {formatDate(transaction.timestamp)}
-                      </TableCell>
-                      <TableCell>
-                        <div>
-                          <div className="font-medium">{transaction.user.email}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {transaction.user.name || "No name"} ({transaction.user.role})
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="font-mono font-bold">
-                        {transaction.ticker}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={transaction.action === "BUY" ? "default" : "secondary"}>
-                          {transaction.action}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="font-mono">
-                        {transaction.shares.toLocaleString()}
-                      </TableCell>
-                      <TableCell className="font-mono">
-                        {formatCurrency(transaction.price)}
-                      </TableCell>
-                      <TableCell className="font-mono font-bold">
-                        {formatCurrency(transaction.totalAmount)}
-                      </TableCell>
+                  {table.getRowModel().rows.map((row) => (
+                    <TableRow key={row.id}>
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell key={cell.id}>
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </TableCell>
+                      ))}
                     </TableRow>
                   ))}
                 </TableBody>
@@ -305,7 +412,7 @@ export default function TransactionLogsPage() {
                   <Pagination>
                     <PaginationContent>
                       <PaginationItem>
-                        <PaginationPrevious
+                        <PaginationPrevious size="sm"
                           onClick={() => handlePageChange(Math.max(1, meta.currentPage - 1))}
                           className={meta.currentPage <= 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
                         />
@@ -314,7 +421,7 @@ export default function TransactionLogsPage() {
                         const page = Math.max(1, Math.min(meta.totalPages - 4, meta.currentPage - 2)) + i;
                         return (
                           <PaginationItem key={page}>
-                            <PaginationLink
+                            <PaginationLink size="sm"
                               onClick={() => handlePageChange(page)}
                               isActive={page === meta.currentPage}
                               className="cursor-pointer"
@@ -325,7 +432,7 @@ export default function TransactionLogsPage() {
                         );
                       })}
                       <PaginationItem>
-                        <PaginationNext
+                        <PaginationNext size="sm"
                           onClick={() => handlePageChange(Math.min(meta.totalPages, meta.currentPage + 1))}
                           className={meta.currentPage >= meta.totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
                         />
