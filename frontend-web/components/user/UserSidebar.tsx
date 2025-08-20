@@ -7,11 +7,9 @@ import {
   TrendingUp, 
   Eye, 
   Settings, 
-  Bell,
   Wallet,
   History,
   Target,
-  BookOpen
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/lib/authStore";
@@ -30,14 +28,13 @@ export default function UserSidebar() {
           <ul className="space-y-1">
             <NavItem href="/" icon={<LayoutDashboard className="size-4" />} label="Dashboard" />
             <NavItem href="/portfolio" icon={<BarChart3 className="size-4" />} label="Portfolio" />
-            <NavItem href="/trading" icon={<TrendingUp className="size-4" />} label="Trading" />
+            <NavItem href="/charts" icon={<TrendingUp className="size-4" />} label="Charts" />
             <NavItem href="/watchlist" icon={<Eye className="size-4" />} label="Watchlist" />
             <NavItem href="/balance" icon={<Wallet className="size-4" />} label="Balance" />
-            <NavItem href="/history" icon={<History className="size-4" />} label="History" />
+            <NavItem href="/history" icon={<History className="size-4" />} label="Trade History" />
             <NavItem href="/alerts" icon={<Target className="size-4" />} label="Alerts" />
-            <NavItem href="/education" icon={<BookOpen className="size-4" />} label="Education" />
+            <NavItem href="/indicators" icon={<BarChart3 className="size-4" />} label="Indicators" />
             <NavItem href="/settings" icon={<Settings className="size-4" />} label="Settings" />
-            <NavItem href="/notifications" icon={<Bell className="size-4" />} label="Notifications" />
           </ul>
         </nav>
         <div className="p-4 border-t">

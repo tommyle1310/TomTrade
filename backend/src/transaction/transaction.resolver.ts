@@ -1,4 +1,4 @@
-import { Query, Resolver, Mutation, Args } from '@nestjs/graphql';
+import { Query, Resolver, Mutation, Args, Int } from '@nestjs/graphql';
 import { Transaction } from './entities/transaction.entity';
 import { TransactionService } from './transaction.service';
 import { UseGuards } from '@nestjs/common';
@@ -20,10 +20,15 @@ import {
   TransactionPaginationResponse,
   TransactionStats,
 } from './entities/transaction-admin.entity';
+import { TradeTick } from './entities/trade-tick.entity';
+import { PrismaService } from 'prisma/prisma.service';
 
 @Resolver(() => Transaction)
 export class TransactionResolver {
-  constructor(private readonly transactionService: TransactionService) {}
+  constructor(
+    private readonly transactionService: TransactionService,
+    private readonly prisma: PrismaService,
+  ) {}
 
   @Query(() => [Transaction], { name: 'myTransactions' })
   @UseGuards(GqlAuthGuard)
@@ -51,6 +56,25 @@ export class TransactionResolver {
   @Roles('ADMIN')
   transactionStats() {
     return this.transactionService.getTransactionStats();
+  }
+
+  @Query(() => [TradeTick])
+  async trades(
+    @Args('symbol') symbol: string,
+    @Args('limit', { type: () => Int, nullable: true }) limit?: number,
+  ) {
+    const rows = await this.prisma.transaction.findMany({
+      where: { ticker: symbol },
+      orderBy: { timestamp: 'desc' },
+      take: limit ?? 100,
+    });
+    return rows.reverse().map((t, idx) => ({
+      tradeId: t.timestamp.getTime() + idx,
+      price: t.price,
+      quantity: t.shares,
+      side: t.action as any,
+      timestamp: t.timestamp.getTime(),
+    }));
   }
 
   @Mutation(() => BuyStockPayload)

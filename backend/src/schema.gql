@@ -51,6 +51,15 @@ type BuyStockPayload {
   transaction: Transaction!
 }
 
+type Candle {
+  close: Float!
+  high: Float!
+  low: Float!
+  open: Float!
+  timestamp: Float!
+  volume: Float!
+}
+
 input CreateAlertRuleInput {
   ruleType: AlertRuleType!
   targetValue: Float!
@@ -109,6 +118,11 @@ type EquityDrawdownPoint {
   maxDrawdown: Float!
 }
 
+type EquityPoint {
+  timestamp: Float!
+  value: Float!
+}
+
 type ForecastModel {
   confidenceScore: Float!
   id: String!
@@ -120,6 +134,22 @@ type ForecastModel {
 
 type Hello {
   message: String!
+}
+
+type HoldingSlice {
+  percentage: Float!
+  symbol: String!
+  value: Float!
+}
+
+type IndicatorPoint {
+  timestamp: Float!
+  value: Float!
+}
+
+type IndicatorSeries {
+  name: String!
+  values: [IndicatorPoint!]!
 }
 
 enum Interval {
@@ -319,6 +349,12 @@ type Portfolio {
   ticker: String!
 }
 
+type PortfolioChart {
+  equityCurve: [EquityPoint!]!
+  holdings: [HoldingSlice!]!
+  totalValue: Float!
+}
+
 type PositionValidation {
   isValid: Boolean!
   maxQuantity: Float
@@ -332,6 +368,7 @@ type Query {
   adminUserOrders(input: UserOrderPaginationInput!): OrderPaginationResponse!
   adminUserTransactions(input: UserTransactionPaginationInput!): TransactionPaginationResponse!
   calculateRecommendedStopLoss(entryPrice: Float!, side: String!, ticker: String!): Float!
+  candles(interval: String!, limit: Int, symbol: String!): [Candle!]!
   getAllUsers: [AdminUser!]!
   getBalance(userId: String!): Float!
   getBollingerBands(interval: Interval! = _1d, period: Float! = 20, stdDev: Float! = 2, ticker: String!): [Float!]!
@@ -350,16 +387,19 @@ type Query {
   getSystemDashboard(input: SystemDashboardInput!): SystemDashboardResult!
   getTotalPnL: String!
   getUserById(userId: String!): AdminUser!
+  indicators(indicators: [String!], interval: String!, period: Float, symbol: String!): [IndicatorSeries!]!
   me: User!
   myOrders: [Order!]!
   myPortfolio: [Portfolio!]!
   myTransactions: [Transaction!]!
   myWatchlists: [Watchlist!]!
   orderBook(ticker: String!): OrderBook!
+  portfolio: PortfolioChart!
   sayHello: Hello!
   simulationStatus: String!
   stock(ticker: String!): Stock
   stocks: [Stock!]!
+  trades(limit: Int, symbol: String!): [TradeTick!]!
   transactionStats: TransactionStats!
   validatePortfolioRisk: RiskValidation!
   validatePositionSize(price: Float!, quantity: Float!, ticker: String!): PositionValidation!
@@ -496,6 +536,14 @@ type TopUser {
   name: String!
   pnl: Float!
   totalValue: Float!
+}
+
+type TradeTick {
+  price: Float!
+  quantity: Float!
+  side: String!
+  timestamp: Float!
+  tradeId: Float!
 }
 
 type Transaction {

@@ -7,6 +7,7 @@ import {
   Float,
   Mutation,
 } from '@nestjs/graphql';
+import { Int } from '@nestjs/graphql';
 import { StockService } from './stock.service';
 import { Stock } from './entities/stock.entity';
 import { MarketDataService } from './market-data/market-data.service';
@@ -26,6 +27,9 @@ import {
   UpdateStockInput,
 } from './dto/stock-admin.input';
 import { StockPaginationResponse } from './entities/stock-admin.entity';
+import { Candle } from './entities/candle.entity';
+import { PrismaService } from 'prisma/prisma.service';
+import { IndicatorSeries } from './entities/indicator-series.entity';
 
 @Resolver(() => Stock)
 export class StockResolver {
@@ -33,11 +37,59 @@ export class StockResolver {
     private stockService: StockService,
     private marketDataService: MarketDataService,
     private indicatorService: IndicatorService,
+    private prisma: PrismaService,
   ) {}
 
   @Query(() => [Stock])
   async stocks() {
     return this.stockService.getAllStocks();
+  }
+
+  @Query(() => [IndicatorSeries])
+  async indicators(
+    @Args('symbol') symbol: string,
+    @Args('interval') interval: string,
+    @Args({ name: 'indicators', type: () => [String], nullable: true })
+    indicators?: string[],
+    @Args('period', { type: () => Number, nullable: true }) period?: number,
+  ) {
+    const available =
+      indicators && indicators.length > 0 ? indicators : ['SMA_14', 'RSI_14'];
+    const results: IndicatorSeries[] = [];
+    for (const name of available) {
+      if (name.startsWith('SMA')) {
+        const p = Number(name.split('_')[1] || period || 14);
+        const values = await this.indicatorService.getSMA(symbol, p, interval);
+        const md = await this.prisma.marketData.findMany({
+          where: { ticker: symbol, interval },
+          orderBy: { timestamp: 'desc' },
+          take: values.length,
+        });
+        const points = values
+          .map((v, i) => ({
+            timestamp: md[values.length - 1 - i]?.timestamp.getTime() ?? 0,
+            value: v,
+          }))
+          .reverse();
+        results.push({ name: `SMA_${p}`, values: points });
+      } else if (name.startsWith('RSI')) {
+        const p = Number(name.split('_')[1] || period || 14);
+        const values = await this.indicatorService.getRSI(symbol, p, interval);
+        const md = await this.prisma.marketData.findMany({
+          where: { ticker: symbol, interval },
+          orderBy: { timestamp: 'desc' },
+          take: values.length,
+        });
+        const points = values
+          .map((v, i) => ({
+            timestamp: md[values.length - 1 - i]?.timestamp.getTime() ?? 0,
+            value: v,
+          }))
+          .reverse();
+        results.push({ name: `RSI_${p}`, values: points });
+      }
+    }
+    return results;
   }
 
   // Admin management
@@ -113,7 +165,12 @@ export class StockResolver {
     @Args('interval', { type: () => Interval, defaultValue: Interval._1d })
     interval: string,
   ) {
-    return this.indicatorService.getSMA(ticker, period, interval);
+    const [norm] = this.toDbIntervals(interval);
+    try {
+      return await this.indicatorService.getSMA(ticker, period, norm);
+    } catch {
+      return [];
+    }
   }
 
   @Query(() => [Float])
@@ -123,7 +180,12 @@ export class StockResolver {
     @Args('interval', { type: () => Interval, defaultValue: Interval._1d })
     interval: string,
   ) {
-    return this.indicatorService.getEMA(ticker, period, interval);
+    const [norm] = this.toDbIntervals(interval);
+    try {
+      return await this.indicatorService.getEMA(ticker, period, norm);
+    } catch {
+      return [];
+    }
   }
 
   @Query(() => [Float])
@@ -133,7 +195,12 @@ export class StockResolver {
     @Args('interval', { type: () => Interval, defaultValue: Interval._1d })
     interval: string,
   ) {
-    return this.indicatorService.getRSI(ticker, period, interval);
+    const [norm] = this.toDbIntervals(interval);
+    try {
+      return await this.indicatorService.getRSI(ticker, period, norm);
+    } catch {
+      return [];
+    }
   }
 
   @Query(() => [Float])
@@ -144,12 +211,51 @@ export class StockResolver {
     @Args('interval', { type: () => Interval, defaultValue: Interval._1d })
     interval: string,
   ) {
+    const [norm] = this.toDbIntervals(interval);
     const bands = await this.indicatorService.getBollingerBands(
       ticker,
       period,
       stdDev,
-      interval,
+      norm,
     );
     return bands.upper; // Return upper band as example, can be extended to return all bands
+  }
+
+  // Candlesticks for charts
+  @Query(() => [Candle])
+  async candles(
+    @Args('symbol') symbol: string,
+    @Args('interval') interval: string,
+    @Args('limit', { type: () => Int, nullable: true }) limit?: number,
+  ) {
+    const intervals = this.toDbIntervals(interval);
+    const rows = await this.prisma.marketData.findMany({
+      where: { ticker: symbol, interval: { in: intervals } },
+      orderBy: { timestamp: 'desc' },
+      take: limit ?? 200,
+    });
+    return rows.reverse().map((r) => ({
+      timestamp: r.timestamp.getTime(),
+      open: r.open,
+      high: r.high,
+      low: r.low,
+      close: r.close,
+      volume: Number(r.volume),
+    }));
+  }
+
+  private toDbIntervals(input: string): string[] {
+    const map: Record<string, string[]> = {
+      _1d: ['1D', '1d'],
+      _1h: ['1h'],
+      _1m: ['1m'],
+      _5m: ['5m'],
+      '1D': ['1D', '1d'],
+      '1d': ['1D', '1d'],
+      '1h': ['1h'],
+      '1m': ['1m'],
+      '5m': ['5m'],
+    };
+    return map[input] ?? [input];
   }
 }
