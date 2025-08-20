@@ -22,6 +22,8 @@ model Stock {
   currency             String?
   avatar               String?
   status               String?             @default("active")
+  isTradable           Boolean             @default(true)
+  suspendReason        String?
 
   marketData           MarketData[]
   technicalIndicators  TechnicalIndicator[]

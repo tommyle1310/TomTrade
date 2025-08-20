@@ -57,6 +57,20 @@ input CreateAlertRuleInput {
   ticker: String!
 }
 
+input CreateStockInput {
+  companyName: String!
+  country: String
+  currency: String
+  exchange: String!
+  industry: String
+  ipoDate: String
+  isTradable: Boolean
+  sector: String
+  status: String
+  suspendReason: String
+  ticker: String!
+}
+
 input CreateWatchlistInput {
   name: String!
 }
@@ -147,7 +161,9 @@ type MostTradedStock {
 
 type Mutation {
   addStockToWatchlist(input: AddStockToWatchlistInput!): Boolean!
+  adminCreateStock(input: CreateStockInput!): Stock!
   adminForceCancelOrder(orderId: String!): Order!
+  adminUpdateStock(input: UpdateStockInput!): Stock!
   banUser(userId: String!): AdminUser!
   broadcastMarketData(price: Float!, ticker: String!): MarketData!
   buyStock(input: BuyStockInput!): BuyStockPayload!
@@ -311,6 +327,7 @@ type PositionValidation {
 
 type Query {
   adminOrders(input: OrderPaginationInput!): OrderPaginationResponse!
+  adminStocks(input: StockPaginationInput!): StockPaginationResponse!
   adminTransactions(input: TransactionPaginationInput!): TransactionPaginationResponse!
   adminUserOrders(input: UserOrderPaginationInput!): OrderPaginationResponse!
   adminUserTransactions(input: UserTransactionPaginationInput!): TransactionPaginationResponse!
@@ -399,13 +416,37 @@ type Stock {
   insiderHolding: Float
   institutionalHolding: Float
   ipoDate: String
+  isTradable: Boolean!
   marketCap: String
   marketData(interval: Interval! = _1d): [MarketData!]!
   news(limit: Float! = 20): [News!]!
   outstandingShares: String
   sector: String
   status: String
+  suspendReason: String
   ticker: String!
+}
+
+input StockPaginationInput {
+  companyName: String
+  exchange: String
+  isTradable: Boolean
+  limit: Int! = 20
+  page: Int! = 1
+  status: String
+  ticker: String
+}
+
+type StockPaginationMeta {
+  currentPage: Int!
+  limit: Int!
+  totalCount: Int!
+  totalPages: Int!
+}
+
+type StockPaginationResponse {
+  meta: StockPaginationMeta!
+  stocks: [Stock!]!
 }
 
 type StockPosition {
@@ -525,6 +566,20 @@ input UpdateRiskConfigInput {
   maxPositionSizePercent: Float
   maxRiskPerTrade: Float
   stopLossPercent: Float
+}
+
+input UpdateStockInput {
+  companyName: String
+  country: String
+  currency: String
+  exchange: String
+  industry: String
+  ipoDate: String
+  isTradable: Boolean
+  sector: String
+  status: String
+  suspendReason: String
+  ticker: String!
 }
 
 type User {

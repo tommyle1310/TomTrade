@@ -31,6 +31,12 @@ export class Stock {
   @Field(() => String, { nullable: true })
   avatar?: string | null;
 
+  @Field(() => Boolean)
+  isTradable: boolean;
+
+  @Field(() => String, { nullable: true })
+  suspendReason?: string | null;
+
   @Field(() => Float, { nullable: true })
   insiderHolding?: number;
 

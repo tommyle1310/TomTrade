@@ -5,6 +5,7 @@ import {
   ResolveField,
   Parent,
   Float,
+  Mutation,
 } from '@nestjs/graphql';
 import { StockService } from './stock.service';
 import { Stock } from './entities/stock.entity';
@@ -15,6 +16,16 @@ import { News } from './entities/news.entity';
 import { Dividend } from './entities/dividend.entity';
 import { ForecastModel } from './entities/forecast-model.entity';
 import { IndicatorService } from './indicator.service';
+import { UseGuards } from '@nestjs/common';
+import { GqlAuthGuard } from 'src/auth/gql-auth.guard';
+import { RolesGuard } from 'src/admin/guards/roles.guard';
+import { Roles } from 'src/admin/decorators/roles.decorator';
+import {
+  StockPaginationInput,
+  CreateStockInput,
+  UpdateStockInput,
+} from './dto/stock-admin.input';
+import { StockPaginationResponse } from './entities/stock-admin.entity';
 
 @Resolver(() => Stock)
 export class StockResolver {
@@ -29,6 +40,28 @@ export class StockResolver {
     return this.stockService.getAllStocks();
   }
 
+  // Admin management
+  @Query(() => StockPaginationResponse, { name: 'adminStocks' })
+  @UseGuards(GqlAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  adminStocks(@Args('input') input: StockPaginationInput) {
+    return this.stockService.getStocksWithPagination(input);
+  }
+
+  @Mutation(() => Stock, { name: 'adminCreateStock' })
+  @UseGuards(GqlAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  adminCreateStock(@Args('input') input: CreateStockInput) {
+    return this.stockService.createStock(input);
+  }
+
+  @Mutation(() => Stock, { name: 'adminUpdateStock' })
+  @UseGuards(GqlAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  adminUpdateStock(@Args('input') input: UpdateStockInput) {
+    return this.stockService.updateStock(input);
+  }
+
   @Query(() => Stock, { nullable: true })
   async stock(@Args('ticker') ticker: string) {
     return this.stockService.getStock(ticker);
@@ -37,7 +70,10 @@ export class StockResolver {
   @ResolveField('avatar', () => String, { nullable: true })
   async getAvatar(@Parent() stock: Stock) {
     // Return existing avatar or fallback to Financial Modeling Prep image
-    return stock.avatar || `https://financialmodelingprep.com/image-stock/${stock.ticker}.png`;
+    return (
+      stock.avatar ||
+      `https://financialmodelingprep.com/image-stock/${stock.ticker}.png`
+    );
   }
 
   @ResolveField('marketData', () => [MarketData])

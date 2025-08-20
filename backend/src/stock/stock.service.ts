@@ -21,6 +21,112 @@ export class StockService {
     return this.prisma.stock.findMany();
   }
 
+  async getStocksWithPagination(input: {
+    page: number;
+    limit: number;
+    ticker?: string;
+    companyName?: string;
+    exchange?: string;
+    status?: string;
+    isTradable?: boolean | null;
+  }) {
+    const { page, limit, ticker, companyName, exchange, status, isTradable } =
+      input;
+    const skip = (page - 1) * limit;
+
+    const where: any = {};
+    if (ticker) where.ticker = { contains: ticker, mode: 'insensitive' };
+    if (companyName)
+      where.companyName = { contains: companyName, mode: 'insensitive' };
+    if (exchange) where.exchange = { contains: exchange, mode: 'insensitive' };
+    if (status) where.status = { contains: status, mode: 'insensitive' };
+    if (typeof isTradable === 'boolean') where.isTradable = isTradable;
+
+    const [stocks, totalCount] = await Promise.all([
+      this.prisma.stock.findMany({
+        where,
+        orderBy: { ticker: 'asc' },
+        skip,
+        take: limit,
+      }),
+      this.prisma.stock.count({ where }),
+    ]);
+
+    return {
+      stocks,
+      meta: {
+        totalCount,
+        totalPages: Math.ceil(totalCount / limit),
+        currentPage: page,
+        limit,
+      },
+    };
+  }
+
+  async createStock(input: {
+    ticker: string;
+    companyName: string;
+    exchange: string;
+    sector?: string;
+    industry?: string;
+    country?: string;
+    currency?: string;
+    status?: string;
+    ipoDate?: string;
+    isTradable?: boolean;
+    suspendReason?: string;
+  }) {
+    const {
+      ticker,
+      companyName,
+      exchange,
+      sector,
+      industry,
+      country,
+      currency,
+      status,
+      ipoDate,
+      isTradable,
+      suspendReason,
+    } = input;
+    return this.prisma.stock.create({
+      data: {
+        ticker,
+        companyName,
+        exchange,
+        sector,
+        industry,
+        country,
+        currency,
+        status,
+        ipoDate: ipoDate ? new Date(ipoDate) : undefined,
+        isTradable: typeof isTradable === 'boolean' ? isTradable : true,
+        suspendReason,
+      },
+    });
+  }
+
+  async updateStock(input: {
+    ticker: string;
+    companyName?: string;
+    exchange?: string;
+    sector?: string;
+    industry?: string;
+    country?: string;
+    currency?: string;
+    status?: string;
+    ipoDate?: string | null;
+    isTradable?: boolean;
+    suspendReason?: string | null;
+  }) {
+    const { ticker, ipoDate, ...rest } = input;
+    const data: any = { ...rest };
+    if (typeof ipoDate !== 'undefined') {
+      data.ipoDate = ipoDate ? new Date(ipoDate) : null;
+    }
+    return this.prisma.stock.update({ where: { ticker }, data });
+  }
+
   async news(ticker: string, limit: number) {
     return this.prisma.news.findMany({
       where: { ticker },

@@ -16,8 +16,9 @@ export default function Sidebar() {
           <ul className="space-y-1">
             <NavItem href="/" icon={<LayoutDashboard className="size-4" />} label="Dashboard" />
             <NavItem href="/admin/users" icon={<Users2 className="size-4" />} label="Manage Users" />
-            <NavItem href="/transaction-logs" icon={<FileText className="size-4" />} label="Transaction Logs" />
-            <NavItem href="/order-logs" icon={<FileText className="size-4" />} label="Order Logs" />
+            <NavItem href="/admin/transaction-logs" icon={<FileText className="size-4" />} label="Transaction Logs" />
+            <NavItem href="/admin/order-logs" icon={<FileText className="size-4" />} label="Order Logs" />
+            <NavItem href="/admin/stocks" icon={<FileText className="size-4" />} label="Stocks" />
             <NavItem href="/risk" icon={<Shield className="size-4" />} label="Risk" />
             <NavItem href="/settings" icon={<Settings className="size-4" />} label="Settings" />
             <NavItem href="/notifications" icon={<Bell className="size-4" />} label="Notifications" />
