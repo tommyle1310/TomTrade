@@ -33,6 +33,9 @@ export class SystemDashboardSeederService {
       `Starting system dashboard data seeding from ${startDate} to ${endDate}...`,
     );
 
+    // Clear existing data to prevent overlap issues
+    await this.clearExistingData();
+
     // Clear Redis cache to prevent old data
     await this.clearRedisCache();
 
@@ -97,6 +100,30 @@ export class SystemDashboardSeederService {
       this.logger.log('Cleared system dashboard Redis cache keys');
     } catch (error) {
       this.logger.error('Error clearing Redis cache:', error);
+    }
+  }
+
+  private async clearExistingData() {
+    try {
+      // Clear existing market data to prevent overlap issues
+      const deletedMarketData = await this.prisma.marketData.deleteMany({});
+      this.logger.log(
+        `Cleared ${deletedMarketData.count} existing market data records`,
+      );
+
+      // Clear existing transactions
+      const deletedTransactions = await this.prisma.transaction.deleteMany({});
+      this.logger.log(
+        `Cleared ${deletedTransactions.count} existing transaction records`,
+      );
+
+      // Clear existing orders
+      const deletedOrders = await this.prisma.order.deleteMany({});
+      this.logger.log(`Cleared ${deletedOrders.count} existing order records`);
+
+      this.logger.log('All existing data cleared successfully');
+    } catch (error) {
+      this.logger.error('Error clearing existing data:', error);
     }
   }
 
@@ -180,45 +207,233 @@ export class SystemDashboardSeederService {
       take: 5,
     });
 
+    if (stocks.length === 0) return;
+
     const currentDate = new Date(startDate);
     while (currentDate <= endDate) {
       for (const stock of stocks) {
-        // Create more realistic price progression with trends and volatility
-        const basePrice = 100 + Math.random() * 400;
-        const trend = (Math.random() - 0.5) * 0.02; // Small daily trend
-        const volatility = 0.05; // 5% daily volatility
+        // Generate data for ALL intervals: 1D, 1H, 30M, 15M, 5M, 1M
 
-        // Calculate price with trend and volatility
-        const daysFromStart = Math.floor(
-          (currentDate.getTime() - startDate.getTime()) / (24 * 60 * 60 * 1000),
-        );
-        const trendEffect = 1 + trend * daysFromStart;
-        const randomEffect = 1 + (Math.random() - 0.5) * volatility;
+        // Start with a realistic base price for this stock
+        const basePrice = 50 + Math.random() * 450; // $50-$500 base price
 
-        const adjustedPrice = basePrice * trendEffect * randomEffect;
+        // 1. Generate DAILY data (1D interval) - one point per day
+        await this.generateDailyData(currentDate, stock, basePrice);
 
-        const open = adjustedPrice + (Math.random() * 10 - 5);
-        const high = open + Math.random() * 20;
-        const low = open - Math.random() * 20;
-        const close = low + Math.random() * (high - low);
-        const volume = Math.floor(Math.random() * 1000000) + 100000;
+        // 2. Generate HOURLY data (1H interval) - multiple points per day
+        await this.generateHourlyData(currentDate, stock, basePrice, stocks);
 
-        await this.prisma.marketData.create({
-          data: {
-            ticker: stock.ticker,
-            timestamp: currentDate,
-            interval: '1d',
-            open,
-            high,
-            low,
-            close,
-            volume: BigInt(volume),
-            afterHours: close + (Math.random() * 5 - 2.5),
-          },
-        });
+        // 3. Generate MINUTE data (30M, 15M, 5M, 1M intervals) - many points per day
+        await this.generateMinuteData(currentDate, stock, basePrice, stocks);
       }
 
       currentDate.setDate(currentDate.getDate() + 1);
+    }
+  }
+
+  private async generateDailyData(
+    date: Date,
+    stock: { ticker: string },
+    basePrice: number,
+  ) {
+    // One data point per day at market close (4:00 PM)
+    const timestamp = new Date(date);
+    timestamp.setHours(16, 0, 0, 0); // 4:00 PM market close
+
+    // Add stock offset to prevent conflicts
+    const stockOffset = Math.floor(Math.random() * 1000);
+    timestamp.setMilliseconds(timestamp.getMilliseconds() + stockOffset);
+
+    // Check for duplicates
+    const existingData = await this.prisma.marketData.findFirst({
+      where: { ticker: stock.ticker, timestamp, interval: '1d' },
+    });
+
+    if (existingData) return;
+
+    // Generate realistic daily OHLC
+    const open = basePrice + (Math.random() - 0.5) * 20;
+    const close = open + (Math.random() - 0.5) * 40; // ±$20 change
+
+    // Create REALISTIC shadows (wicks) - much larger than body
+    const bodyRange = Math.abs(close - open);
+    const shadowRange = bodyRange * (2 + Math.random() * 3); // 2x to 5x body size
+
+    const high = Math.max(open, close) + Math.random() * shadowRange;
+    const low = Math.min(open, close) - Math.random() * shadowRange;
+
+    const volume = Math.floor(500000 + Math.random() * 1500000); // 500k to 2M
+
+    await this.prisma.marketData.create({
+      data: {
+        ticker: stock.ticker,
+        timestamp,
+        interval: '1d',
+        open,
+        high,
+        low,
+        close,
+        volume: BigInt(volume),
+        afterHours: close + (Math.random() * 5 - 2.5),
+      },
+    });
+  }
+
+  private async generateHourlyData(
+    date: Date,
+    stock: { ticker: string },
+    basePrice: number,
+    stocks: { ticker: string }[],
+  ) {
+    // Generate 8-12 hourly data points per day
+    const dataPointsPerDay = Math.floor(Math.random() * 4) + 8; // 8-12 points
+
+    // Market hours: 9:30 AM to 4:00 PM (6.5 hours)
+    const marketHours = 6.5;
+    const timeInterval = (marketHours * 60 * 60 * 1000) / dataPointsPerDay;
+
+    let currentPrice = basePrice;
+
+    for (let i = 0; i < dataPointsPerDay; i++) {
+      // Create timestamp with PROPER spacing (no overlap)
+      const timestamp = new Date(date);
+      timestamp.setHours(9, 30, 0, 0); // Start at 9:30 AM
+      timestamp.setMilliseconds(timestamp.getMilliseconds() + i * timeInterval);
+
+      // Add stock offset to prevent conflicts
+      const stockOffset = stocks.indexOf(stock) * 1000;
+      timestamp.setMilliseconds(timestamp.getMilliseconds() + stockOffset);
+
+      // Check for duplicates
+      const existingData = await this.prisma.marketData.findFirst({
+        where: { ticker: stock.ticker, timestamp, interval: '1h' },
+      });
+
+      if (existingData) continue;
+
+      // Generate realistic hourly OHLC with gradual progression
+      const open = currentPrice;
+      const priceChange = currentPrice * (Math.random() - 0.5) * 0.02; // ±1% change
+      const close = open + priceChange;
+
+      // Create VARIED body sizes (not uniform!)
+      const bodyRange = Math.abs(close - open);
+      const bodyVariation = 0.5 + Math.random() * 2; // 0.5x to 2.5x variation
+      const adjustedBodyRange = bodyRange * bodyVariation;
+
+      // Create REALISTIC shadows (wicks) - much larger than body
+      const shadowRange = adjustedBodyRange * (1.5 + Math.random() * 2); // 1.5x to 3.5x body size
+
+      const high = Math.max(open, close) + Math.random() * shadowRange;
+      const low = Math.min(open, close) - Math.random() * shadowRange;
+
+      const volume = Math.floor(200000 + Math.random() * 800000); // 200k to 1M
+
+      await this.prisma.marketData.create({
+        data: {
+          ticker: stock.ticker,
+          timestamp,
+          interval: '1h',
+          open,
+          high,
+          low,
+          close,
+          volume: BigInt(volume),
+          afterHours: close + (Math.random() * 5 - 2.5),
+        },
+      });
+
+      // Update price for next iteration
+      currentPrice = close;
+    }
+  }
+
+  private async generateMinuteData(
+    date: Date,
+    stock: { ticker: string },
+    basePrice: number,
+    stocks: { ticker: string }[],
+  ) {
+    // Generate MINIMAL data points to prevent overlap
+    const intervals = [
+      { name: '30m', points: 4, offset: 0 }, // 4 points per day (every 1.5 hours)
+      { name: '15m', points: 6, offset: 1000 }, // 6 points per day (every 1 hour)
+      { name: '5m', points: 8, offset: 2000 }, // 8 points per day (every 45 min)
+      { name: '1m', points: 12, offset: 3000 }, // 12 points per day (every 30 min)
+    ];
+
+    for (const interval of intervals) {
+      await this.generateIntervalData(date, stock, basePrice, interval, stocks);
+    }
+  }
+
+  private async generateIntervalData(
+    date: Date,
+    stock: { ticker: string },
+    basePrice: number,
+    interval: { name: string; points: number; offset: number },
+    stocks: { ticker: string }[],
+  ) {
+    const dataPointsPerDay = interval.points;
+
+    // Market hours: 9:30 AM to 4:00 PM (6.5 hours)
+    const marketHours = 6.5;
+    const timeInterval = (marketHours * 60 * 60 * 1000) / dataPointsPerDay;
+
+    let currentPrice = basePrice;
+
+    for (let i = 0; i < dataPointsPerDay; i++) {
+      // Create timestamp with PROPER spacing (no overlap)
+      const timestamp = new Date(date);
+      timestamp.setHours(9, 30, 0, 0); // Start at 9:30 AM
+      timestamp.setMilliseconds(timestamp.getMilliseconds() + i * timeInterval);
+
+      // Add stock offset + interval offset to prevent conflicts
+      const stockOffset = stocks.indexOf(stock) * 1000;
+      const totalOffset = stockOffset + interval.offset;
+      timestamp.setMilliseconds(timestamp.getMilliseconds() + totalOffset);
+
+      // Check for duplicates
+      const existingData = await this.prisma.marketData.findFirst({
+        where: { ticker: stock.ticker, timestamp, interval: interval.name },
+      });
+
+      if (existingData) continue;
+
+      // Generate realistic minute-level OHLC with gradual progression
+      const open = currentPrice;
+      const priceChange = currentPrice * (Math.random() - 0.5) * 0.01; // ±0.5% change
+      const close = open + priceChange;
+
+      // Create VARIED body sizes (not uniform!)
+      const bodyRange = Math.abs(close - open);
+      const bodyVariation = 0.3 + Math.random() * 3; // 0.3x to 3.3x variation
+      const adjustedBodyRange = bodyRange * bodyVariation;
+
+      // Create REALISTIC shadows (wicks) - much larger than body
+      const shadowRange = adjustedBodyRange * (2 + Math.random() * 3); // 2x to 5x body size
+
+      const high = Math.max(open, close) + Math.random() * shadowRange;
+      const low = Math.min(open, close) - Math.random() * shadowRange;
+
+      const volume = Math.floor(50000 + Math.random() * 300000); // 50k to 350k
+
+      await this.prisma.marketData.create({
+        data: {
+          ticker: stock.ticker,
+          timestamp,
+          interval: interval.name,
+          open,
+          high,
+          low,
+          close,
+          volume: BigInt(volume),
+          afterHours: close + (Math.random() * 5 - 2.5),
+        },
+      });
+
+      // Update price for next iteration
+      currentPrice = close;
     }
   }
 
