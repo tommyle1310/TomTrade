@@ -16,7 +16,15 @@ export class SystemDashboardSeederResolver {
     @Args('startDate') startDate: string,
     @Args('endDate') endDate: string,
   ) {
-    const result = await this.seederService.startSeeding(startDate, endDate);
+    // Normalize date inputs to YYYY-MM-DD for clean UTC boundaries
+    const s = new Date(startDate);
+    s.setUTCHours(0, 0, 0, 0);
+    const e = new Date(endDate);
+    e.setUTCHours(23, 59, 59, 999);
+    const result = await this.seederService.startSeeding(
+      s.toISOString(),
+      e.toISOString(),
+    );
     return JSON.stringify(result);
   }
 

@@ -1,24 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { useQuery, gql } from "@apollo/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { 
-  ComposedChart, 
-  Line, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer,
-  ReferenceLine
-} from "recharts";
 
 interface Candle {
   timestamp: number;
@@ -62,38 +50,87 @@ const GET_TRADES = gql`
   }
 `;
 
-// Custom candlestick chart component
-const CandlestickChart = ({ data }: { data: Candle[] }) => {
+const GET_STOCKS = gql`
+  query GetStocks($input: StockPaginationInput!) {
+    adminStocks(input: $input) {
+      stocks {
+        ticker
+        companyName
+        exchange
+        isTradable
+      }
+      meta { totalCount }
+    }
+  }
+`;
+
+// Enhanced candlestick chart with proper scaling and responsive design
+const CandlestickChart = ({ data, interval }: { data: Candle[]; interval: string }) => {
   const [hoveredCandle, setHoveredCandle] = useState<Candle | null>(null);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  // Process data to handle duplicate timestamps with better spacing
-  const processedData = data.map((candle, index) => {
-    // Create unique position for each candle with better spacing
-    let uniquePosition = index;
-    if (index > 0 && data[index - 1].timestamp === candle.timestamp) {
-      // If duplicate timestamp, create larger offset to prevent overlap
-      uniquePosition = index + (index * 0.5);
-    }
-    
-    return {
-      ...candle,
-      position: uniquePosition,
-      isGreen: candle.close >= candle.open,
-      bodyHeight: Math.abs(candle.close - candle.open),
-      bodyY: Math.min(candle.open, candle.close),
-      wickHeight: candle.high - candle.low,
-      wickY: candle.low,
+  // Process and normalize data
+  const processedData = useMemo(() => {
+    if (!data.length) return [];
+
+    // Sort by timestamp and remove duplicates
+    const sorted = [...data].sort((a, b) => a.timestamp - b.timestamp);
+    const unique = sorted.filter((candle, index) => 
+      index === 0 || candle.timestamp !== sorted[index - 1].timestamp
+    );
+
+    // Normalize timestamps to interval boundaries
+    const normalizeTimestamp = (timestamp: number, interval: string) => {
+      const date = new Date(timestamp);
+      switch (interval) {
+        case '1h':
+          date.setMinutes(0, 0, 0);
+          break;
+        case '5m':
+          date.setMinutes(Math.floor(date.getMinutes() / 5) * 5, 0, 0);
+          break;
+        case '15m':
+          date.setMinutes(Math.floor(date.getMinutes() / 15) * 15, 0, 0);
+          break;
+        case '30m':
+          date.setMinutes(Math.floor(date.getMinutes() / 30) * 30, 0, 0);
+          break;
+        case '1m':
+          date.setSeconds(0, 0);
+          break;
+        default:
+          break;
+      }
+      return date.getTime();
     };
-  });
 
-  const maxPrice = Math.max(...data.map(d => d.high));
-  const minPrice = Math.min(...data.map(d => d.low));
-  const priceRange = maxPrice - minPrice || 1;
+    return unique.map(candle => ({
+      ...candle,
+      normalizedTimestamp: normalizeTimestamp(candle.timestamp, interval),
+      isGreen: candle.close >= candle.open,
+    }));
+  }, [data, interval]);
+
+  // Calculate scales
+  const scales = useMemo(() => {
+    if (!processedData.length) return null;
+
+    const minPrice = Math.min(...processedData.map(d => d.low));
+    const maxPrice = Math.max(...processedData.map(d => d.high));
+    const priceRange = maxPrice - minPrice;
+    const padding = priceRange * 0.05; // 5% padding
+
+    return {
+      minPrice: minPrice - padding,
+      maxPrice: maxPrice + padding,
+      priceRange: priceRange + padding * 2,
+      candleCount: processedData.length,
+    };
+  }, [processedData]);
 
   const handleMouseMove = (event: React.MouseEvent, candle: Candle) => {
-    // Use the actual mouse position relative to the chart container
-    const rect = event.currentTarget.closest('.relative')?.getBoundingClientRect();
+    const rect = containerRef.current?.getBoundingClientRect();
     if (rect) {
       setTooltipPosition({
         x: event.clientX - rect.left,
@@ -103,146 +140,165 @@ const CandlestickChart = ({ data }: { data: Candle[] }) => {
     setHoveredCandle(candle);
   };
 
-  // Calculate chart width based on data points to ensure proper spacing
-  const chartWidth = Math.max(100, processedData.length * 20); // Minimum 20px per candle
+  if (!scales || !processedData.length) {
+    return (
+      <div className="h-[400px] flex items-center justify-center text-muted-foreground">
+        No data available
+      </div>
+    );
+  }
+
+  const { minPrice, maxPrice, priceRange, candleCount } = scales;
+  const containerWidth = containerRef.current?.clientWidth || 800;
+  const minCandleWidth = 4; // Minimum 4px per candle
+  const maxCandleWidth = 20; // Maximum 20px per candle
+  const availableWidth = containerWidth - 80; // Account for Y-axis labels
+  const candleWidth = Math.max(minCandleWidth, Math.min(maxCandleWidth, availableWidth / candleCount));
+  const chartWidth = candleCount * candleWidth;
 
   return (
-    <div className="relative h-[400px] w-full overflow-x-auto">
-      <div style={{ width: `${chartWidth}px`, minWidth: '100%' }}>
-        <svg className="w-full h-full">
-          <defs>
-            <linearGradient id="greenGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stopColor="#10b981" />
-              <stop offset="100%" stopColor="#059669" />
-            </linearGradient>
-            <linearGradient id="redGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stopColor="#ef4444" />
-              <stop offset="100%" stopColor="#dc2626" />
-            </linearGradient>
-          </defs>
-          
-          {processedData.map((candle, i) => {
-            const x = (candle.position / (processedData.length - 1)) * 100;
-            const candleWidth = Math.max(8, 90 / processedData.length); // Wider candles, minimum 8%
-            const isGreen = candle.isGreen;
-            
-            // Calculate Y positions (inverted for SVG)
-            const highY = 100 - ((candle.high - minPrice) / priceRange) * 80;
-            const lowY = 100 - ((candle.low - minPrice) / priceRange) * 80;
-            const openY = 100 - ((candle.open - minPrice) / priceRange) * 80;
-            const closeY = 100 - ((candle.close - minPrice) / priceRange) * 80;
-            
-            const bodyHeight = Math.abs(closeY - openY);
-            const bodyY = Math.min(openY, closeY);
-            
-            const isHovered = hoveredCandle === candle;
-            const strokeWidth = isHovered ? 2 : 1;
-            const opacity = isHovered ? 1 : 0.8;
-            
-            return (
-              <g 
-                key={i}
-                onMouseEnter={(e) => handleMouseMove(e, candle)}
-                onMouseLeave={() => setHoveredCandle(null)}
-                style={{ cursor: 'pointer' }}
-              >
-                {/* Wick */}
-                <line
-                  x1={`${x}%`}
-                  y1={`${highY}%`}
-                  x2={`${x}%`}
-                  y2={`${lowY}%`}
-                  stroke={isGreen ? "#10b981" : "#ef4444"}
-                  strokeWidth={strokeWidth}
-                  opacity={opacity}
-                />
-                {/* Body */}
-                <rect
-                  x={`${x - candleWidth/2}%`}
-                  y={`${bodyY}%`}
-                  width={`${candleWidth}%`}
-                  height={`${Math.max(bodyHeight, 3)}%`}
-                  fill={isGreen ? "url(#greenGradient)" : "url(#redGradient)"}
-                  stroke={isGreen ? "#059669" : "#dc2626"}
-                  strokeWidth={strokeWidth}
-                  opacity={opacity}
-                />
-              </g>
-            );
-          })}
-        </svg>
-        
-        {/* Price labels */}
-        <div className="absolute left-0 top-0 w-16 h-full flex flex-col justify-between text-xs text-muted-foreground">
-          {[0, 0.25, 0.5, 0.75, 1].map((ratio, i) => (
-            <div key={i} className="text-right pr-2">
-              ${(maxPrice - priceRange * ratio).toFixed(0)}
-            </div>
-          ))}
-        </div>
+    <div ref={containerRef} className="relative h-[400px] w-full overflow-hidden">
+      {/* Y-axis price labels */}
+      <div className="absolute left-0 top-0 w-16 h-full flex flex-col justify-between text-xs text-muted-foreground z-10">
+        {[0, 0.25, 0.5, 0.75, 1].map((ratio, i) => (
+          <div key={i} className="text-right text-indigo-400 font-bold pr-2 bg-background">
+            ${(maxPrice - priceRange * ratio).toFixed(2)}
+          </div>
+        ))}
+      </div>
 
-        {/* Hover tooltip - positioned BELOW the cursor */}
-        {hoveredCandle && (
-          <div 
-            className="absolute bg-background border rounded-lg p-3 shadow-lg z-10 pointer-events-none"
-            style={{
-              left: tooltipPosition.x + 10,
-              top: tooltipPosition.y + 10, // Position BELOW cursor
-            }}
-          >
-            <div className="text-sm font-medium text-muted-foreground">
-              {new Date(hoveredCandle.timestamp).toLocaleString()}
+      {/* Chart container with proper scrolling */}
+      <div className="ml-16 h-full overflow-x-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+        <div style={{ width: `${chartWidth}px`, minWidth: '100%', height: '100%' }}>
+          <svg className="w-full h-full" viewBox={`0 0 ${chartWidth} 400`} preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="greenGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stopColor="#10b981" />
+                <stop offset="100%" stopColor="#059669" />
+              </linearGradient>
+              <linearGradient id="redGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stopColor="#ef4444" />
+                <stop offset="100%" stopColor="#dc2626" />
+              </linearGradient>
+            </defs>
+            
+            {processedData.map((candle, i) => {
+              const x = i * candleWidth + candleWidth / 2;
+              const isGreen = candle.isGreen;
+              
+              // Calculate Y positions (inverted for SVG)
+              const highY = 400 - ((candle.high - minPrice) / priceRange) * 360;
+              const lowY = 400 - ((candle.low - minPrice) / priceRange) * 360;
+              const openY = 400 - ((candle.open - minPrice) / priceRange) * 360;
+              const closeY = 400 - ((candle.close - minPrice) / priceRange) * 360;
+              
+              const bodyHeight = Math.abs(closeY - openY);
+              const bodyY = Math.min(openY, closeY);
+              const bodyWidth = Math.max(2, candleWidth * 0.8);
+              
+              const isHovered = hoveredCandle === candle;
+              const strokeWidth = isHovered ? 2 : 1;
+              const opacity = isHovered ? 1 : 0.8;
+              
+              return (
+                <g 
+                  key={i}
+                  onMouseEnter={(e) => handleMouseMove(e, candle)}
+                  onMouseLeave={() => setHoveredCandle(null)}
+                  style={{ cursor: 'pointer' }}
+                >
+                  {/* Wick */}
+                  <line
+                    x1={x}
+                    y1={highY}
+                    x2={x}
+                    y2={lowY}
+                    stroke={isGreen ? "#10b981" : "#ef4444"}
+                    strokeWidth={strokeWidth}
+                    opacity={opacity}
+                  />
+                  {/* Body */}
+                  <rect
+                    x={x - bodyWidth / 2}
+                    y={bodyY}
+                    width={bodyWidth}
+                    height={Math.max(bodyHeight, 2)}
+                    fill={isGreen ? "url(#greenGradient)" : "url(#redGradient)"}
+                    stroke={isGreen ? "#059669" : "#dc2626"}
+                    strokeWidth={strokeWidth}
+                    opacity={opacity}
+                  />
+                </g>
+              );
+            })}
+          </svg>
+        </div>
+      </div>
+
+      {/* Hover tooltip - positioned ABOVE the cursor */}
+      {hoveredCandle && (
+        <div 
+          className="absolute bg-background border rounded-lg p-3 shadow-lg z-20 pointer-events-none"
+          style={{
+            left: Math.min(tooltipPosition.x + 10, containerWidth - 200),
+            top: Math.max(tooltipPosition.y - 120, 10), // Position ABOVE cursor
+          }}
+        >
+          <div className="text-sm font-medium text-muted-foreground">
+            {new Date(hoveredCandle.timestamp).toLocaleString()}
+          </div>
+          <div className="space-y-1 mt-2">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Open:</span>
+              <span className="font-mono">${hoveredCandle.open.toFixed(2)}</span>
             </div>
-            <div className="space-y-1 mt-2">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Open:</span>
-                <span className="font-mono">${hoveredCandle.open.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">High:</span>
-                <span className="font-mono text-green-600">${hoveredCandle.high.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Low:</span>
-                <span className="font-mono text-red-600">${hoveredCandle.low.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Close:</span>
-                <span className="font-mono">${hoveredCandle.close.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Volume:</span>
-                <span className="font-mono">{hoveredCandle.volume.toLocaleString()}</span>
-              </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">High:</span>
+              <span className="font-mono text-green-600">${hoveredCandle.high.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Low:</span>
+              <span className="font-mono text-red-600">${hoveredCandle.low.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Close:</span>
+              <span className="font-mono">${hoveredCandle.close.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Volume:</span>
+              <span className="font-mono">{hoveredCandle.volume.toLocaleString()}</span>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };
 
-// Volume chart component
-const VolumeChart = ({ data }: { data: Candle[] }) => {
+// Enhanced volume chart with proper alignment and scaling
+const VolumeChart = ({ data, candleWidth }: { data: Candle[]; candleWidth: number }) => {
   const [hoveredCandle, setHoveredCandle] = useState<Candle | null>(null);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  const processedData = data.map((candle, index) => {
-    let uniquePosition = index;
-    if (index > 0 && data[index - 1].timestamp === candle.timestamp) {
-      uniquePosition = index + (index * 0.5); // Same spacing as candlestick chart
-    }
-    
-    return {
+  // Process data to match candlestick chart
+  const processedData = useMemo(() => {
+    if (!data.length) return [];
+
+    // Sort by timestamp and remove duplicates (same logic as candlestick chart)
+    const sorted = [...data].sort((a, b) => a.timestamp - b.timestamp);
+    const unique = sorted.filter((candle, index) => 
+      index === 0 || candle.timestamp !== sorted[index - 1].timestamp
+    );
+
+    return unique.map(candle => ({
       ...candle,
-      position: uniquePosition,
       isGreen: candle.close >= candle.open,
-    };
-  });
+    }));
+  }, [data]);
 
   const handleMouseMove = (event: React.MouseEvent, candle: Candle) => {
-    // Use the actual mouse position relative to the chart container
-    const rect = event.currentTarget.closest('.relative')?.getBoundingClientRect();
+    const rect = containerRef.current?.getBoundingClientRect();
     if (rect) {
       setTooltipPosition({
         x: event.clientX - rect.left,
@@ -252,64 +308,95 @@ const VolumeChart = ({ data }: { data: Candle[] }) => {
     setHoveredCandle(candle);
   };
 
-  // Calculate chart width based on data points to ensure proper spacing
-  const chartWidth = Math.max(100, processedData.length * 20); // Minimum 20px per bar
+  if (!processedData.length) {
+    return (
+      <div className="h-[150px] flex items-center justify-center text-muted-foreground">
+        No volume data
+      </div>
+    );
+  }
+
+  const maxVolume = Math.max(...processedData.map(d => d.volume));
+  const chartWidth = processedData.length * candleWidth;
 
   return (
-    <div className="relative h-[150px] w-full overflow-x-auto">
-      <div style={{ width: `${chartWidth}px`, minWidth: '100%' }}>
-        <svg className="w-full h-full">
-          {processedData.map((candle, i) => {
-            const x = (candle.position / (processedData.length - 1)) * 100;
-            const candleWidth = Math.max(8, 90 / processedData.length); // Same width as candlestick
-            const maxVolume = Math.max(...data.map(d => d.volume));
-            const height = maxVolume > 0 ? (candle.volume / maxVolume) * 80 : 0;
-            
-            return (
-              <rect
-                key={i}
-                x={`${x - candleWidth/2}%`}
-                y={`${100 - height}%`}
-                width={`${candleWidth}%`}
-                height={`${height}%`}
-                fill={candle.isGreen ? "#10b981" : "#ef4444"}
-                opacity="0.6"
-                style={{ cursor: 'pointer' }}
-                onMouseEnter={(e) => handleMouseMove(e, candle)}
-                onMouseLeave={() => setHoveredCandle(null)}
-              />
-            );
-          })}
-        </svg>
-
-        {/* Volume tooltip - positioned BELOW the cursor */}
-        {hoveredCandle && (
-          <div 
-            className="absolute bg-background border rounded-lg p-3 shadow-lg z-10 pointer-events-none"
-            style={{
-              left: tooltipPosition.x + 10,
-              top: tooltipPosition.y + 10, // Position BELOW cursor
-            }}
-          >
-            <div className="text-sm font-medium text-muted-foreground">
-              {new Date(hoveredCandle.timestamp).toLocaleString()}
-            </div>
-            <div className="text-lg font-bold mt-1">
-              Volume: {hoveredCandle.volume.toLocaleString()}
-            </div>
-            <div className="text-sm text-muted-foreground">
-              Price: ${hoveredCandle.close.toFixed(2)}
-            </div>
+    <div ref={containerRef} className="relative h-[150px] w-full overflow-hidden">
+      {/* Y-axis volume labels */}
+      <div className="absolute left-0 top-0 w-16 h-full flex flex-col justify-between text-xs text-muted-foreground z-10">
+        {[0, 0.25, 0.5, 0.75, 1].map((ratio, i) => (
+          <div key={i} className="text-right pr-2 bg-background">
+            {Math.round(maxVolume * ratio).toLocaleString()}
           </div>
-        )}
+        ))}
       </div>
+
+      {/* Volume chart container */}
+      <div className="ml-16 h-full overflow-x-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+        <div style={{ width: `${chartWidth}px`, minWidth: '100%', height: '100%' }}>
+          <svg className="w-full h-full" viewBox={`0 0 ${chartWidth} 150`} preserveAspectRatio="none">
+            {processedData.map((candle, i) => {
+              const x = i * candleWidth + candleWidth / 2;
+              const barWidth = Math.max(2, candleWidth * 0.8);
+              const height = maxVolume > 0 ? (candle.volume / maxVolume) * 120 : 0; // 120px max height
+              
+              return (
+                <rect
+                  key={i}
+                  x={x - barWidth / 2}
+                  y={150 - height}
+                  width={barWidth}
+                  height={height}
+                  fill={candle.isGreen ? "#10b981" : "#ef4444"}
+                  opacity="0.6"
+                  style={{ cursor: 'pointer' }}
+                  onMouseEnter={(e) => handleMouseMove(e, candle)}
+                  onMouseLeave={() => setHoveredCandle(null)}
+                />
+              );
+            })}
+          </svg>
+        </div>
+      </div>
+
+      {/* Volume tooltip - positioned ABOVE the cursor */}
+      {hoveredCandle && (
+        <div 
+          className="absolute bg-background border rounded-lg p-3 shadow-lg z-20 pointer-events-none"
+          style={{
+            left: Math.min(tooltipPosition.x + 10, (containerRef.current?.clientWidth || 800) - 200),
+            top: Math.max(tooltipPosition.y - 80, 10), // Position ABOVE cursor
+          }}
+        >
+          <div className="text-sm font-medium text-muted-foreground">
+            {new Date(hoveredCandle.timestamp).toLocaleString()}
+          </div>
+          <div className="text-lg font-bold mt-1">
+            Volume: {hoveredCandle.volume.toLocaleString()}
+          </div>
+          <div className="text-sm text-muted-foreground">
+            Price: ${hoveredCandle.close.toFixed(2)}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
 export default function ChartsPage() {
   const [symbol, setSymbol] = useState("AAPL");
-  const [interval, setInterval] = useState("1D");
+  const [interval, setInterval] = useState("5m");
+
+  // Get available stocks for dropdown
+  const { data: stocksData } = useQuery(GET_STOCKS, {
+    variables: { 
+      input: { 
+        page: 1, 
+        limit: 1000, // Get all stocks
+        isTradable: true // Only tradable stocks
+      } 
+    },
+    fetchPolicy: "cache-and-network",
+  });
 
   const { data: candleData, refetch: refetchCandles } = useQuery(GET_CANDLES, {
     variables: { symbol, interval, limit: 200 },
@@ -323,6 +410,16 @@ export default function ChartsPage() {
 
   const candles: Candle[] = candleData?.candles || [];
   const trades: Trade[] = tradeData?.trades || [];
+  const stocks = stocksData?.adminStocks?.stocks || [];
+
+  // Calculate optimal candle width based on data count
+  const candleWidth = useMemo(() => {
+    const containerWidth = 800; // Approximate container width
+    const minCandleWidth = 4;
+    const maxCandleWidth = 20;
+    const availableWidth = containerWidth - 80;
+    return Math.max(minCandleWidth, Math.min(maxCandleWidth, availableWidth / Math.max(1, candles.length)));
+  }, [candles.length]);
 
   // Check for data quality issues
   const hasDuplicateTimestamps = candles.length > 1 && 
@@ -339,12 +436,21 @@ export default function ChartsPage() {
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium">Symbol:</span>
-              <Input 
-                value={symbol} 
-                onChange={(e) => setSymbol(e.target.value.toUpperCase())} 
-                className="w-24 h-8 text-center font-mono"
-                placeholder="AAPL"
-              />
+              <Select value={symbol} onValueChange={setSymbol}>
+                <SelectTrigger className="w-32 h-8">
+                  <SelectValue placeholder="Select stock" />
+                </SelectTrigger>
+                <SelectContent>
+                  {stocks.map((stock: { ticker: string; companyName: string; exchange: string }) => (
+                    <SelectItem key={stock.ticker} value={stock.ticker}>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono font-bold">{stock.ticker}</span>
+                        <span className="text-muted-foreground text-xs">({stock.exchange})</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium">Interval:</span>
@@ -355,8 +461,8 @@ export default function ChartsPage() {
                 <SelectContent>
                   <SelectItem value="1D">1D</SelectItem>
                   <SelectItem value="1h">1h</SelectItem>
-                  <SelectItem value="1m">1m</SelectItem>
                   <SelectItem value="5m">5m</SelectItem>
+                  <SelectItem value="1m">1m</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -393,48 +499,29 @@ export default function ChartsPage() {
 
           {candles.length > 0 ? (
             <div className="space-y-4">
-              {/* Synchronized Scroll Container */}
-              <div className="relative">
-                {/* Scrollable Chart Container */}
-                <div className="overflow-x-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-                  <div style={{ width: `${Math.max(100, candles.length * 40)}px`, minWidth: '100%' }}>
-                    {/* Price Chart */}
-                    <div className="mb-2">
-                      <CandlestickChart data={candles} />
+              {/* Price Chart */}
+              <div className="mb-2">
+                <CandlestickChart data={candles} interval={interval} />
+              </div>
+              
+              {/* Volume Chart */}
+              <div className="mb-2">
+                <VolumeChart data={candles} candleWidth={candleWidth} />
+              </div>
+              
+              {/* X-axis Time Labels */}
+              <div className="h-6 flex justify-between text-xs text-muted-foreground px-16">
+                {(() => {
+                  const unique: number[] = Array.from(new Set(candles.map((d: Candle) => d.timestamp)));
+                  const tickCount = 6;
+                  const step = Math.max(1, Math.floor(unique.length / tickCount));
+                  const ticks = unique.filter((_, i) => i % step === 0 || i === unique.length - 1);
+                  return ticks.map((t: number, i: number) => (
+                    <div key={i} className="text-center">
+                      {new Date(Number(t)).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </div>
-                    
-                    {/* Volume Chart */}
-                    <div className="mb-2">
-                      <VolumeChart data={candles} />
-                    </div>
-                  </div>
-                </div>
-                
-                {/* X-axis Time Labels - BELOW the volume chart (CORRECT position) */}
-                <div className="h-6 flex justify-between text-xs text-muted-foreground px-16">
-                  {(() => {
-                    const step = Math.max(1, Math.floor(candles.length / 6));
-                    const times = candles.filter((_, i) => i % step === 0 || i === candles.length - 1);
-                    return times.map((candle, i) => (
-                      <div key={i} className="text-center">
-                        {new Date(candle.timestamp).toLocaleTimeString([], { 
-                          hour: '2-digit', 
-                          minute: '2-digit' 
-                        })}
-                      </div>
-                    ));
-                  })()}
-                </div>
-                
-                {/* Custom Scrollbar - ONLY below volume chart */}
-                <div className="mt-2 h-2 bg-gray-200 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-blue-500 rounded-full"
-                    style={{ 
-                      width: `${Math.min(100, (100 / Math.max(1, candles.length * 40 - 100)) * 100)}%` 
-                    }}
-                  ></div>
-                </div>
+                  ));
+                })()}
               </div>
               
               {/* Data Summary */}

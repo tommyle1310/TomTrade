@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { LayoutDashboard, Users2, Shield, Settings, Bell, FileText } from "lucide-react";
+import { LayoutDashboard, Users2, Shield, Settings, Bell, FileText, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function Sidebar() {
@@ -18,6 +18,7 @@ export default function Sidebar() {
             <NavItem href="/admin/users" icon={<Users2 className="size-4" />} label="Manage Users" />
             <NavItem href="/admin/transaction-logs" icon={<FileText className="size-4" />} label="Transaction Logs" />
             <NavItem href="/admin/order-logs" icon={<FileText className="size-4" />} label="Order Logs" />
+            <NavItem href="/charts" icon={<TrendingUp className="size-4" />} label="Charts" />
             <NavItem href="/admin/stocks" icon={<FileText className="size-4" />} label="Stocks" />
             <NavItem href="/risk" icon={<Shield className="size-4" />} label="Risk" />
             <NavItem href="/settings" icon={<Settings className="size-4" />} label="Settings" />

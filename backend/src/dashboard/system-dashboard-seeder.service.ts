@@ -251,16 +251,33 @@ export class SystemDashboardSeederService {
 
     if (existingData) return;
 
-    // Generate realistic daily OHLC
+    // Generate realistic daily OHLC with highly variable body sizes
     const open = basePrice + (Math.random() - 0.5) * 20;
-    const close = open + (Math.random() - 0.5) * 40; // ±$20 change
 
-    // Create REALISTIC shadows (wicks) - much larger than body
+    // Create highly variable body sizes (0.1% to 8% of price)
+    const bodySizeMultiplier = 0.001 + Math.random() * 0.079; // 0.1% to 8%
+    const direction = Math.random() > 0.5 ? 1 : -1;
+    const close = open + direction * open * bodySizeMultiplier;
+
+    // Generate asymmetric wicks with realistic patterns
     const bodyRange = Math.abs(close - open);
-    const shadowRange = bodyRange * (2 + Math.random() * 3); // 2x to 5x body size
 
-    const high = Math.max(open, close) + Math.random() * shadowRange;
-    const low = Math.min(open, close) - Math.random() * shadowRange;
+    // NEW: Randomize body-to-total-range ratio (10% to 90% of total candle range)
+    const bodyToTotalRatio = 0.1 + Math.random() * 0.8; // 10% to 90%
+
+    // Calculate total candle range based on body ratio
+    const totalRange = bodyRange / bodyToTotalRatio;
+
+    // Distribute remaining range to wicks (sometimes very small wicks)
+    const remainingRange = totalRange - bodyRange;
+    const upperWickRatio = Math.random(); // 0 to 1
+    const lowerWickRatio = 1 - upperWickRatio;
+
+    const upperWick = remainingRange * upperWickRatio;
+    const lowerWick = remainingRange * lowerWickRatio;
+
+    const high = Math.max(open, close) + upperWick;
+    const low = Math.min(open, close) - lowerWick;
 
     const volume = Math.floor(500000 + Math.random() * 1500000); // 500k to 2M
 
@@ -283,51 +300,70 @@ export class SystemDashboardSeederService {
     date: Date,
     stock: { ticker: string },
     basePrice: number,
-    stocks: { ticker: string }[],
+    _stocks: { ticker: string }[],
   ) {
-    // Generate 8-12 hourly data points per day
-    const dataPointsPerDay = Math.floor(Math.random() * 4) + 8; // 8-12 points
-
-    // Market hours: 9:30 AM to 4:00 PM (6.5 hours)
-    const marketHours = 6.5;
-    const timeInterval = (marketHours * 60 * 60 * 1000) / dataPointsPerDay;
+    // Generate hourly bars aligned to exact top-of-hour UTC timestamps
+    // Market hours approximated from 9:00 to 16:00 (7 hours)
+    const start = new Date(
+      Date.UTC(
+        date.getUTCFullYear(),
+        date.getUTCMonth(),
+        date.getUTCDate(),
+        9,
+        0,
+        0,
+        0,
+      ),
+    );
+    const endHour = 16;
 
     let currentPrice = basePrice;
+    for (let hour = 9; hour < endHour; hour++) {
+      const timestamp = new Date(
+        Date.UTC(
+          date.getUTCFullYear(),
+          date.getUTCMonth(),
+          date.getUTCDate(),
+          hour,
+          0,
+          0,
+          0,
+        ),
+      );
 
-    for (let i = 0; i < dataPointsPerDay; i++) {
-      // Create timestamp with PROPER spacing (no overlap)
-      const timestamp = new Date(date);
-      timestamp.setHours(9, 30, 0, 0); // Start at 9:30 AM
-      timestamp.setMilliseconds(timestamp.getMilliseconds() + i * timeInterval);
-
-      // Add stock offset to prevent conflicts
-      const stockOffset = stocks.indexOf(stock) * 1000;
-      timestamp.setMilliseconds(timestamp.getMilliseconds() + stockOffset);
-
-      // Check for duplicates
+      // Check for duplicate bar
       const existingData = await this.prisma.marketData.findFirst({
         where: { ticker: stock.ticker, timestamp, interval: '1h' },
       });
-
       if (existingData) continue;
 
-      // Generate realistic hourly OHLC with gradual progression
       const open = currentPrice;
-      const priceChange = currentPrice * (Math.random() - 0.5) * 0.02; // ±1% change
-      const close = open + priceChange;
 
-      // Create VARIED body sizes (not uniform!)
+      // Create highly variable body sizes (0.05% to 4% of price)
+      const bodySizeMultiplier = 0.0005 + Math.random() * 0.0395; // 0.05% to 4%
+      const direction = Math.random() > 0.5 ? 1 : -1;
+      const close = open + direction * open * bodySizeMultiplier;
+
+      // Generate asymmetric wicks with realistic patterns
       const bodyRange = Math.abs(close - open);
-      const bodyVariation = 0.5 + Math.random() * 2; // 0.5x to 2.5x variation
-      const adjustedBodyRange = bodyRange * bodyVariation;
 
-      // Create REALISTIC shadows (wicks) - much larger than body
-      const shadowRange = adjustedBodyRange * (1.5 + Math.random() * 2); // 1.5x to 3.5x body size
+      // NEW: Randomize body-to-total-range ratio (15% to 85% of total candle range)
+      const bodyToTotalRatio = 0.15 + Math.random() * 0.7; // 15% to 85%
 
-      const high = Math.max(open, close) + Math.random() * shadowRange;
-      const low = Math.min(open, close) - Math.random() * shadowRange;
+      // Calculate total candle range based on body ratio
+      const totalRange = bodyRange / bodyToTotalRatio;
 
-      const volume = Math.floor(200000 + Math.random() * 800000); // 200k to 1M
+      // Distribute remaining range to wicks (sometimes very small wicks)
+      const remainingRange = totalRange - bodyRange;
+      const upperWickRatio = Math.random(); // 0 to 1
+      const lowerWickRatio = 1 - upperWickRatio;
+
+      const upperWick = remainingRange * upperWickRatio;
+      const lowerWick = remainingRange * lowerWickRatio;
+
+      const high = Math.max(open, close) + upperWick;
+      const low = Math.min(open, close) - lowerWick;
+      const volume = Math.floor(200000 + Math.random() * 800000);
 
       await this.prisma.marketData.create({
         data: {
@@ -343,7 +379,6 @@ export class SystemDashboardSeederService {
         },
       });
 
-      // Update price for next iteration
       currentPrice = close;
     }
   }
@@ -354,75 +389,147 @@ export class SystemDashboardSeederService {
     basePrice: number,
     stocks: { ticker: string }[],
   ) {
-    // Generate MINIMAL data points to prevent overlap
+    // Generate aligned minute-based intervals with exact boundaries in UTC
     const intervals = [
-      { name: '30m', points: 4, offset: 0 }, // 4 points per day (every 1.5 hours)
-      { name: '15m', points: 6, offset: 1000 }, // 6 points per day (every 1 hour)
-      { name: '5m', points: 8, offset: 2000 }, // 8 points per day (every 45 min)
-      { name: '1m', points: 12, offset: 3000 }, // 12 points per day (every 30 min)
+      { name: '30m', stepMinutes: 30 },
+      { name: '15m', stepMinutes: 15 },
+      { name: '5m', stepMinutes: 5 },
+      { name: '1m', stepMinutes: 1 },
     ];
 
     for (const interval of intervals) {
-      await this.generateIntervalData(date, stock, basePrice, interval, stocks);
+      await this.generateAlignedIntervalData(
+        date,
+        stock,
+        basePrice,
+        interval.name,
+        interval.stepMinutes,
+      );
     }
   }
 
-  private async generateIntervalData(
+  private async generateAlignedIntervalData(
     date: Date,
     stock: { ticker: string },
     basePrice: number,
-    interval: { name: string; points: number; offset: number },
-    stocks: { ticker: string }[],
+    intervalName: string,
+    stepMinutes: number,
   ) {
-    const dataPointsPerDay = interval.points;
-
-    // Market hours: 9:30 AM to 4:00 PM (6.5 hours)
-    const marketHours = 6.5;
-    const timeInterval = (marketHours * 60 * 60 * 1000) / dataPointsPerDay;
-
+    // Generate from 9:00 to 16:00 UTC aligned by stepMinutes
     let currentPrice = basePrice;
+    const start = new Date(
+      Date.UTC(
+        date.getUTCFullYear(),
+        date.getUTCMonth(),
+        date.getUTCDate(),
+        9,
+        0,
+        0,
+        0,
+      ),
+    );
+    const end = new Date(
+      Date.UTC(
+        date.getUTCFullYear(),
+        date.getUTCMonth(),
+        date.getUTCDate(),
+        16,
+        0,
+        0,
+        0,
+      ),
+    );
 
-    for (let i = 0; i < dataPointsPerDay; i++) {
-      // Create timestamp with PROPER spacing (no overlap)
-      const timestamp = new Date(date);
-      timestamp.setHours(9, 30, 0, 0); // Start at 9:30 AM
-      timestamp.setMilliseconds(timestamp.getMilliseconds() + i * timeInterval);
+    for (
+      let ts = new Date(start);
+      ts < end;
+      ts = new Date(ts.getTime() + stepMinutes * 60 * 1000)
+    ) {
+      const timestamp = new Date(ts); // aligned
 
-      // Add stock offset + interval offset to prevent conflicts
-      const stockOffset = stocks.indexOf(stock) * 1000;
-      const totalOffset = stockOffset + interval.offset;
-      timestamp.setMilliseconds(timestamp.getMilliseconds() + totalOffset);
-
-      // Check for duplicates
-      const existingData = await this.prisma.marketData.findFirst({
-        where: { ticker: stock.ticker, timestamp, interval: interval.name },
-      });
-
-      if (existingData) continue;
-
-      // Generate realistic minute-level OHLC with gradual progression
+      // Use upsert to prevent duplicates with unique constraint
       const open = currentPrice;
-      const priceChange = currentPrice * (Math.random() - 0.5) * 0.01; // ±0.5% change
-      const close = open + priceChange;
 
-      // Create VARIED body sizes (not uniform!)
+      // Create highly variable body sizes by interval
+      let bodySizeMultiplier: number;
+      switch (stepMinutes) {
+        case 1: // 1m - very small bodies (0.02% to 1%)
+          bodySizeMultiplier = 0.0002 + Math.random() * 0.0098;
+          break;
+        case 5: // 5m - small bodies (0.05% to 2%)
+          bodySizeMultiplier = 0.0005 + Math.random() * 0.0195;
+          break;
+        case 15: // 15m - medium bodies (0.1% to 3%)
+          bodySizeMultiplier = 0.001 + Math.random() * 0.029;
+          break;
+        case 30: // 30m - larger bodies (0.2% to 4%)
+          bodySizeMultiplier = 0.002 + Math.random() * 0.038;
+          break;
+        default:
+          bodySizeMultiplier = 0.001 + Math.random() * 0.019;
+      }
+
+      const direction = Math.random() > 0.5 ? 1 : -1;
+      const close = open + direction * open * bodySizeMultiplier;
+
+      // Generate asymmetric wicks with realistic patterns
       const bodyRange = Math.abs(close - open);
-      const bodyVariation = 0.3 + Math.random() * 3; // 0.3x to 3.3x variation
-      const adjustedBodyRange = bodyRange * bodyVariation;
 
-      // Create REALISTIC shadows (wicks) - much larger than body
-      const shadowRange = adjustedBodyRange * (2 + Math.random() * 3); // 2x to 5x body size
+      // NEW: Randomize body-to-total-range ratio by interval
+      let bodyToTotalRatio: number;
+      switch (stepMinutes) {
+        case 1: // 1m - body can be 20% to 80% of total range
+          bodyToTotalRatio = 0.2 + Math.random() * 0.6;
+          break;
+        case 5: // 5m - body can be 25% to 85% of total range
+          bodyToTotalRatio = 0.25 + Math.random() * 0.6;
+          break;
+        case 15: // 15m - body can be 30% to 90% of total range
+          bodyToTotalRatio = 0.3 + Math.random() * 0.6;
+          break;
+        case 30: // 30m - body can be 35% to 95% of total range
+          bodyToTotalRatio = 0.35 + Math.random() * 0.6;
+          break;
+        default:
+          bodyToTotalRatio = 0.25 + Math.random() * 0.6;
+      }
 
-      const high = Math.max(open, close) + Math.random() * shadowRange;
-      const low = Math.min(open, close) - Math.random() * shadowRange;
+      // Calculate total candle range based on body ratio
+      const totalRange = bodyRange / bodyToTotalRatio;
 
-      const volume = Math.floor(50000 + Math.random() * 300000); // 50k to 350k
+      // Distribute remaining range to wicks (sometimes very small wicks)
+      const remainingRange = totalRange - bodyRange;
+      const upperWickRatio = Math.random(); // 0 to 1
+      const lowerWickRatio = 1 - upperWickRatio;
 
-      await this.prisma.marketData.create({
-        data: {
+      const upperWick = remainingRange * upperWickRatio;
+      const lowerWick = remainingRange * lowerWickRatio;
+
+      const high = Math.max(open, close) + upperWick;
+      const low = Math.min(open, close) - lowerWick;
+      const volume = Math.floor(50000 + Math.random() * 300000);
+
+      // Use upsert to handle potential duplicates gracefully
+      await this.prisma.marketData.upsert({
+        where: {
+          ticker_interval_timestamp: {
+            ticker: stock.ticker,
+            interval: intervalName,
+            timestamp,
+          },
+        },
+        update: {
+          open,
+          high,
+          low,
+          close,
+          volume: BigInt(volume),
+          afterHours: close + (Math.random() * 5 - 2.5),
+        },
+        create: {
           ticker: stock.ticker,
           timestamp,
-          interval: interval.name,
+          interval: intervalName,
           open,
           high,
           low,
@@ -432,7 +539,6 @@ export class SystemDashboardSeederService {
         },
       });
 
-      // Update price for next iteration
       currentPrice = close;
     }
   }

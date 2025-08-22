@@ -59,6 +59,7 @@ model MarketData {
   stock Stock @relation(fields: [ticker], references: [ticker])
 
   @@index([ticker, timestamp])
+  @@unique([ticker, interval, timestamp])
 }
 
 model TechnicalIndicator {
