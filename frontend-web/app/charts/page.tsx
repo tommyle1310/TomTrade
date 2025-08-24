@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { ZoomIn, ZoomOut, RotateCcw } from "lucide-react";
 
 interface Candle {
   timestamp: number;
@@ -64,11 +65,26 @@ const GET_STOCKS = gql`
   }
 `;
 
-// Enhanced candlestick chart with proper scaling and responsive design
-const CandlestickChart = ({ data, interval }: { data: Candle[]; interval: string }) => {
+// Enhanced candlestick chart with zoom functionality
+const CandlestickChart = ({ 
+  data, 
+  interval, 
+  zoomLevel, 
+  onZoomChange,
+  scrollPosition,
+  onScrollChange 
+}: { 
+  data: Candle[]; 
+  interval: string;
+  zoomLevel: number;
+  onZoomChange: (level: number) => void;
+  scrollPosition: number;
+  onScrollChange: (position: number) => void;
+}) => {
   const [hoveredCandle, setHoveredCandle] = useState<Candle | null>(null);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Process and normalize data
   const processedData = useMemo(() => {
@@ -112,12 +128,27 @@ const CandlestickChart = ({ data, interval }: { data: Candle[]; interval: string
     }));
   }, [data, interval]);
 
+  // Calculate visible data based on zoom level
+  const visibleData = useMemo(() => {
+    if (!processedData.length) return [];
+    
+    const totalCandles = processedData.length;
+    const targetCandles = Math.max(10, Math.min(totalCandles, Math.round(totalCandles / zoomLevel)));
+    
+    // Calculate start and end indices for visible range
+    const maxScroll = Math.max(0, totalCandles - targetCandles);
+    const startIndex = Math.min(maxScroll, Math.max(0, Math.round(scrollPosition * maxScroll)));
+    const endIndex = Math.min(totalCandles, startIndex + targetCandles);
+    
+    return processedData.slice(startIndex, endIndex);
+  }, [processedData, zoomLevel, scrollPosition]);
+
   // Calculate scales
   const scales = useMemo(() => {
-    if (!processedData.length) return null;
+    if (!visibleData.length) return null;
 
-    const minPrice = Math.min(...processedData.map(d => d.low));
-    const maxPrice = Math.max(...processedData.map(d => d.high));
+    const minPrice = Math.min(...visibleData.map(d => d.low));
+    const maxPrice = Math.max(...visibleData.map(d => d.high));
     const priceRange = maxPrice - minPrice;
     const padding = priceRange * 0.05; // 5% padding
 
@@ -125,11 +156,11 @@ const CandlestickChart = ({ data, interval }: { data: Candle[]; interval: string
       minPrice: minPrice - padding,
       maxPrice: maxPrice + padding,
       priceRange: priceRange + padding * 2,
-      candleCount: processedData.length,
+      candleCount: visibleData.length,
     };
-  }, [processedData]);
+  }, [visibleData]);
 
-  const handleMouseMove = (event: React.MouseEvent, candle: Candle) => {
+  const handleCandleMouseMove = (event: React.MouseEvent, candle: Candle) => {
     const rect = containerRef.current?.getBoundingClientRect();
     if (rect) {
       setTooltipPosition({
@@ -140,7 +171,74 @@ const CandlestickChart = ({ data, interval }: { data: Candle[]; interval: string
     setHoveredCandle(candle);
   };
 
-  if (!scales || !processedData.length) {
+  // Disable wheel zoom - only buttons should zoom
+  const handleWheel = (event: React.WheelEvent) => {
+    event.preventDefault();
+    // Do nothing - zoom only via buttons
+  };
+
+  // Handle scroll
+  const handleScroll = (event: React.UIEvent<HTMLDivElement>) => {
+    const target = event.target as HTMLDivElement;
+    const scrollLeft = target.scrollLeft;
+    const maxScroll = target.scrollWidth - target.clientWidth;
+    const scrollRatio = maxScroll > 0 ? scrollLeft / maxScroll : 0;
+    onScrollChange(scrollRatio);
+  };
+
+  // Handle drag to scroll
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, scrollLeft: 0 });
+
+  const handleMouseDown = (event: React.MouseEvent) => {
+    if (scrollContainerRef.current) {
+      setIsDragging(true);
+      setDragStart({
+        x: event.clientX,
+        scrollLeft: scrollContainerRef.current.scrollLeft
+      });
+      event.preventDefault();
+      // Prevent text selection during drag
+      document.body.style.userSelect = 'none';
+    }
+  };
+
+  const handleDragMouseMove = (event: React.MouseEvent) => {
+    if (!isDragging || !scrollContainerRef.current) return;
+    
+    const deltaX = event.clientX - dragStart.x;
+    const newScrollLeft = dragStart.scrollLeft - deltaX;
+    
+    // Apply scroll to container
+    scrollContainerRef.current.scrollLeft = newScrollLeft;
+    
+    // Update scroll position state for synchronization
+    const maxScroll = scrollContainerRef.current.scrollWidth - scrollContainerRef.current.clientWidth;
+    const scrollRatio = maxScroll > 0 ? newScrollLeft / maxScroll : 0;
+    onScrollChange(scrollRatio);
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+    // Restore text selection
+    document.body.style.userSelect = '';
+  };
+
+  const handleMouseLeave = () => {
+    setIsDragging(false);
+    // Restore text selection
+    document.body.style.userSelect = '';
+  };
+
+  // Apply scroll position when it changes
+  useEffect(() => {
+    if (scrollContainerRef.current) {
+      const maxScroll = scrollContainerRef.current.scrollWidth - scrollContainerRef.current.clientWidth;
+      scrollContainerRef.current.scrollLeft = scrollPosition * maxScroll;
+    }
+  }, [scrollPosition]);
+
+  if (!scales || !visibleData.length) {
     return (
       <div className="h-[400px] flex items-center justify-center text-muted-foreground">
         No data available
@@ -151,13 +249,13 @@ const CandlestickChart = ({ data, interval }: { data: Candle[]; interval: string
   const { minPrice, maxPrice, priceRange, candleCount } = scales;
   const containerWidth = containerRef.current?.clientWidth || 800;
   const minCandleWidth = 4; // Minimum 4px per candle
-  const maxCandleWidth = 20; // Maximum 20px per candle
+  const maxCandleWidth = 50; // Maximum 50px per candle when zoomed in
   const availableWidth = containerWidth - 80; // Account for Y-axis labels
   const candleWidth = Math.max(minCandleWidth, Math.min(maxCandleWidth, availableWidth / candleCount));
-  const chartWidth = candleCount * candleWidth;
+  const chartWidth = Math.max(availableWidth, candleCount * candleWidth);
 
   return (
-    <div ref={containerRef} className="relative h-[400px] w-full overflow-hidden">
+    <div ref={containerRef} className="relative h-[400px] w-full overflow-hidden" onWheel={handleWheel}>
       {/* Y-axis price labels */}
       <div className="absolute left-0 top-0 w-16 h-full flex flex-col justify-between text-xs text-muted-foreground z-10">
         {[0, 0.25, 0.5, 0.75, 1].map((ratio, i) => (
@@ -168,9 +266,22 @@ const CandlestickChart = ({ data, interval }: { data: Candle[]; interval: string
       </div>
 
       {/* Chart container with proper scrolling */}
-      <div className="ml-16 h-full overflow-x-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+      <div 
+        ref={scrollContainerRef}
+        className="ml-16 h-full overflow-x-auto transition-all duration-300 ease-in-out" 
+        style={{ 
+          scrollbarWidth: 'none', 
+          msOverflowStyle: 'none',
+          cursor: isDragging ? 'grabbing' : 'grab'
+        }}
+        onScroll={handleScroll}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleDragMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseLeave}
+      >
         <div style={{ width: `${chartWidth}px`, minWidth: '100%', height: '100%' }}>
-          <svg className="w-full h-full" viewBox={`0 0 ${chartWidth} 400`} preserveAspectRatio="none">
+          <svg className="w-full h-full transition-all duration-300 ease-in-out" viewBox={`0 0 ${chartWidth} 400`} preserveAspectRatio="none">
             <defs>
               <linearGradient id="greenGradient" x1="0%" y1="0%" x2="0%" y2="100%">
                 <stop offset="0%" stopColor="#10b981" />
@@ -182,7 +293,7 @@ const CandlestickChart = ({ data, interval }: { data: Candle[]; interval: string
               </linearGradient>
             </defs>
             
-            {processedData.map((candle, i) => {
+            {visibleData.map((candle, i) => {
               const x = i * candleWidth + candleWidth / 2;
               const isGreen = candle.isGreen;
               
@@ -203,7 +314,7 @@ const CandlestickChart = ({ data, interval }: { data: Candle[]; interval: string
               return (
                 <g 
                   key={i}
-                  onMouseEnter={(e) => handleMouseMove(e, candle)}
+                  onMouseEnter={(e) => handleCandleMouseMove(e, candle)}
                   onMouseLeave={() => setHoveredCandle(null)}
                   style={{ cursor: 'pointer' }}
                 >
@@ -275,8 +386,20 @@ const CandlestickChart = ({ data, interval }: { data: Candle[]; interval: string
   );
 };
 
-// Enhanced volume chart with proper alignment and scaling
-const VolumeChart = ({ data, candleWidth }: { data: Candle[]; candleWidth: number }) => {
+// Enhanced volume chart with zoom functionality
+const VolumeChart = ({ 
+  data, 
+  interval,
+  zoomLevel,
+  scrollPosition,
+  candleWidth 
+}: { 
+  data: Candle[]; 
+  interval: string;
+  zoomLevel: number;
+  scrollPosition: number;
+  candleWidth: number;
+}) => {
   const [hoveredCandle, setHoveredCandle] = useState<Candle | null>(null);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
@@ -297,7 +420,22 @@ const VolumeChart = ({ data, candleWidth }: { data: Candle[]; candleWidth: numbe
     }));
   }, [data]);
 
-  const handleMouseMove = (event: React.MouseEvent, candle: Candle) => {
+  // Calculate visible data based on zoom level (same logic as candlestick chart)
+  const visibleData = useMemo(() => {
+    if (!processedData.length) return [];
+    
+    const totalCandles = processedData.length;
+    const targetCandles = Math.max(10, Math.min(totalCandles, Math.round(totalCandles / zoomLevel)));
+    
+    // Calculate start and end indices for visible range
+    const maxScroll = Math.max(0, totalCandles - targetCandles);
+    const startIndex = Math.min(maxScroll, Math.max(0, Math.round(scrollPosition * maxScroll)));
+    const endIndex = Math.min(totalCandles, startIndex + targetCandles);
+    
+    return processedData.slice(startIndex, endIndex);
+  }, [processedData, zoomLevel, scrollPosition]);
+
+  const handleCandleMouseMove = (event: React.MouseEvent, candle: Candle) => {
     const rect = containerRef.current?.getBoundingClientRect();
     if (rect) {
       setTooltipPosition({
@@ -308,7 +446,47 @@ const VolumeChart = ({ data, candleWidth }: { data: Candle[]; candleWidth: numbe
     setHoveredCandle(candle);
   };
 
-  if (!processedData.length) {
+  // Handle drag to scroll for volume chart
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, scrollLeft: 0 });
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  const handleMouseDown = (event: React.MouseEvent) => {
+    if (scrollContainerRef.current) {
+      setIsDragging(true);
+      setDragStart({
+        x: event.clientX,
+        scrollLeft: scrollContainerRef.current.scrollLeft
+      });
+      event.preventDefault();
+      // Prevent text selection during drag
+      document.body.style.userSelect = 'none';
+    }
+  };
+
+  const handleDragMouseMove = (event: React.MouseEvent) => {
+    if (!isDragging || !scrollContainerRef.current) return;
+    
+    const deltaX = event.clientX - dragStart.x;
+    const newScrollLeft = dragStart.scrollLeft - deltaX;
+    
+    // Apply scroll to container
+    scrollContainerRef.current.scrollLeft = newScrollLeft;
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+    // Restore text selection
+    document.body.style.userSelect = '';
+  };
+
+  const handleMouseLeave = () => {
+    setIsDragging(false);
+    // Restore text selection
+    document.body.style.userSelect = '';
+  };
+
+  if (!visibleData.length) {
     return (
       <div className="h-[150px] flex items-center justify-center text-muted-foreground">
         No volume data
@@ -316,8 +494,8 @@ const VolumeChart = ({ data, candleWidth }: { data: Candle[]; candleWidth: numbe
     );
   }
 
-  const maxVolume = Math.max(...processedData.map(d => d.volume));
-  const chartWidth = processedData.length * candleWidth;
+  const maxVolume = Math.max(...visibleData.map(d => d.volume));
+  const chartWidth = Math.max(800 - 80, visibleData.length * candleWidth);
 
   return (
     <div ref={containerRef} className="relative h-[150px] w-full overflow-hidden">
@@ -331,10 +509,22 @@ const VolumeChart = ({ data, candleWidth }: { data: Candle[]; candleWidth: numbe
       </div>
 
       {/* Volume chart container */}
-      <div className="ml-16 h-full overflow-x-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+      <div 
+        ref={scrollContainerRef}
+        className="ml-16 h-full overflow-x-auto transition-all duration-300 ease-in-out" 
+        style={{ 
+          scrollbarWidth: 'none', 
+          msOverflowStyle: 'none',
+          cursor: isDragging ? 'grabbing' : 'grab'
+        }}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleDragMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseLeave}
+      >
         <div style={{ width: `${chartWidth}px`, minWidth: '100%', height: '100%' }}>
-          <svg className="w-full h-full" viewBox={`0 0 ${chartWidth} 150`} preserveAspectRatio="none">
-            {processedData.map((candle, i) => {
+          <svg className="w-full h-full transition-all duration-300 ease-in-out" viewBox={`0 0 ${chartWidth} 150`} preserveAspectRatio="none">
+            {visibleData.map((candle, i) => {
               const x = i * candleWidth + candleWidth / 2;
               const barWidth = Math.max(2, candleWidth * 0.8);
               const height = maxVolume > 0 ? (candle.volume / maxVolume) * 120 : 0; // 120px max height
@@ -349,7 +539,7 @@ const VolumeChart = ({ data, candleWidth }: { data: Candle[]; candleWidth: numbe
                   fill={candle.isGreen ? "#10b981" : "#ef4444"}
                   opacity="0.6"
                   style={{ cursor: 'pointer' }}
-                  onMouseEnter={(e) => handleMouseMove(e, candle)}
+                  onMouseEnter={(e) => handleCandleMouseMove(e, candle)}
                   onMouseLeave={() => setHoveredCandle(null)}
                 />
               );
@@ -385,6 +575,8 @@ const VolumeChart = ({ data, candleWidth }: { data: Candle[]; candleWidth: numbe
 export default function ChartsPage() {
   const [symbol, setSymbol] = useState("AAPL");
   const [interval, setInterval] = useState("5m");
+  const [zoomLevel, setZoomLevel] = useState(1.5); // Default zoom to show ~50-60 candles
+  const [scrollPosition, setScrollPosition] = useState(0);
 
   // Get available stocks for dropdown
   const { data: stocksData } = useQuery(GET_STOCKS, {
@@ -412,14 +604,15 @@ export default function ChartsPage() {
   const trades: Trade[] = tradeData?.trades || [];
   const stocks = stocksData?.adminStocks?.stocks || [];
 
-  // Calculate optimal candle width based on data count
+  // Calculate optimal candle width based on data count and zoom level
   const candleWidth = useMemo(() => {
     const containerWidth = 800; // Approximate container width
     const minCandleWidth = 4;
-    const maxCandleWidth = 20;
+    const maxCandleWidth = 50;
     const availableWidth = containerWidth - 80;
-    return Math.max(minCandleWidth, Math.min(maxCandleWidth, availableWidth / Math.max(1, candles.length)));
-  }, [candles.length]);
+    const targetCandles = Math.max(10, Math.min(candles.length, Math.round(candles.length / zoomLevel)));
+    return Math.max(minCandleWidth, Math.min(maxCandleWidth, availableWidth / Math.max(1, targetCandles)));
+  }, [candles.length, zoomLevel]);
 
   // Check for data quality issues
   const hasDuplicateTimestamps = candles.length > 1 && 
@@ -427,6 +620,27 @@ export default function ChartsPage() {
   
   const uniqueTimestamps = new Set(candles.map(c => c.timestamp)).size;
   const dataQuality = uniqueTimestamps / candles.length;
+
+  // Zoom controls
+  const handleZoomIn = () => {
+    setZoomLevel(prev => Math.min(10, prev * 1.2));
+  };
+
+  const handleZoomOut = () => {
+    setZoomLevel(prev => Math.max(1, prev / 1.2));
+  };
+
+  const handleResetZoom = () => {
+    setZoomLevel(1.5);
+    setScrollPosition(0);
+  };
+
+  // Calculate visible data info
+  const totalCandles = candles.length;
+  const targetCandles = Math.max(10, Math.min(totalCandles, Math.round(totalCandles / zoomLevel)));
+  const maxScroll = Math.max(0, totalCandles - targetCandles);
+  const startIndex = Math.min(maxScroll, Math.max(0, Math.round(scrollPosition * maxScroll)));
+  const endIndex = Math.min(totalCandles, startIndex + targetCandles);
 
   return (
     <div className="p-6 space-y-6">
@@ -466,6 +680,34 @@ export default function ChartsPage() {
                 </SelectContent>
               </Select>
             </div>
+            <div className="flex items-center gap-1">
+              <Button 
+                onClick={handleZoomOut}
+                variant="outline"
+                size="sm"
+                className="h-8 w-8 p-0"
+                disabled={zoomLevel <= 1}
+              >
+                <ZoomOut className="h-4 w-4" />
+              </Button>
+              <Button 
+                onClick={handleResetZoom}
+                variant="outline"
+                size="sm"
+                className="h-8 px-2"
+              >
+                <RotateCcw className="h-4 w-4" />
+              </Button>
+              <Button 
+                onClick={handleZoomIn}
+                variant="outline"
+                size="sm"
+                className="h-8 w-8 p-0"
+                disabled={zoomLevel >= 10}
+              >
+                <ZoomIn className="h-4 w-4" />
+              </Button>
+            </div>
             <Button 
               onClick={() => { 
                 refetchCandles({ symbol, interval, limit: 200 }); 
@@ -497,22 +739,48 @@ export default function ChartsPage() {
             </div>
           )}
 
+          {/* Zoom Info */}
+          <div className="flex items-center justify-between text-sm text-muted-foreground">
+            <div className="flex items-center gap-4">
+              <span>Zoom: {zoomLevel.toFixed(1)}x</span>
+              <span>Showing: {targetCandles} of {totalCandles} candles</span>
+              <span>Range: {startIndex + 1}-{endIndex} of {totalCandles}</span>
+            </div>
+            <div className="text-xs">
+              Drag to scroll left/right • Use zoom buttons to zoom in/out
+            </div>
+          </div>
+
           {candles.length > 0 ? (
             <div className="space-y-4">
               {/* Price Chart */}
               <div className="mb-2">
-                <CandlestickChart data={candles} interval={interval} />
+                <CandlestickChart 
+                  data={candles} 
+                  interval={interval} 
+                  zoomLevel={zoomLevel}
+                  onZoomChange={setZoomLevel}
+                  scrollPosition={scrollPosition}
+                  onScrollChange={setScrollPosition}
+                />
               </div>
               
               {/* Volume Chart */}
               <div className="mb-2">
-                <VolumeChart data={candles} candleWidth={candleWidth} />
+                <VolumeChart 
+                  data={candles} 
+                  interval={interval}
+                  zoomLevel={zoomLevel}
+                  scrollPosition={scrollPosition}
+                  candleWidth={candleWidth} 
+                />
               </div>
               
               {/* X-axis Time Labels */}
               <div className="h-6 flex justify-between text-xs text-muted-foreground px-16">
                 {(() => {
-                  const unique: number[] = Array.from(new Set(candles.map((d: Candle) => d.timestamp)));
+                  const visibleCandles = candles.slice(startIndex, endIndex);
+                  const unique: number[] = Array.from(new Set(visibleCandles.map((d: Candle) => d.timestamp)));
                   const tickCount = 6;
                   const step = Math.max(1, Math.floor(unique.length / tickCount));
                   const ticks = unique.filter((_, i) => i % step === 0 || i === unique.length - 1);
@@ -571,7 +839,7 @@ export default function ChartsPage() {
                   <div className="flex items-center gap-3">
                     <Badge 
                       variant={trade.side === 'BUY' ? 'default' : 'secondary'}
-                      className={trade.side === 'BUY' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'}
+                      className={trade.side === 'BUY' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600 text-white'}
                     >
                       {trade.side}
                     </Badge>
