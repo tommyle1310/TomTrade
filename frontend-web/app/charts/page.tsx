@@ -238,6 +238,46 @@ const CandlestickChart = ({
     }
   }, [scrollPosition]);
 
+  // Add keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.target !== document.body) return; // Only handle when no input is focused
+      
+      const totalCandles = processedData.length;
+      const targetCandles = Math.max(10, Math.min(totalCandles, Math.round(totalCandles / zoomLevel)));
+      const maxScroll = Math.max(0, totalCandles - targetCandles);
+      
+      if (maxScroll === 0) return; // No scrolling needed
+      
+      let newScrollPosition = scrollPosition;
+      
+      switch (event.key) {
+        case 'ArrowLeft':
+          newScrollPosition = Math.max(0, scrollPosition - 0.1);
+          break;
+        case 'ArrowRight':
+          newScrollPosition = Math.min(1, scrollPosition + 0.1);
+          break;
+        case 'Home':
+          newScrollPosition = 0;
+          break;
+        case 'End':
+          newScrollPosition = 1;
+          break;
+        default:
+          return;
+      }
+      
+      if (newScrollPosition !== scrollPosition) {
+        event.preventDefault();
+        onScrollChange(newScrollPosition);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [scrollPosition, processedData.length, zoomLevel, onScrollChange]);
+
   if (!scales || !visibleData.length) {
     return (
       <div className="h-[400px] flex items-center justify-center text-muted-foreground">
@@ -254,6 +294,9 @@ const CandlestickChart = ({
   const candleWidth = Math.max(minCandleWidth, Math.min(maxCandleWidth, availableWidth / candleCount));
   const chartWidth = Math.max(availableWidth, candleCount * candleWidth);
 
+  // Check if scrolling is needed
+  const needsScrolling = chartWidth > availableWidth;
+
   return (
     <div ref={containerRef} className="relative h-[400px] w-full overflow-hidden" onWheel={handleWheel}>
       {/* Y-axis price labels */}
@@ -268,17 +311,20 @@ const CandlestickChart = ({
       {/* Chart container with proper scrolling */}
       <div 
         ref={scrollContainerRef}
-        className="ml-16 h-full overflow-x-auto transition-all duration-300 ease-in-out" 
+        className={`ml-16 h-full transition-all duration-300 ease-in-out ${
+          needsScrolling ? 'overflow-x-auto' : 'overflow-x-hidden'
+        }`}
         style={{ 
-          scrollbarWidth: 'none', 
-          msOverflowStyle: 'none',
-          cursor: isDragging ? 'grabbing' : 'grab'
+          scrollbarWidth: needsScrolling ? 'auto' : 'none', 
+          msOverflowStyle: needsScrolling ? 'auto' : 'none',
+          cursor: isDragging ? 'grabbing' : (needsScrolling ? 'grab' : 'default'),
+          maxWidth: 'calc(100% - 4rem)' // Ensure it doesn't overflow parent
         }}
         onScroll={handleScroll}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleDragMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseLeave}
+        onMouseDown={needsScrolling ? handleMouseDown : undefined}
+        onMouseMove={needsScrolling ? handleDragMouseMove : undefined}
+        onMouseUp={needsScrolling ? handleMouseUp : undefined}
+        onMouseLeave={needsScrolling ? handleMouseLeave : undefined}
       >
         <div style={{ width: `${chartWidth}px`, minWidth: '100%', height: '100%' }}>
           <svg className="w-full h-full transition-all duration-300 ease-in-out" viewBox={`0 0 ${chartWidth} 400`} preserveAspectRatio="none">
@@ -346,6 +392,13 @@ const CandlestickChart = ({
         </div>
       </div>
 
+      {/* Scroll indicator when scrolling is needed */}
+      {needsScrolling && (
+        <div className="absolute bottom-2 right-2 bg-background/80 backdrop-blur-sm rounded-lg px-2 py-1 text-xs text-muted-foreground">
+          Scroll to navigate • {Math.round(scrollPosition * 100)}% through data
+        </div>
+      )}
+
       {/* Hover tooltip - positioned ABOVE the cursor */}
       {hoveredCandle && (
         <div 
@@ -403,6 +456,7 @@ const VolumeChart = ({
   const [hoveredCandle, setHoveredCandle] = useState<Candle | null>(null);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Process data to match candlestick chart
   const processedData = useMemo(() => {
@@ -449,7 +503,6 @@ const VolumeChart = ({
   // Handle drag to scroll for volume chart
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, scrollLeft: 0 });
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const handleMouseDown = (event: React.MouseEvent) => {
     if (scrollContainerRef.current) {
@@ -486,6 +539,14 @@ const VolumeChart = ({
     document.body.style.userSelect = '';
   };
 
+  // Apply scroll position when it changes (synchronize with candlestick chart)
+  useEffect(() => {
+    if (scrollContainerRef.current) {
+      const maxScroll = scrollContainerRef.current.scrollWidth - scrollContainerRef.current.clientWidth;
+      scrollContainerRef.current.scrollLeft = scrollPosition * maxScroll;
+    }
+  }, [scrollPosition]);
+
   if (!visibleData.length) {
     return (
       <div className="h-[150px] flex items-center justify-center text-muted-foreground">
@@ -496,6 +557,9 @@ const VolumeChart = ({
 
   const maxVolume = Math.max(...visibleData.map(d => d.volume));
   const chartWidth = Math.max(800 - 80, visibleData.length * candleWidth);
+  
+  // Check if scrolling is needed
+  const needsScrolling = chartWidth > (800 - 80);
 
   return (
     <div ref={containerRef} className="relative h-[150px] w-full overflow-hidden">
@@ -511,16 +575,19 @@ const VolumeChart = ({
       {/* Volume chart container */}
       <div 
         ref={scrollContainerRef}
-        className="ml-16 h-full overflow-x-auto transition-all duration-300 ease-in-out" 
+        className={`ml-16 h-full transition-all duration-300 ease-in-out ${
+          needsScrolling ? 'overflow-x-auto' : 'overflow-x-hidden'
+        }`}
         style={{ 
-          scrollbarWidth: 'none', 
-          msOverflowStyle: 'none',
-          cursor: isDragging ? 'grabbing' : 'grab'
+          scrollbarWidth: needsScrolling ? 'auto' : 'none', 
+          msOverflowStyle: needsScrolling ? 'auto' : 'none',
+          cursor: isDragging ? 'grabbing' : (needsScrolling ? 'grab' : 'default'),
+          maxWidth: 'calc(100% - 4rem)' // Ensure it doesn't overflow parent
         }}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleDragMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseLeave}
+        onMouseDown={needsScrolling ? handleMouseDown : undefined}
+        onMouseMove={needsScrolling ? handleDragMouseMove : undefined}
+        onMouseUp={needsScrolling ? handleMouseUp : undefined}
+        onMouseLeave={needsScrolling ? handleMouseLeave : undefined}
       >
         <div style={{ width: `${chartWidth}px`, minWidth: '100%', height: '100%' }}>
           <svg className="w-full h-full transition-all duration-300 ease-in-out" viewBox={`0 0 ${chartWidth} 150`} preserveAspectRatio="none">
@@ -548,23 +615,20 @@ const VolumeChart = ({
         </div>
       </div>
 
-      {/* Volume tooltip - positioned ABOVE the cursor */}
+      {/* Volume tooltip */}
       {hoveredCandle && (
         <div 
-          className="absolute bg-background border rounded-lg p-3 shadow-lg z-20 pointer-events-none"
+          className="absolute bg-background border rounded-lg p-2 shadow-lg z-20 pointer-events-none"
           style={{
-            left: Math.min(tooltipPosition.x + 10, (containerRef.current?.clientWidth || 800) - 200),
-            top: Math.max(tooltipPosition.y - 80, 10), // Position ABOVE cursor
+            left: Math.min(tooltipPosition.x + 10, 200),
+            top: Math.max(tooltipPosition.y - 80, 10),
           }}
         >
-          <div className="text-sm font-medium text-muted-foreground">
-            {new Date(hoveredCandle.timestamp).toLocaleString()}
+          <div className="text-xs font-medium text-muted-foreground">
+            {new Date(hoveredCandle.timestamp).toLocaleTimeString()}
           </div>
-          <div className="text-lg font-bold mt-1">
+          <div className="text-sm font-mono mt-1">
             Volume: {hoveredCandle.volume.toLocaleString()}
-          </div>
-          <div className="text-sm text-muted-foreground">
-            Price: ${hoveredCandle.close.toFixed(2)}
           </div>
         </div>
       )}
@@ -745,16 +809,29 @@ export default function ChartsPage() {
               <span>Zoom: {zoomLevel.toFixed(1)}x</span>
               <span>Showing: {targetCandles} of {totalCandles} candles</span>
               <span>Range: {startIndex + 1}-{endIndex} of {totalCandles}</span>
+              {zoomLevel > 1 && maxScroll > 0 && (
+                <span className="text-blue-600">
+                  Position: {Math.round(scrollPosition * 100)}% through data
+                </span>
+              )}
             </div>
             <div className="text-xs">
-              Drag to scroll left/right • Use zoom buttons to zoom in/out
+              {zoomLevel > 1 ? (
+                <>
+                  Drag to scroll left/right • Use arrow keys to navigate • Use zoom buttons to zoom in/out
+                </>
+              ) : (
+                <>
+                  Use zoom buttons to zoom in/out • Drag to scroll when zoomed in
+                </>
+              )}
             </div>
           </div>
 
           {candles.length > 0 ? (
-            <div className="space-y-4">
+            <div className="space-y-4 w-full overflow-hidden">
               {/* Price Chart */}
-              <div className="mb-2">
+              <div className="mb-2 w-full overflow-hidden">
                 <CandlestickChart 
                   data={candles} 
                   interval={interval} 
@@ -766,7 +843,7 @@ export default function ChartsPage() {
               </div>
               
               {/* Volume Chart */}
-              <div className="mb-2">
+              <div className="mb-2 w-full overflow-hidden">
                 <VolumeChart 
                   data={candles} 
                   interval={interval}
@@ -776,8 +853,48 @@ export default function ChartsPage() {
                 />
               </div>
               
+              {/* Fixed Width Scrollbar - No Overflow */}
+              {zoomLevel > 1 && (
+                <div className="w-full px-16">
+                  <div className="relative h-4 bg-muted rounded-full w-full">
+                    {/* Scroll track */}
+                    <div className="absolute inset-1 bg-background rounded-full"></div>
+                    
+                    {/* Scroll thumb */}
+                    <div 
+                      className="absolute top-1 h-2 bg-primary rounded-full transition-all duration-200 cursor-pointer hover:bg-primary/80"
+                      style={{
+                        left: `${scrollPosition * (100 - Math.max(20, 100 / zoomLevel))}%`,
+                        width: `${Math.max(20, 100 / zoomLevel)}%`
+                      }}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        const track = e.currentTarget.parentElement;
+                        if (!track) return;
+                        
+                        const handleMouseMove = (moveEvent: MouseEvent) => {
+                          const rect = track.getBoundingClientRect();
+                          const clickX = moveEvent.clientX - rect.left;
+                          const trackWidth = rect.width;
+                          const newScrollRatio = Math.max(0, Math.min(1, clickX / trackWidth));
+                          setScrollPosition(newScrollRatio);
+                        };
+                        
+                        const handleMouseUp = () => {
+                          document.removeEventListener('mousemove', handleMouseMove);
+                          document.removeEventListener('mouseup', handleMouseUp);
+                        };
+                        
+                        document.addEventListener('mousemove', handleMouseMove);
+                        document.addEventListener('mouseup', handleMouseUp);
+                      }}
+                    ></div>
+                  </div>
+                </div>
+              )}
+              
               {/* X-axis Time Labels */}
-              <div className="h-6 flex justify-between text-xs text-muted-foreground px-16">
+              <div className="h-6 flex justify-between text-xs text-muted-foreground px-16 w-full overflow-hidden">
                 {(() => {
                   const visibleCandles = candles.slice(startIndex, endIndex);
                   const unique: number[] = Array.from(new Set(visibleCandles.map((d: Candle) => d.timestamp)));
@@ -793,7 +910,7 @@ export default function ChartsPage() {
               </div>
               
               {/* Data Summary */}
-              <div className="grid grid-cols-4 gap-4 pt-4 border-t">
+              <div className="grid grid-cols-4 gap-4 pt-4 border-t w-full">
                 <div className="text-center">
                   <div className="text-2xl font-bold text-blue-600">{candles.length}</div>
                   <div className="text-sm text-muted-foreground">Total Candles</div>
