@@ -1,13 +1,31 @@
-"use client";
+'use client';
 
-import { gql, useQuery } from "@apollo/client";
-import { useState } from "react";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { LineChart, CartesianGrid, Line, XAxis, Tooltip, ResponsiveContainer, YAxis } from "recharts";
+import { gql, useQuery } from '@apollo/client';
+import { useState } from 'react';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from '@/components/ui/chart';
+import {
+  LineChart,
+  CartesianGrid,
+  Line,
+  XAxis,
+  Tooltip,
+  ResponsiveContainer,
+  YAxis,
+} from 'recharts';
 
 interface IndicatorPoint {
   timestamp: number;
@@ -38,41 +56,47 @@ const GET_EMA = gql`
 `;
 
 export default function IndicatorsPage() {
-  const [ticker, setTicker] = useState("AAPL");
+  const [ticker, setTicker] = useState('AAPL');
   const [period, setPeriod] = useState(14);
-  const [interval, setInterval] = useState("_1d");
+  const [interval, setInterval] = useState('_1d');
 
   const { data: smaData, refetch: refetchSMA } = useQuery(GET_SMA, {
     variables: { ticker, period, interval },
-    fetchPolicy: "cache-and-network",
+    fetchPolicy: 'cache-and-network',
   });
 
   const { data: rsiData, refetch: refetchRSI } = useQuery(GET_RSI, {
     variables: { ticker, period, interval },
-    fetchPolicy: "cache-and-network",
+    fetchPolicy: 'cache-and-network',
   });
 
   const { data: emaData, refetch: refetchEMA } = useQuery(GET_EMA, {
     variables: { ticker, period, interval },
-    fetchPolicy: "cache-and-network",
+    fetchPolicy: 'cache-and-network',
   });
 
-  const smaSeries = (smaData?.getSMA || []).map((v: number, i: number) => ({ 
-    index: i, 
+  const smaSeries = (smaData?.getSMA || []).map((v: number, i: number) => ({
+    index: i,
     value: v,
-    date: new Date(Date.now() - (smaData.getSMA.length - i) * 24 * 60 * 60 * 1000).toLocaleDateString()
+    date: new Date(
+      Date.now() - (smaData.getSMA.length - i) * 24 * 60 * 60 * 1000
+    ).toLocaleDateString(),
   }));
 
-  const rsiSeries = (rsiData?.getRSI || []).map((v: number, i: number) => ({ 
-    index: i, 
+  const rsiSeries = (rsiData?.getRSI || []).map((v: number, i: number) => ({
+    index: i,
     value: v,
-    date: new Date(Date.now() - (rsiData.getRSI.length - i) * 24 * 60 * 60 * 1000).toLocaleDateString()
+    date: new Date(
+      Date.now() - (rsiData.getRSI.length - i) * 24 * 60 * 60 * 1000
+    ).toLocaleDateString(),
   }));
 
-  const emaSeries = (emaData?.getEMA || []).map((v: number, i: number) => ({ 
-    index: i, 
+  const emaSeries = (emaData?.getEMA || []).map((v: number, i: number) => ({
+    index: i,
     value: v,
-    date: new Date(Date.now() - (emaData.getEMA.length - i) * 24 * 60 * 60 * 1000).toLocaleDateString()
+    date: new Date(
+      Date.now() - (emaData.getEMA.length - i) * 24 * 60 * 60 * 1000
+    ).toLocaleDateString(),
   }));
 
   const handleRefresh = () => {
@@ -86,25 +110,27 @@ export default function IndicatorsPage() {
       {/* Header */}
       <Card className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
         <CardHeader>
-          <CardTitle className="text-2xl font-bold">Technical Indicators - {ticker}</CardTitle>
+          <CardTitle className="text-2xl font-bold">
+            Technical Indicators - {ticker}
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium">Symbol:</span>
-              <Input 
-                value={ticker} 
-                onChange={(e) => setTicker(e.target.value.toUpperCase())} 
+              <Input
+                value={ticker}
+                onChange={(e) => setTicker(e.target.value.toUpperCase())}
                 className="w-24 h-9 text-center font-mono bg-white/10 border-white/20 text-white placeholder:text-white/50"
                 placeholder="AAPL"
               />
             </div>
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium">Period:</span>
-              <Input 
-                type="number" 
-                value={period} 
-                onChange={(e) => setPeriod(parseInt(e.target.value || '14'))} 
+              <Input
+                type="number"
+                value={period}
+                onChange={(e) => setPeriod(parseInt(e.target.value || '14'))}
                 className="w-20 h-9 text-center font-mono bg-white/10 border-white/20 text-white"
               />
             </div>
@@ -122,7 +148,7 @@ export default function IndicatorsPage() {
                 </SelectContent>
               </Select>
             </div>
-            <Button 
+            <Button
               onClick={handleRefresh}
               className="h-9 px-4 bg-white/20 hover:bg-white/30 text-white border-white/30"
             >
@@ -145,33 +171,46 @@ export default function IndicatorsPage() {
             {smaSeries.length > 0 ? (
               <ChartContainer config={{}}>
                 <LineChart data={smaSeries} height={300}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis 
-                    dataKey="date" 
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke="hsl(var(--border))"
+                  />
+                  <XAxis
+                    dataKey="date"
                     tick={{ fontSize: 12 }}
                     tickLine={false}
                     axisLine={false}
                   />
-                  <YAxis 
+                  <YAxis
                     tick={{ fontSize: 12 }}
                     tickLine={false}
                     axisLine={false}
                   />
-                  <Tooltip 
+                  <Tooltip
                     content={<ChartTooltipContent />}
                     labelStyle={{ color: 'hsl(var(--foreground))' }}
                   />
-                  <Line 
-                    dataKey="value" 
-                    stroke="url(#smaGradient)" 
+                  <Line
+                    dataKey="value"
+                    stroke="url(#smaGradient)"
                     strokeWidth={3}
                     dot={false}
-                    activeDot={{ r: 6, fill: "#3b82f6" }}
+                    activeDot={{ r: 6, fill: '#3b82f6' }}
                   />
                   <defs>
-                    <linearGradient id="smaGradient" x1="0" y1="0" x2="0" y2="1">
+                    <linearGradient
+                      id="smaGradient"
+                      x1="0"
+                      y1="0"
+                      x2="0"
+                      y2="1"
+                    >
                       <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.8} />
-                      <stop offset="100%" stopColor="#3b82f6" stopOpacity={0.2} />
+                      <stop
+                        offset="100%"
+                        stopColor="#3b82f6"
+                        stopOpacity={0.2}
+                      />
                     </linearGradient>
                   </defs>
                 </LineChart>
@@ -198,33 +237,46 @@ export default function IndicatorsPage() {
             {emaSeries.length > 0 ? (
               <ChartContainer config={{}}>
                 <LineChart data={emaSeries} height={300}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis 
-                    dataKey="date" 
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke="hsl(var(--border))"
+                  />
+                  <XAxis
+                    dataKey="date"
                     tick={{ fontSize: 12 }}
                     tickLine={false}
                     axisLine={false}
                   />
-                  <YAxis 
+                  <YAxis
                     tick={{ fontSize: 12 }}
                     tickLine={false}
                     axisLine={false}
                   />
-                  <Tooltip 
+                  <Tooltip
                     content={<ChartTooltipContent />}
                     labelStyle={{ color: 'hsl(var(--foreground))' }}
                   />
-                  <Line 
-                    dataKey="value" 
-                    stroke="url(#emaGradient)" 
+                  <Line
+                    dataKey="value"
+                    stroke="url(#emaGradient)"
                     strokeWidth={3}
                     dot={false}
-                    activeDot={{ r: 6, fill: "#10b981" }}
+                    activeDot={{ r: 6, fill: '#10b981' }}
                   />
                   <defs>
-                    <linearGradient id="emaGradient" x1="0" y1="0" x2="0" y2="1">
+                    <linearGradient
+                      id="emaGradient"
+                      x1="0"
+                      y1="0"
+                      x2="0"
+                      y2="1"
+                    >
                       <stop offset="0%" stopColor="#10b981" stopOpacity={0.8} />
-                      <stop offset="100%" stopColor="#10b981" stopOpacity={0.2} />
+                      <stop
+                        offset="100%"
+                        stopColor="#10b981"
+                        stopOpacity={0.2}
+                      />
                     </linearGradient>
                   </defs>
                 </LineChart>
@@ -253,68 +305,83 @@ export default function IndicatorsPage() {
             <div className="space-y-4">
               <ChartContainer config={{}}>
                 <LineChart data={rsiSeries} height={300}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis 
-                    dataKey="date" 
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke="hsl(var(--border))"
+                  />
+                  <XAxis
+                    dataKey="date"
                     tick={{ fontSize: 12 }}
                     tickLine={false}
                     axisLine={false}
                   />
-                  <YAxis 
+                  <YAxis
                     domain={[0, 100]}
                     tick={{ fontSize: 12 }}
                     tickLine={false}
                     axisLine={false}
                   />
-                  <Tooltip 
+                  <Tooltip
                     content={<ChartTooltipContent />}
                     labelStyle={{ color: 'hsl(var(--foreground))' }}
                   />
-                  <Line 
-                    dataKey="value" 
-                    stroke="url(#rsiGradient)" 
+                  <Line
+                    dataKey="value"
+                    stroke="url(#rsiGradient)"
                     strokeWidth={3}
                     dot={false}
-                    activeDot={{ r: 6, fill: "#8b5cf6" }}
+                    activeDot={{ r: 6, fill: '#8b5cf6' }}
                   />
                   {/* Overbought line */}
-                  <Line 
-                    dataKey={() => 70} 
-                    stroke="#ef4444" 
+                  <Line
+                    dataKey={() => 70}
+                    stroke="#ef4444"
                     strokeWidth={1}
                     strokeDasharray="5 5"
                     dot={false}
                   />
                   {/* Oversold line */}
-                  <Line 
-                    dataKey={() => 30} 
-                    stroke="#ef4444" 
+                  <Line
+                    dataKey={() => 30}
+                    stroke="#ef4444"
                     strokeWidth={1}
                     strokeDasharray="5 5"
                     dot={false}
                   />
                   <defs>
-                    <linearGradient id="rsiGradient" x1="0" y1="0" x2="0" y2="1">
+                    <linearGradient
+                      id="rsiGradient"
+                      x1="0"
+                      y1="0"
+                      x2="0"
+                      y2="1"
+                    >
                       <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.8} />
-                      <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0.2} />
+                      <stop
+                        offset="100%"
+                        stopColor="#8b5cf6"
+                        stopOpacity={0.2}
+                      />
                     </linearGradient>
                   </defs>
                 </LineChart>
               </ChartContainer>
-              
+
               {/* RSI Zones */}
               <div className="grid grid-cols-3 gap-4">
                 <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-center">
                   <div className="text-red-600 font-semibold">Overbought</div>
-                  <div className="text-red-500 text-sm">RSI > 70</div>
+                  <div className="text-red-500 text-sm">RSI &gt; 70</div>
                 </div>
                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-center">
                   <div className="text-yellow-600 font-semibold">Neutral</div>
-                  <div className="text-yellow-500 text-sm">30 ≤ RSI ≤ 70</div>
+                  <div className="text-yellow-500 text-sm">
+                    30 &le; RSI &le; 70
+                  </div>
                 </div>
                 <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-center">
                   <div className="text-green-600 font-semibold">Oversold</div>
-                  <div className="text-green-500 text-sm">RSI < 30</div>
+                  <div className="text-green-500 text-sm">RSI &lt; 30</div>
                 </div>
               </div>
             </div>
@@ -331,7 +398,9 @@ export default function IndicatorsPage() {
       {/* Indicator Stats */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-xl font-semibold">Indicator Statistics</CardTitle>
+          <CardTitle className="text-xl font-semibold">
+            Indicator Statistics
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -357,5 +426,3 @@ export default function IndicatorsPage() {
     </div>
   );
 }
-
-
