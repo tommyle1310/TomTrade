@@ -2,8 +2,10 @@
 
 import { gql, useQuery } from "@apollo/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useTranslation } from "@/lib/translations";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { PieChart, Pie, Cell, LineChart, Line, CartesianGrid, XAxis, Tooltip, ResponsiveContainer } from "recharts";
+import { CHART_COLORS } from "@/lib/theme";
 
 interface Holding {
   symbol: string;
@@ -33,12 +35,13 @@ const GET_PORTFOLIO = gql`
 `;
 
 const COLORS = [
-  "#3b82f6", "#ef4444", "#10b981", "#f59e0b", 
-  "#8b5cf6", "#06b6d4", "#f97316", "#84cc16",
+  ...CHART_COLORS, // Use first 5 colors from theme
+  "#06b6d4", "#f97316", "#84cc16",
   "#ec4899", "#6366f1", "#14b8a6", "#f43f5e"
 ];
 
 export default function PortfolioPage() {
+  const { t } = useTranslation();
   const { data, loading } = useQuery(GET_PORTFOLIO, { fetchPolicy: "cache-and-network" });
   const portfolio: PortfolioData = data?.portfolio;
 
@@ -46,7 +49,7 @@ export default function PortfolioPage() {
     return (
       <div className="p-6">
         <div className="h-64 flex items-center justify-center">
-          <div className="text-muted-foreground">Loading portfolio data...</div>
+          <div className="text-muted-foreground">{t('common.loading')}</div>
         </div>
       </div>
     );
@@ -57,8 +60,8 @@ export default function PortfolioPage() {
       <div className="p-6">
         <div className="h-64 flex flex-col items-center justify-center text-muted-foreground space-y-4">
           <div className="text-6xl">💼</div>
-          <div className="text-xl font-medium">No portfolio data available</div>
-          <div className="text-sm">Start trading to see your portfolio</div>
+          <div className="text-xl font-medium">{t('common.noData')}</div>
+          <div className="text-sm">{t('dashboard.portfolioValue')}</div>
         </div>
       </div>
     );
@@ -79,14 +82,14 @@ export default function PortfolioPage() {
       {/* Portfolio Summary */}
       <Card className="bg-gradient-to-r from-blue-600 to-purple-600 text-white">
         <CardHeader>
-          <CardTitle className="text-2xl font-bold">Portfolio Overview</CardTitle>
+          <CardTitle className="text-2xl font-bold">{t('portfolio.title')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-4xl font-bold mb-2">
             ${portfolio.totalValue.toLocaleString()}
           </div>
           <div className="text-blue-100">
-            Total Portfolio Value
+            {t('dashboard.portfolioValue')}
           </div>
         </CardContent>
       </Card>
@@ -95,18 +98,18 @@ export default function PortfolioPage() {
         {/* Holdings Allocation */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-xl font-semibold">Holdings Allocation</CardTitle>
+            <CardTitle className="text-xl font-semibold">{t('portfolio.allocation')}</CardTitle>
           </CardHeader>
           <CardContent>
             {portfolio.holdings.length > 0 ? (
               <div className="space-y-4">
                 <ChartContainer config={{}} className="h-[320px]">
                   <PieChart>
-                    <Pie 
-                      dataKey="value" 
-                      data={pieData} 
-                      nameKey="symbol" 
-                      outerRadius={120} 
+                    <Pie
+                      dataKey="value"
+                      data={pieData}
+                      nameKey="symbol"
+                      outerRadius={120}
                       label={({ symbol, percentage }) => `${symbol} ${percentage.toFixed(1)}%`}
                     >
                       {pieData.map((entry, index) => (
@@ -116,14 +119,14 @@ export default function PortfolioPage() {
                     <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
                   </PieChart>
                 </ChartContainer>
-                
+
                 {/* Holdings List */}
                 <div className="space-y-2">
                   {portfolio.holdings.map((holding, index) => (
                     <div key={holding.symbol} className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/30 transition-colors">
                       <div className="flex items-center gap-3">
-                        <div 
-                          className="w-4 h-4 rounded-full" 
+                        <div
+                          className="w-4 h-4 rounded-full"
                           style={{ backgroundColor: COLORS[index % COLORS.length] }}
                         />
                         <div className="font-semibold">{holding.symbol}</div>
@@ -139,8 +142,8 @@ export default function PortfolioPage() {
             ) : (
               <div className="h-64 flex flex-col items-center justify-center text-muted-foreground space-y-4">
                 <div className="text-6xl">📈</div>
-                <div className="text-xl font-medium">No holdings</div>
-                <div className="text-sm">Start investing to see your allocation</div>
+                <div className="text-xl font-medium">{t('common.noData')}</div>
+                <div className="text-sm">{t('portfolio.holdings')}</div>
               </div>
             )}
           </CardContent>
@@ -149,26 +152,26 @@ export default function PortfolioPage() {
         {/* Equity Curve */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-xl font-semibold">Equity Curve</CardTitle>
+            <CardTitle className="text-xl font-semibold">{t('dashboard.portfolioPerformance')}</CardTitle>
           </CardHeader>
           <CardContent>
             {portfolio.equityCurve.length > 0 ? (
               <ChartContainer config={{}}>
                 <LineChart data={lineData} height={320}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis 
-                    dataKey="date" 
+                  <XAxis
+                    dataKey="date"
                     tick={{ fontSize: 12 }}
                     tickLine={false}
                     axisLine={false}
                   />
-                  <Tooltip 
+                  <Tooltip
                     content={<ChartTooltipContent />}
                     labelStyle={{ color: 'hsl(var(--foreground))' }}
                   />
-                  <Line 
-                    dataKey="value" 
-                    stroke="url(#equityGradient)" 
+                  <Line
+                    dataKey="value"
+                    stroke="url(#equityGradient)"
                     strokeWidth={3}
                     dot={false}
                     activeDot={{ r: 6, fill: "hsl(var(--primary))" }}
@@ -184,8 +187,8 @@ export default function PortfolioPage() {
             ) : (
               <div className="h-64 flex flex-col items-center justify-center text-muted-foreground space-y-4">
                 <div className="text-6xl">📊</div>
-                <div className="text-xl font-medium">No equity data</div>
-                <div className="text-sm">Historical data will appear here</div>
+                <div className="text-xl font-medium">{t('common.noData')}</div>
+                <div className="text-sm">{t('dashboard.portfolioChart')}</div>
               </div>
             )}
           </CardContent>
@@ -195,18 +198,18 @@ export default function PortfolioPage() {
       {/* Portfolio Stats */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-xl font-semibold">Portfolio Statistics</CardTitle>
+          <CardTitle className="text-xl font-semibold">{t('dashboard.overview')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-lg p-4 text-white">
-              <div className="text-sm opacity-90">Total Holdings</div>
+              <div className="text-sm opacity-90">{t('portfolio.holdings')}</div>
               <div className="text-2xl font-bold">{portfolio.holdings.length}</div>
             </div>
             <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg p-4 text-white">
               <div className="text-sm opacity-90">Largest Position</div>
               <div className="text-2xl font-bold">
-                {portfolio.holdings.length > 0 
+                {portfolio.holdings.length > 0
                   ? portfolio.holdings.reduce((max, h) => h.value > max.value ? h : max).symbol
                   : 'N/A'
                 }
@@ -219,7 +222,7 @@ export default function PortfolioPage() {
             <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg p-4 text-white">
               <div className="text-sm opacity-90">Avg Position</div>
               <div className="text-2xl font-bold">
-                ${portfolio.holdings.length > 0 
+                ${portfolio.holdings.length > 0
                   ? (portfolio.totalValue / portfolio.holdings.length).toFixed(0)
                   : '0'
                 }

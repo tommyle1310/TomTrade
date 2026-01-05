@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from "react";
+import { motion } from "motion/react";
 import {
   TrendingUp,
   TrendingDown,
@@ -17,6 +18,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuthStore } from "@/lib/authStore";
+import { useTranslation } from "@/lib/translations";
+import { staggerContainer, staggerItem, cardHover } from "@/lib/motionVariants";
+import { cn } from "@/lib/utils";
 
 type PortfolioItem = {
   ticker: string;
@@ -41,6 +45,7 @@ const mockWatchlist = [
 
 export default function UserDashboard() {
   const { user, getUserDisplayName } = useAuthStore();
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<'portfolio' | 'watchlist'>('portfolio');
 
   const totalPortfolioValue = mockPortfolio.reduce((sum, item) => sum + (item.quantity * item.currentPrice), 0);
@@ -52,164 +57,213 @@ export default function UserDashboard() {
       {/* Header */}
       <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Welcome back, {getUserDisplayName()}</h1>
-          <p className="text-sm text-muted-foreground">Your trading dashboard and portfolio overview.</p>
+          <h1 className="text-2xl font-bold tracking-tight">
+            {t('dashboard.welcome')}, {getUserDisplayName()}
+          </h1>
+          <p className="text-sm text-muted-foreground">{t('dashboard.overview')}</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline">
+          <Button variant="outline" className="shadow-sm hover:shadow transition-shadow">
             <Plus className="size-4 mr-2" />
-            Buy
+            {t('trading.buy')}
           </Button>
-          <Button variant="outline">
+          <Button variant="outline" className="shadow-sm hover:shadow transition-shadow">
             <Minus className="size-4 mr-2" />
-            Sell
+            {t('trading.sell')}
           </Button>
         </div>
       </div>
 
       {/* Portfolio Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="gap-0 py-4">
-          <CardHeader className="flex flex-row px-4 items-center justify-between space-y-0 ">
-            <CardTitle className="text-sm font-medium">Portfolio Value</CardTitle>
-            <DollarSign className="size-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent className="px-4">
-            <div className="text-2xl font-bold">${totalPortfolioValue.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">
-              {totalPnL >= 0 ? '+' : ''}${totalPnL.toFixed(2)} ({totalPnLPercent >= 0 ? '+' : ''}{totalPnLPercent.toFixed(2)}%)
-            </p>
-          </CardContent>
-        </Card>
+      <motion.div 
+        className="grid grid-cols-1 md:grid-cols-4 gap-4"
+        variants={staggerContainer}
+        initial="hidden"
+        animate="visible"
+      >
+        <motion.div variants={staggerItem}>
+          <Card className="gap-0 py-4 card-interactive border-0 shadow-sm hover:shadow-md">
+            <CardHeader className="flex flex-row px-4 items-center justify-between space-y-0">
+              <CardTitle className="text-sm font-medium text-muted-foreground">{t('dashboard.portfolioValue')}</CardTitle>
+              <div className="p-2 rounded-full bg-primary/10">
+                <DollarSign className="size-4 text-primary" />
+              </div>
+            </CardHeader>
+            <CardContent className="px-4">
+              <div className="text-2xl font-bold">${totalPortfolioValue.toLocaleString()}</div>
+              <p className={cn(
+                "text-xs font-medium",
+                totalPnL >= 0 ? "text-success" : "text-danger"
+              )}>
+                {totalPnL >= 0 ? '+' : ''}${totalPnL.toFixed(2)} ({totalPnLPercent >= 0 ? '+' : ''}{totalPnLPercent.toFixed(2)}%)
+              </p>
+            </CardContent>
+          </Card>
+        </motion.div>
 
-        <Card className="gap-0 py-4">
-          <CardHeader className="flex flex-row px-4 items-center justify-between space-y-0 ">
-            <CardTitle className="text-sm font-medium">Total P&L</CardTitle>
-            {totalPnL >= 0 ? (
-              <TrendingUp className="size-4 text-green-600" />
-            ) : (
-              <TrendingDown className="size-4 text-red-600" />
-            )}
-          </CardHeader>
-          <CardContent className="px-4">
-            <div className={`text-2xl font-bold ${totalPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {totalPnL >= 0 ? '+' : ''}${totalPnL.toFixed(2)}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {totalPnLPercent >= 0 ? '+' : ''}{totalPnLPercent.toFixed(2)}% today
-            </p>
-          </CardContent>
-        </Card>
+        <motion.div variants={staggerItem}>
+          <Card className="gap-0 py-4 card-interactive border-0 shadow-sm hover:shadow-md">
+            <CardHeader className="flex flex-row px-4 items-center justify-between space-y-0">
+              <CardTitle className="text-sm font-medium text-muted-foreground">{t('dashboard.totalPnL')}</CardTitle>
+              <div className={cn(
+                "p-2 rounded-full",
+                totalPnL >= 0 ? "bg-success/10" : "bg-danger/10"
+              )}>
+                {totalPnL >= 0 ? (
+                  <TrendingUp className="size-4 text-success" />
+                ) : (
+                  <TrendingDown className="size-4 text-danger" />
+                )}
+              </div>
+            </CardHeader>
+            <CardContent className="px-4">
+              <div className={cn(
+                "text-2xl font-bold",
+                totalPnL >= 0 ? "text-success" : "text-danger"
+              )}>
+                {totalPnL >= 0 ? '+' : ''}${totalPnL.toFixed(2)}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {totalPnLPercent >= 0 ? '+' : ''}{totalPnLPercent.toFixed(2)}% {t('time.today').toLowerCase()}
+              </p>
+            </CardContent>
+          </Card>
+        </motion.div>
 
-        <Card className="gap-0 py-4">
-          <CardHeader className="flex flex-row px-4 items-center justify-between space-y-0 ">
-            <CardTitle className="text-sm font-medium">Active Positions</CardTitle>
-            <BarChart3 className="size-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent className="px-4">
-            <div className="text-2xl font-bold">{mockPortfolio.length}</div>
-            <p className="text-xs text-muted-foreground">
-              {mockPortfolio.filter(item => item.pnl > 0).length} profitable
-            </p>
-          </CardContent>
-        </Card>
+        <motion.div variants={staggerItem}>
+          <Card className="gap-0 py-4 card-interactive border-0 shadow-sm hover:shadow-md">
+            <CardHeader className="flex flex-row px-4 items-center justify-between space-y-0">
+              <CardTitle className="text-sm font-medium text-muted-foreground">{t('dashboard.openPositions')}</CardTitle>
+              <div className="p-2 rounded-full bg-chart-1/10">
+                <BarChart3 className="size-4 text-chart-1" />
+              </div>
+            </CardHeader>
+            <CardContent className="px-4">
+              <div className="text-2xl font-bold">{mockPortfolio.length}</div>
+              <p className="text-xs text-muted-foreground">
+                {mockPortfolio.filter(item => item.pnl > 0).length} profitable
+              </p>
+            </CardContent>
+          </Card>
+        </motion.div>
 
-        <Card className="gap-0 py-4">
-          <CardHeader className="flex flex-row px-4 items-center justify-between space-y-0">
-            <CardTitle className="text-sm font-medium">Account Status</CardTitle>
-            <Activity className="size-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent className="px-4">
-            <div className="text-2xl font-bold">Active</div>
-            <p className="text-xs text-muted-foreground">
-              Member since {user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+        <motion.div variants={staggerItem}>
+          <Card className="gap-0 py-4 card-interactive border-0 shadow-sm hover:shadow-md">
+            <CardHeader className="flex flex-row px-4 items-center justify-between space-y-0">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Account Status</CardTitle>
+              <div className="p-2 rounded-full bg-success/10">
+                <Activity className="size-4 text-success" />
+              </div>
+            </CardHeader>
+            <CardContent className="px-4">
+              <div className="text-2xl font-bold text-success">Active</div>
+              <p className="text-xs text-muted-foreground">
+                {t('user.joinedOn')} {user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}
+              </p>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </motion.div>
 
       {/* Row 2: Portfolio/Watchlist Tabs + Recent Activity & Market Overview */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
         {/* Section 1: Portfolio/Watchlist Tabs (7/12) */}
         <div className="lg:col-span-7 h-full">
           <div className="h-full flex flex-col justify-center space-y-6">
-            <div className="flex space-x-1 bg-muted p-1 rounded-lg">
+            <div className="flex space-x-1 bg-muted/50 p-1 rounded-lg">
               <Button
                 variant={activeTab === 'portfolio' ? 'default' : 'ghost'}
                 size="sm"
                 onClick={() => setActiveTab('portfolio')}
-                className="flex-1"
+                className="flex-1 transition-all"
               >
-                Portfolio
+                {t('nav.portfolio')}
               </Button>
               <Button
                 variant={activeTab === 'watchlist' ? 'default' : 'ghost'}
                 size="sm"
                 onClick={() => setActiveTab('watchlist')}
-                className="flex-1"
+                className="flex-1 transition-all"
               >
-                Watchlist
+                {t('nav.watchlist')}
               </Button>
             </div>
 
             {activeTab === 'portfolio' ? (
-              <Card className=" justify-end gap-2 h-full">
+              <Card className="justify-end gap-2 h-full border-0 shadow-sm">
                 <CardHeader>
-                  <CardTitle>Your Portfolio</CardTitle>
+                  <CardTitle>{t('portfolio.holdings')}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
                     {mockPortfolio.map((item) => (
-                      <div key={item.ticker} className="flex items-center justify-between p-3 border rounded-lg">
+                      <motion.div 
+                        key={item.ticker} 
+                        className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/50 transition-colors"
+                        whileHover={{ scale: 1.01 }}
+                        transition={{ duration: 0.15 }}
+                      >
                         <div className="flex items-center space-x-3">
                           <div>
                             <div className="font-semibold">{item.ticker}</div>
                             <div className="text-sm text-muted-foreground">
-                              {item.quantity} shares @ ${item.avgPrice}
+                              {item.quantity} {t('portfolio.quantity').toLowerCase()} @ ${item.avgPrice}
                             </div>
                           </div>
                         </div>
                         <div className="text-right">
                           <div className="font-semibold">${item.currentPrice}</div>
-                          <div className={`text-sm ${item.pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          <div className={cn(
+                            "text-sm font-medium",
+                            item.pnl >= 0 ? "text-success" : "text-danger"
+                          )}>
                             {item.pnl >= 0 ? '+' : ''}${item.pnl.toFixed(2)} ({item.pnlPercent >= 0 ? '+' : ''}{item.pnlPercent.toFixed(2)}%)
                           </div>
                         </div>
                         <div className="flex space-x-1">
-                          <Button size="sm" variant="outline">
+                          <Button size="sm" variant="outline" className="h-8 w-8 p-0">
                             <Plus className="size-3" />
                           </Button>
-                          <Button size="sm" variant="outline">
+                          <Button size="sm" variant="outline" className="h-8 w-8 p-0">
                             <Minus className="size-3" />
                           </Button>
                         </div>
-                      </div>
+                      </motion.div>
                     ))}
                   </div>
                 </CardContent>
               </Card>
             ) : (
-              <Card className="flex-grow bg-red-300">
+              <Card className="flex-grow border-0 shadow-sm">
                 <CardHeader>
-                  <CardTitle>Watchlist</CardTitle>
+                  <CardTitle>{t('nav.watchlist')}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
                     {mockWatchlist.map((item) => (
-                      <div key={item.ticker} className="flex items-center justify-between p-3 border rounded-lg">
-                        <div className="flex items-center space-x-3">
-                          <div>
-                            <div className="font-semibold">{item.ticker}</div>
-                            <div className="text-sm text-muted-foreground">
-                              ${item.price}
-                            </div>
+                      <motion.div 
+                        key={item.ticker} 
+                        className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/50 transition-colors"
+                        whileHover={{ scale: 1.01 }}
+                        transition={{ duration: 0.15 }}
+                      >
+                        <div>
+                          <div className="font-semibold">{item.ticker}</div>
+                          <div className="text-sm text-muted-foreground">
+                            ${item.price}
                           </div>
                         </div>
                         <div className="text-right">
-                          <div className={`font-semibold ${item.change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          <div className={cn(
+                            'font-semibold',
+                            item.change >= 0 ? 'text-success' : 'text-danger'
+                          )}>
                             {item.change >= 0 ? '+' : ''}${item.change.toFixed(2)}
                           </div>
-                          <div className={`text-sm ${item.changePercent >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          <div className={cn(
+                            'text-sm',
+                            item.changePercent >= 0 ? 'text-success' : 'text-danger'
+                          )}>
                             {item.changePercent >= 0 ? '+' : ''}{item.changePercent.toFixed(2)}%
                           </div>
                         </div>
@@ -221,7 +275,7 @@ export default function UserDashboard() {
                             <Plus className="size-3" />
                           </Button>
                         </div>
-                      </div>
+                      </motion.div>
                     ))}
                   </div>
                 </CardContent>
@@ -233,70 +287,85 @@ export default function UserDashboard() {
         {/* Section 2: Recent Activity & Market Overview (5/12) */}
         <div className="lg:col-span-5 space-y-4">
           {/* Recent Activity */}
-          <Card className="gap-2 ">
+          <Card className="gap-2">
             <CardHeader>
-              <CardTitle>Recent Activity</CardTitle>
+              <CardTitle>{t('dashboard.recentTransactions')}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                <div className="flex items-center justify-between">
+                <motion.div 
+                  className="flex items-center justify-between"
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.1 }}
+                >
                   <div className="flex items-center space-x-3">
-                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <div className="w-2 h-2 bg-success rounded-full"></div>
                     <div>
-                      <div className="font-medium text-sm">Bought 5 AAPL shares</div>
-                      <div className="text-xs text-muted-foreground">2 hours ago</div>
+                      <div className="font-medium text-sm">{t('trading.buy')} 5 AAPL</div>
+                      <div className="text-xs text-muted-foreground">{t('time.hoursAgo', { count: '2' })}</div>
                     </div>
                   </div>
                   <div className="text-right">
                     <div className="font-medium text-sm">$825.00</div>
                     <div className="text-xs text-muted-foreground">@ $165.00</div>
                   </div>
-                </div>
-                <div className="flex items-center justify-between">
+                </motion.div>
+                <motion.div 
+                  className="flex items-center justify-between"
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.2 }}
+                >
                   <div className="flex items-center space-x-3">
-                    <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                    <div className="w-2 h-2 bg-danger rounded-full"></div>
                     <div>
-                      <div className="font-medium text-sm">Sold 3 TSLA shares</div>
-                      <div className="text-xs text-muted-foreground">1 day ago</div>
+                      <div className="font-medium text-sm">{t('trading.sell')} 3 TSLA</div>
+                      <div className="text-xs text-muted-foreground">{t('time.daysAgo', { count: '1' })}</div>
                     </div>
                   </div>
                   <div className="text-right">
                     <div className="font-medium text-sm">$555.00</div>
                     <div className="text-xs text-muted-foreground">@ $185.00</div>
                   </div>
-                </div>
-                <div className="flex items-center justify-between">
+                </motion.div>
+                <motion.div 
+                  className="flex items-center justify-between"
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.3 }}
+                >
                   <div className="flex items-center space-x-3">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                    <div className="w-2 h-2 bg-primary rounded-full"></div>
                     <div>
-                      <div className="font-medium text-sm">Added GOOGL to watchlist</div>
-                      <div className="text-xs text-muted-foreground">3 days ago</div>
+                      <div className="font-medium text-sm">{t('common.add')} GOOGL {t('nav.watchlist').toLowerCase()}</div>
+                      <div className="text-xs text-muted-foreground">{t('time.daysAgo', { count: '3' })}</div>
                     </div>
                   </div>
-                </div>
+                </motion.div>
               </div>
             </CardContent>
           </Card>
 
           {/* Market Overview */}
-          <Card className="gap-2 ">
+          <Card className="gap-2">
             <CardHeader>
-              <CardTitle>Market Overview</CardTitle>
+              <CardTitle>{t('dashboard.marketOverview')}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span>S&P 500</span>
-                    <span className="text-green-600">+1.2%</span>
+                    <span className="text-success">+1.2%</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span>NASDAQ</span>
-                    <span className="text-red-600">-0.8%</span>
+                    <span className="text-danger">-0.8%</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span>DOW</span>
-                    <span className="text-green-600">+0.5%</span>
+                    <span className="text-success">+0.5%</span>
                   </div>
                 </div>
                 <div className="space-y-2">
@@ -310,7 +379,7 @@ export default function UserDashboard() {
                   </div>
                   <div className="flex justify-between text-sm">
                     <span>USD Index</span>
-                    <span className="text-green-600">+0.3%</span>
+                    <span className="text-success">+0.3%</span>
                   </div>
                 </div>
               </div>
@@ -325,14 +394,14 @@ export default function UserDashboard() {
         <div className="lg:col-span-5">
           <Card>
             <CardHeader>
-              <CardTitle>Portfolio Performance</CardTitle>
+              <CardTitle>{t('dashboard.portfolioPerformance')}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="h-64 bg-muted rounded-lg flex items-center justify-center">
                 <div className="text-center text-muted-foreground">
                   <BarChart3 className="size-12 mx-auto mb-3" />
-                  <p className="text-sm font-medium">Portfolio Chart</p>
-                  <p className="text-xs">Performance over time</p>
+                  <p className="text-sm font-medium">{t('dashboard.portfolioChart')}</p>
+                  <p className="text-xs">{t('dashboard.performanceOverTime')}</p>
                 </div>
               </div>
             </CardContent>
@@ -340,32 +409,32 @@ export default function UserDashboard() {
         </div>
 
         {/* Top Movers (3/12) */}
-        <div className="lg:col-span-3 h-full ">
-          <Card className=" h-full">
+        <div className="lg:col-span-3 h-full">
+          <Card className="h-full">
             <CardHeader>
-              <CardTitle>Top Movers</CardTitle>
+              <CardTitle>{t('dashboard.topMovers')}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
                   <span className="text-sm font-medium">NVDA</span>
-                  <span className="text-sm text-green-600">+15.2%</span>
+                  <span className="text-sm text-success">+15.2%</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm font-medium">TSLA</span>
-                  <span className="text-sm text-red-600">-8.5%</span>
+                  <span className="text-sm text-danger">-8.5%</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm font-medium">META</span>
-                  <span className="text-sm text-green-600">+6.3%</span>
+                  <span className="text-sm text-success">+6.3%</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm font-medium">AAPL</span>
-                  <span className="text-sm text-green-600">+3.1%</span>
+                  <span className="text-sm text-success">+3.1%</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm font-medium">GOOGL</span>
-                  <span className="text-sm text-red-600">-2.4%</span>
+                  <span className="text-sm text-danger">-2.4%</span>
                 </div>
               </div>
             </CardContent>
@@ -376,25 +445,25 @@ export default function UserDashboard() {
         <div className="lg:col-span-4">
           <Card>
             <CardHeader>
-              <CardTitle>Quick Actions</CardTitle>
+              <CardTitle>{t('dashboard.quickActions')}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 gap-3">
-                <Button variant="outline" size="sm" className=" cursor-pointer">
+                <Button variant="outline" size="sm" className="cursor-pointer">
                   <Plus className="size-4 mr-2" />
-                  Buy Stock
+                  {t('trading.buy')}
                 </Button>
-                <Button variant="outline" size="sm" className=" cursor-pointer">
+                <Button variant="outline" size="sm" className="cursor-pointer">
                   <Minus className="size-4 mr-2" />
-                  Sell Stock
+                  {t('trading.sell')}
                 </Button>
-                <Button variant="outline" size="sm" className=" cursor-pointer">
+                <Button variant="outline" size="sm" className="cursor-pointer">
                   <Eye className="size-4 mr-2" />
-                  Watchlist
+                  {t('nav.watchlist')}
                 </Button>
-                <Button variant="outline" size="sm" className=" cursor-pointer">
+                <Button variant="outline" size="sm" className="cursor-pointer">
                   <BarChart3 className="size-4 mr-2" />
-                  View Charts
+                  {t('common.viewChart')}
                 </Button>
               </div>
             </CardContent>

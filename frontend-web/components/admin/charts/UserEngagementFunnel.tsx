@@ -18,7 +18,7 @@ const stages: Stage[] = baseStages.map((s, i, arr) => {
   const prev = arr[i - 1].value;
   const dropRatio = prev > 0 ? 1 - s.value / prev : 0;
   const severeDrop = dropRatio > 0.3; // >30% => red
-  const fill = severeDrop ? "#ef4444" : i === 1 ? "#2563eb" : "#10b981";
+  const fill = severeDrop ? danger[500] : i === 1 ? primary[500] : success[500];
   return { ...s, fill };
 });
 

@@ -2,6 +2,7 @@
 
 import { gql, useQuery } from '@apollo/client';
 import { useState } from 'react';
+import { useTranslation } from '@/lib/translations';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import {
@@ -26,6 +27,7 @@ import {
   ResponsiveContainer,
   YAxis,
 } from 'recharts';
+import { CHART_COLORS, success, danger, accent } from '@/lib/theme';
 
 interface IndicatorPoint {
   timestamp: number;
@@ -56,6 +58,7 @@ const GET_EMA = gql`
 `;
 
 export default function IndicatorsPage() {
+  const { t } = useTranslation();
   const [ticker, setTicker] = useState('AAPL');
   const [period, setPeriod] = useState(14);
   const [interval, setInterval] = useState('_1d');
@@ -195,7 +198,7 @@ export default function IndicatorsPage() {
                     stroke="url(#smaGradient)"
                     strokeWidth={3}
                     dot={false}
-                    activeDot={{ r: 6, fill: '#3b82f6' }}
+                    activeDot={{ r: 6, fill: CHART_COLORS[0] }}
                   />
                   <defs>
                     <linearGradient
@@ -205,10 +208,10 @@ export default function IndicatorsPage() {
                       x2="0"
                       y2="1"
                     >
-                      <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.8} />
+                      <stop offset="0%" stopColor={CHART_COLORS[0]} stopOpacity={0.8} />
                       <stop
                         offset="100%"
-                        stopColor="#3b82f6"
+                        stopColor={CHART_COLORS[0]}
                         stopOpacity={0.2}
                       />
                     </linearGradient>
@@ -218,7 +221,7 @@ export default function IndicatorsPage() {
             ) : (
               <div className="h-64 flex flex-col items-center justify-center text-muted-foreground space-y-4">
                 <div className="text-6xl">📈</div>
-                <div className="text-xl font-medium">No SMA data</div>
+                <div className="text-xl font-medium">{t('common.noData')}</div>
                 <div className="text-sm">Try changing parameters or symbol</div>
               </div>
             )}
@@ -261,7 +264,7 @@ export default function IndicatorsPage() {
                     stroke="url(#emaGradient)"
                     strokeWidth={3}
                     dot={false}
-                    activeDot={{ r: 6, fill: '#10b981' }}
+                    activeDot={{ r: 6, fill: success[500] }}
                   />
                   <defs>
                     <linearGradient
@@ -271,10 +274,10 @@ export default function IndicatorsPage() {
                       x2="0"
                       y2="1"
                     >
-                      <stop offset="0%" stopColor="#10b981" stopOpacity={0.8} />
+                      <stop offset="0%" stopColor={success[500]} stopOpacity={0.8} />
                       <stop
                         offset="100%"
-                        stopColor="#10b981"
+                        stopColor={success[500]}
                         stopOpacity={0.2}
                       />
                     </linearGradient>
@@ -284,7 +287,7 @@ export default function IndicatorsPage() {
             ) : (
               <div className="h-64 flex flex-col items-center justify-center text-muted-foreground space-y-4">
                 <div className="text-6xl">📊</div>
-                <div className="text-xl font-medium">No EMA data</div>
+                <div className="text-xl font-medium">{t('common.noData')}</div>
                 <div className="text-sm">Try changing parameters or symbol</div>
               </div>
             )}
@@ -330,12 +333,12 @@ export default function IndicatorsPage() {
                     stroke="url(#rsiGradient)"
                     strokeWidth={3}
                     dot={false}
-                    activeDot={{ r: 6, fill: '#8b5cf6' }}
+                    activeDot={{ r: 6, fill: accent[500] }}
                   />
                   {/* Overbought line */}
                   <Line
                     dataKey={() => 70}
-                    stroke="#ef4444"
+                    stroke={danger[500]}
                     strokeWidth={1}
                     strokeDasharray="5 5"
                     dot={false}
@@ -343,7 +346,7 @@ export default function IndicatorsPage() {
                   {/* Oversold line */}
                   <Line
                     dataKey={() => 30}
-                    stroke="#ef4444"
+                    stroke={danger[500]}
                     strokeWidth={1}
                     strokeDasharray="5 5"
                     dot={false}
@@ -356,10 +359,10 @@ export default function IndicatorsPage() {
                       x2="0"
                       y2="1"
                     >
-                      <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.8} />
+                      <stop offset="0%" stopColor={accent[500]} stopOpacity={0.8} />
                       <stop
                         offset="100%"
-                        stopColor="#8b5cf6"
+                        stopColor={accent[500]}
                         stopOpacity={0.2}
                       />
                     </linearGradient>
@@ -388,7 +391,7 @@ export default function IndicatorsPage() {
           ) : (
             <div className="h-64 flex flex-col items-center justify-center text-muted-foreground space-y-4">
               <div className="text-6xl">📉</div>
-              <div className="text-xl font-medium">No RSI data</div>
+              <div className="text-xl font-medium">{t('common.noData')}</div>
               <div className="text-sm">Try changing parameters or symbol</div>
             </div>
           )}

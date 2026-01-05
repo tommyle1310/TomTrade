@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useTranslation } from '@/lib/translations';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -63,6 +64,7 @@ const GET_ADMIN_TRANSACTIONS = gql`
 `;
 
 export default function TransactionLogsPage() {
+  const { t } = useTranslation();
   const [currentPage, setCurrentPage] = useState(1);
   const [filters, setFilters] = useState({
     ticker: "",
@@ -232,7 +234,7 @@ export default function TransactionLogsPage() {
     <div className=" space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Transaction Logs</h1>
+          <h1 className="text-3xl font-bold">{t('nav.transactionLogs')}</h1>
           <p className="text-muted-foreground">Monitor all trading activity across the platform</p>
         </div>
         <Button onClick={() => refetch()}>
@@ -277,7 +279,7 @@ export default function TransactionLogsPage() {
 
           <Card className="gap-0 py-3">
             <CardHeader className="flex flex-row items-center px-3 py-0 justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active Users</CardTitle>
+              <CardTitle className="text-sm font-medium">{t('admin.activeUsers')}</CardTitle>
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent className="px-3">
@@ -304,7 +306,7 @@ export default function TransactionLogsPage() {
         <CardHeader className="px-3">
           <CardTitle className="flex items-center gap-2">
             <Filter className="w-5 h-5" />
-            Filters
+            {t('common.filter')}
           </CardTitle>
         </CardHeader>
         <CardContent className="px-3">
@@ -318,15 +320,15 @@ export default function TransactionLogsPage() {
               />
             </div>
             <div>
-              <label className="text-sm font-medium">Action</label>
+              <label className="text-sm font-medium">{t('history.type')}</label>
               <Select value={filters.action} onValueChange={(value) => handleFilterChange("action", value)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="All actions" />
+                  <SelectValue placeholder={t('common.all')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="ALL">All actions</SelectItem>
-                  <SelectItem value="BUY">Buy</SelectItem>
-                  <SelectItem value="SELL">Sell</SelectItem>
+                  <SelectItem value="ALL">{t('common.all')}</SelectItem>
+                  <SelectItem value="BUY">{t('trading.buy')}</SelectItem>
+                  <SelectItem value="SELL">{t('trading.sell')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -356,9 +358,9 @@ export default function TransactionLogsPage() {
       {/* Transactions Table */}
       <Card className="gap-0 ">
         <CardHeader className="px-3">
-          <CardTitle>Transactions</CardTitle>
+          <CardTitle>{t('history.transactions')}</CardTitle>
           <CardDescription className="mb-2">
-            Showing {transactions.length} of {meta?.totalCount || 0} transactions
+            {t('table.showing')} {transactions.length} {t('table.of')} {meta?.totalCount || 0} {t('table.results')}
             {meta && (
               <span className="ml-4">
                 Total: {formatCurrency(meta.totalAmount)} | 
@@ -371,7 +373,7 @@ export default function TransactionLogsPage() {
         <CardContent className="px-3">
           {transactionsLoading ? (
             <div className="flex items-center justify-center h-32">
-              <div className="text-muted-foreground">Loading transactions...</div>
+              <div className="text-muted-foreground">{t('common.loading')}</div>
             </div>
           ) : (
             <>

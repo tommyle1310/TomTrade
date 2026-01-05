@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslation } from '@/lib/translations';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,6 +46,7 @@ const ADMIN_UPDATE_STOCK = gql`
 `;
 
 export default function StocksAdminPage() {
+  const { t } = useTranslation();
   const [currentPage, setCurrentPage] = useState(1);
   const [filters, setFilters] = useState({ ticker: "", companyName: "", exchange: "", status: "", isTradable: "ALL" });
   const [limit] = useState(20);
@@ -79,7 +81,7 @@ export default function StocksAdminPage() {
     <div className=" space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Stocks Management</h1>
+          <h1 className="text-3xl font-bold">{t('nav.stocks')}</h1>
           <p className="text-muted-foreground">Create, update, and manage stock metadata</p>
         </div>
         <div className="flex gap-2">
@@ -94,7 +96,7 @@ export default function StocksAdminPage() {
         <CardHeader className="px-3">
           <CardTitle className="flex items-center gap-2">
             <Filter className="w-5 h-5" />
-            Filters
+            {t('common.filter')}
           </CardTitle>
         </CardHeader>
         <CardContent className="px-3">
@@ -119,10 +121,10 @@ export default function StocksAdminPage() {
               <label className="text-sm font-medium">Tradable</label>
               <Select value={filters.isTradable} onValueChange={(v) => handleFilterChange("isTradable", v)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="All" />
+                  <SelectValue placeholder={t('common.all')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="ALL">All</SelectItem>
+                  <SelectItem value="ALL">{t('common.all')}</SelectItem>
                   <SelectItem value="TRUE">Tradable</SelectItem>
                   <SelectItem value="FALSE">Suspended</SelectItem>
                 </SelectContent>
@@ -177,12 +179,12 @@ export default function StocksAdminPage() {
 
       <Card className="gap-0 ">
         <CardHeader className="px-3">
-          <CardTitle>Stocks</CardTitle>
-          <CardDescription className="mb-2">Showing {stocks.length} of {meta?.totalCount || 0} stocks</CardDescription>
+          <CardTitle>{t('nav.stocks')}</CardTitle>
+          <CardDescription className="mb-2">{t('table.showing')} {stocks.length} {t('table.of')} {meta?.totalCount || 0} {t('table.results')}</CardDescription>
         </CardHeader>
         <CardContent className="px-3 overflow-x-auto">
           {loading ? (
-            <div className="flex items-center justify-center h-32"><div className="text-muted-foreground">Loading...</div></div>
+            <div className="flex items-center justify-center h-32"><div className="text-muted-foreground">{t('common.loading')}</div></div>
           ) : (
             <>
               <Table>
@@ -196,7 +198,7 @@ export default function StocksAdminPage() {
                     <TableHead>Industry</TableHead>
                     <TableHead>Tradable</TableHead>
                     <TableHead>Suspend Reason</TableHead>
-                    <TableHead>Actions</TableHead>
+                    <TableHead>{t('common.actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

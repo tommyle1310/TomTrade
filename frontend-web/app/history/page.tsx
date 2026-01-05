@@ -3,6 +3,7 @@
 import { gql, useQuery } from "@apollo/client";
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useTranslation } from "@/lib/translations";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -29,6 +30,7 @@ const GET_TRADES = gql`
 `;
 
 export default function TradeHistoryPage() {
+  const { t } = useTranslation();
   const [symbol, setSymbol] = useState("AAPL");
   const [limit, setLimit] = useState(100);
   
@@ -48,12 +50,12 @@ export default function TradeHistoryPage() {
     <div className="p-6 space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle className="text-2xl font-bold">Trade History - {symbol}</CardTitle>
+          <CardTitle className="text-2xl font-bold">{t('history.title')} - {symbol}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex items-center gap-4 mb-6">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-medium">Symbol:</span>
+              <span className="text-sm font-medium">{t('portfolio.symbol')}:</span>
               <Input 
                 value={symbol} 
                 onChange={(e) => setSymbol(e.target.value.toUpperCase())} 
@@ -86,19 +88,19 @@ export default function TradeHistoryPage() {
           {/* Stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
             <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg p-4 text-white">
-              <div className="text-sm opacity-90">Total Trades</div>
+              <div className="text-sm opacity-90">{t('history.transactions')}</div>
               <div className="text-2xl font-bold">{trades.length}</div>
             </div>
             <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-lg p-4 text-white">
-              <div className="text-sm opacity-90">Buy Orders</div>
+              <div className="text-sm opacity-90">{t('trading.buy')}</div>
               <div className="text-2xl font-bold">{buyCount}</div>
             </div>
             <div className="bg-gradient-to-r from-red-500 to-red-600 rounded-lg p-4 text-white">
-              <div className="text-sm opacity-90">Sell Orders</div>
+              <div className="text-sm opacity-90">{t('trading.sell')}</div>
               <div className="text-2xl font-bold">{sellCount}</div>
             </div>
             <div className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg p-4 text-white">
-              <div className="text-sm opacity-90">Avg Price</div>
+              <div className="text-sm opacity-90">{t('trading.price')}</div>
               <div className="text-2xl font-bold">${avgPrice.toFixed(2)}</div>
             </div>
           </div>
@@ -135,19 +137,19 @@ export default function TradeHistoryPage() {
                   </div>
                   <div className="flex items-center gap-6">
                     <div className="text-right">
-                      <div className="text-xs text-muted-foreground uppercase tracking-wide">Quantity</div>
+                      <div className="text-xs text-muted-foreground uppercase tracking-wide">{t('trading.quantity')}</div>
                       <div className="font-mono font-semibold text-lg">
                         {trade.quantity.toLocaleString()}
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-xs text-muted-foreground uppercase tracking-wide">Price</div>
+                      <div className="text-xs text-muted-foreground uppercase tracking-wide">{t('trading.price')}</div>
                       <div className="font-mono font-bold text-xl">
                         ${trade.price.toFixed(2)}
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-xs text-muted-foreground uppercase tracking-wide">Total</div>
+                      <div className="text-xs text-muted-foreground uppercase tracking-wide">{t('trading.total')}</div>
                       <div className="font-mono font-bold text-lg">
                         ${(trade.price * trade.quantity).toFixed(2)}
                       </div>
@@ -159,8 +161,8 @@ export default function TradeHistoryPage() {
           ) : (
             <div className="h-64 flex flex-col items-center justify-center text-muted-foreground space-y-4">
               <div className="text-6xl">📊</div>
-              <div className="text-xl font-medium">No trades available</div>
-              <div className="text-sm">Try changing the symbol or limit</div>
+              <div className="text-xl font-medium">{t('table.noResults')}</div>
+              <div className="text-sm">{t('common.filter')}</div>
             </div>
           )}
         </CardContent>

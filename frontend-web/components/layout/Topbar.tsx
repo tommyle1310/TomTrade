@@ -5,6 +5,7 @@ import { Bell, LogOut, Menu } from 'lucide-react';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { motion, AnimatePresence } from 'motion/react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -31,8 +32,11 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { LanguageSwitcher } from '@/components/ui/language-switcher';
 import { useAuthStore } from '@/lib/authStore';
+import { useTranslation } from '@/lib/translations';
 import { Label } from '../ui/label';
+import { bellShake, fadeInUp, scaleIn } from '@/lib/motionVariants';
 
 function GoogleIcon() {
   return (
@@ -79,6 +83,7 @@ export default function Topbar({
 }: {
   onToggleSidebar: () => void;
 }) {
+  const { t } = useTranslation();
   const [count] = useState(4);
   const [authOpen, setAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
@@ -95,6 +100,17 @@ export default function Topbar({
     getUserDisplayName,
     isAdmin,
   } = useAuthStore();
+
+  const loginSchema = z.object({
+    email: z.string().email({ message: t('auth.emailInvalid') }),
+    password: z.string().min(6, { message: t('auth.passwordMin') }),
+  });
+
+  const signupSchema = z.object({
+    name: z.string().min(2, { message: t('auth.nameTooShort') }),
+    email: z.string().email({ message: t('auth.emailInvalid') }),
+    password: z.string().min(8, { message: t('auth.passwordMinSignup') }),
+  });
 
   const loginForm = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -155,78 +171,104 @@ export default function Topbar({
   };
 
   return (
-    <header className="sticky top-0 z-20 border-b bg-background/70 backdrop-blur supports-backdrop-blur:bg-background/60">
+    <header className="sticky top-0 z-20 border-b bg-background/80 backdrop-blur-xl supports-backdrop-blur:bg-background/60 shadow-sm">
       <div className="flex items-center gap-3 px-4 lg:px-6 h-14">
         <Button
-          variant="outline"
-          size="sm"
-          className="lg:hidden"
+          variant="ghost"
+          size="icon"
+          className="lg:hidden h-9 w-9 hover:bg-accent/80 transition-colors"
           onClick={onToggleSidebar}
         >
           <Menu className="size-4" />
         </Button>
-        <div className="font-semibold">{isAdmin() ? 'Admin' : 'TomTrade'}</div>
-        <div className="ml-auto flex items-center gap-2">
+        <div className="font-semibold text-foreground/90">
+          {isAdmin() ? t('nav.adminPanel') : 'TomTrade'}
+        </div>
+        <div className="ml-auto flex items-center gap-1.5">
+          <LanguageSwitcher />
+          
           {isAuthenticated ? (
             <>
-              <button
-                aria-label="Notifications"
-                className="relative rounded-full border p-2"
+              <motion.button
+                aria-label={t('notifications.title')}
+                className="relative rounded-full p-2 hover:bg-accent/80 transition-colors"
+                variants={bellShake}
+                initial="idle"
+                whileHover="shake"
               >
                 <Bell className="size-4" />
-                {count > 0 && (
-                  <span className="absolute -top-1 -right-1 inline-flex size-4 items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px]">
-                    {count}
-                  </span>
-                )}
-              </button>
+                <AnimatePresence>
+                  {count > 0 && (
+                    <motion.span
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      exit={{ scale: 0 }}
+                      className="absolute -top-0.5 -right-0.5 inline-flex size-4 items-center justify-center rounded-full bg-danger text-white text-[10px] font-medium"
+                    >
+                      {count}
+                    </motion.span>
+                  )}
+                </AnimatePresence>
+              </motion.button>
 
               <Popover>
                 <PopoverTrigger asChild>
                   <button
-                    aria-label="Profile"
-                    className="rounded-full border p-0"
+                    aria-label={t('user.profile')}
+                    className="rounded-full p-0.5 hover:ring-2 hover:ring-primary/20 transition-all"
                   >
-                    <Avatar className="h-8 w-8">
+                    <Avatar className="h-8 w-8 border-2 border-background shadow-sm">
                       <AvatarImage
                         src={user?.avatar || undefined}
                         alt="avatar"
                       />
-                      <AvatarFallback>{avatarFallback}</AvatarFallback>
+                      <AvatarFallback className="bg-primary/10 text-primary font-medium">
+                        {avatarFallback}
+                      </AvatarFallback>
                     </Avatar>
                   </button>
                 </PopoverTrigger>
-                <PopoverContent className="w-44 p-1">
-                  <div className="px-2 py-1 text-sm font-medium border-b mb-1">
-                    {getUserDisplayName()}
+                <PopoverContent className="w-48 p-1.5" align="end">
+                  <div className="px-2 py-2 text-sm font-medium border-b mb-1.5">
+                    <div className="truncate">{getUserDisplayName()}</div>
+                    <div className="text-xs text-muted-foreground font-normal">
+                      {isAdmin() ? t('user.admin') : t('user.regularUser')}
+                    </div>
                   </div>
                   <Button
                     variant="ghost"
-                    className="w-full justify-start gap-2"
+                    className="w-full justify-start gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
                     onClick={handleLogout}
                   >
-                    <LogOut className="size-4" /> Logout
+                    <LogOut className="size-4" /> {t('auth.signOut')}
                   </Button>
                 </PopoverContent>
               </Popover>
             </>
           ) : (
             <Button
-              variant="outline"
+              variant="default"
+              size="sm"
+              className="shadow-sm"
               onClick={() => {
                 setAuthMode('signin');
                 setAuthOpen(true);
               }}
             >
-              Sign In
+              {t('auth.signIn')}
             </Button>
           )}
         </div>
       </div>
 
       <Dialog open={authOpen} onOpenChange={setAuthOpen}>
-        <DialogContent className="sm:max-w-2xl p-0 overflow-hidden">
-          <div className="grid md:grid-cols-2">
+        <DialogContent className="sm:max-w-2xl p-0 overflow-hidden border-0 shadow-xl">
+          <motion.div 
+            className="grid md:grid-cols-2"
+            initial="hidden"
+            animate="visible"
+            variants={fadeInUp}
+          >
             <div className="p-6">
               <DialogHeader className="mb-4">
                 <div className="flex items-center gap-2">
@@ -234,158 +276,190 @@ export default function Topbar({
                     variant={authMode === 'signin' ? 'default' : 'outline'}
                     size="sm"
                     onClick={() => setAuthMode('signin')}
+                    className="transition-all"
                   >
-                    Sign In
+                    {t('auth.signIn')}
                   </Button>
                   <Button
                     variant={authMode === 'signup' ? 'default' : 'outline'}
                     size="sm"
                     onClick={() => setAuthMode('signup')}
+                    className="transition-all"
                   >
-                    Sign Up
+                    {t('auth.signUp')}
                   </Button>
                 </div>
                 <DialogTitle className="mt-2">
                   {authMode === 'signin'
-                    ? 'Welcome back'
-                    : 'Create your account'}
+                    ? t('auth.welcomeBack')
+                    : t('auth.createAccount')}
                 </DialogTitle>
                 <DialogDescription>
                   {authMode === 'signin'
-                    ? 'Enter your credentials to continue'
-                    : 'Fill the form below to get started'}
+                    ? t('auth.signInToContinue')
+                    : t('auth.signUpToStart')}
                 </DialogDescription>
                 {error && (
-                  <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
+                  <motion.div 
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mt-2 p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm"
+                  >
                     {error}
-                  </div>
+                  </motion.div>
                 )}
               </DialogHeader>
 
-              {authMode === 'signin' ? (
-                <Form {...loginForm}>
-                  <form
-                    onSubmit={loginForm.handleSubmit(onSubmitLogin)}
-                    className="space-y-4"
+              <AnimatePresence mode="wait">
+                {authMode === 'signin' ? (
+                  <motion.div
+                    key="signin"
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 20 }}
+                    transition={{ duration: 0.2 }}
                   >
-                    <FormField
-                      control={loginForm.control}
-                      name="email"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Email</FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder="name@example.com"
-                              type="email"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={loginForm.control}
-                      name="password"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Password</FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder="••••••••"
-                              type="password"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <DialogFooter>
-                      <Button
-                        type="submit"
-                        className="w-full"
-                        disabled={!loginForm.formState.isValid || loading}
+                    <Form {...loginForm}>
+                      <form
+                        onSubmit={loginForm.handleSubmit(onSubmitLogin)}
+                        className="space-y-4"
                       >
-                        {loading ? (
-                          <LoadingSpinner size="sm" variant="spinner" />
-                        ) : (
-                          'Sign In'
-                        )}
-                      </Button>
-                    </DialogFooter>
-                  </form>
-                </Form>
-              ) : (
-                <Form {...signupForm}>
-                  <form
-                    onSubmit={signupForm.handleSubmit(onSubmitSignup)}
-                    className="space-y-4"
+                        <FormField
+                          control={loginForm.control}
+                          name="email"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>{t('auth.email')}</FormLabel>
+                              <FormControl>
+                                <Input
+                                  placeholder="name@example.com"
+                                  type="email"
+                                  className="transition-all focus:ring-2 focus:ring-primary/20"
+                                  {...field}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={loginForm.control}
+                          name="password"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>{t('auth.password')}</FormLabel>
+                              <FormControl>
+                                <Input
+                                  placeholder="••••••••"
+                                  type="password"
+                                  className="transition-all focus:ring-2 focus:ring-primary/20"
+                                  {...field}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <DialogFooter>
+                          <Button
+                            type="submit"
+                            className="w-full shadow-sm"
+                            disabled={!loginForm.formState.isValid || loading}
+                          >
+                            {loading ? (
+                              <LoadingSpinner size="sm" variant="spinner" />
+                            ) : (
+                              t('auth.signIn')
+                            )}
+                          </Button>
+                        </DialogFooter>
+                      </form>
+                    </Form>
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="signup"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    transition={{ duration: 0.2 }}
                   >
-                    <FormField
-                      control={signupForm.control}
-                      name="name"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Name</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Your name" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={signupForm.control}
-                      name="email"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Email</FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder="name@example.com"
-                              type="email"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={signupForm.control}
-                      name="password"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Password</FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder="Minimum 8 characters"
-                              type="password"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <DialogFooter>
-                      <Button
-                        type="submit"
-                        className="w-full"
-                        disabled={!signupForm.formState.isValid || loading}
+                    <Form {...signupForm}>
+                      <form
+                        onSubmit={signupForm.handleSubmit(onSubmitSignup)}
+                        className="space-y-4"
                       >
-                        {loading ? (
-                          <LoadingSpinner size="sm" variant="spinner" />
-                        ) : (
-                          'Create Account'
-                        )}
-                      </Button>
-                    </DialogFooter>
-                  </form>
-                </Form>
-              )}
+                        <FormField
+                          control={signupForm.control}
+                          name="name"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>{t('auth.name')}</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  placeholder={t('auth.name')} 
+                                  className="transition-all focus:ring-2 focus:ring-primary/20"
+                                  {...field} 
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={signupForm.control}
+                          name="email"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>{t('auth.email')}</FormLabel>
+                              <FormControl>
+                                <Input
+                                  placeholder="name@example.com"
+                                  type="email"
+                                  className="transition-all focus:ring-2 focus:ring-primary/20"
+                                  {...field}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={signupForm.control}
+                          name="password"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>{t('auth.password')}</FormLabel>
+                              <FormControl>
+                                <Input
+                                  placeholder={t('auth.passwordMinSignup')}
+                                  type="password"
+                                  className="transition-all focus:ring-2 focus:ring-primary/20"
+                                  {...field}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <DialogFooter>
+                          <Button
+                            type="submit"
+                            className="w-full shadow-sm"
+                            disabled={!signupForm.formState.isValid || loading}
+                          >
+                            {loading ? (
+                              <LoadingSpinner size="sm" variant="spinner" />
+                            ) : (
+                              t('auth.createAccount')
+                            )}
+                          </Button>
+                        </DialogFooter>
+                      </form>
+                    </Form>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               <div className="mt-6">
                 <div className="relative my-4">
@@ -394,41 +468,44 @@ export default function Topbar({
                   </div>
                   <div className="relative flex justify-center text-xs uppercase">
                     <span className="bg-background px-2 text-muted-foreground">
-                      Or continue with
+                      {t('auth.orContinueWith')}
                     </span>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <Button
                     variant="outline"
-                    className="w-full justify-center gap-2"
+                    className="w-full justify-center gap-2 hover:bg-accent/80 transition-colors"
                     onClick={() => handleSocial('google')}
                   >
                     <GoogleIcon />
-                    Google
+                    {t('auth.google')}
                   </Button>
                   <Button
                     variant="outline"
-                    className="w-full justify-center gap-2"
+                    className="w-full justify-center gap-2 hover:bg-accent/80 transition-colors"
                     onClick={() => handleSocial('facebook')}
                   >
                     <FacebookIcon />
-                    Facebook
+                    {t('auth.facebook')}
                   </Button>
                   <Popover>
                       <PopoverTrigger asChild>
-                        <Button variant="outline">Demo Account</Button>
+                        <Button variant="outline" className="col-span-2">Demo Account</Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-80 flex justify-between gap-2">
-                      <Button className='w-[48%] ' onClick={() => handleDemoAccount('admin')}>Admin</Button>
-                      <Button className='w-[48%] ' onClick={() => handleDemoAccount('buyer')}>Buyer</Button>
+                      <Button className='w-[48%]' onClick={() => handleDemoAccount('admin')}>{t('user.admin')}</Button>
+                      <Button className='w-[48%]' onClick={() => handleDemoAccount('buyer')}>{t('user.regularUser')}</Button>
                     </PopoverContent>
                   </Popover>
                 </div>
               </div>
             </div>
-            <div className="hidden md:block bg-gradient-to-br from-primary/10 via-muted to-primary/10" />
-          </div>
+            <div className="hidden md:block bg-gradient-to-br from-primary/20 via-primary/5 to-transparent relative overflow-hidden">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,var(--primary)_0%,transparent_50%)] opacity-20" />
+              <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-background/80 to-transparent" />
+            </div>
+          </motion.div>
         </DialogContent>
       </Dialog>
     </header>

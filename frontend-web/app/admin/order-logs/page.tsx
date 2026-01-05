@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useTranslation } from '@/lib/translations';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,6 +44,7 @@ const ADMIN_FORCE_CANCEL = gql`
 `;
 
 export default function OrderLogsPage() {
+  const { t } = useTranslation();
   const [currentPage, setCurrentPage] = useState(1);
   const [filters, setFilters] = useState({
     ticker: "",
@@ -124,7 +126,7 @@ export default function OrderLogsPage() {
     <div className=" space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Order Management</h1>
+          <h1 className="text-3xl font-bold">{t('nav.orderLogs')}</h1>
           <p className="text-muted-foreground">Review and manage all orders</p>
         </div>
         <Button onClick={() => refetch()} disabled={cancelLoading}>
@@ -137,7 +139,7 @@ export default function OrderLogsPage() {
         <CardHeader className="px-3">
           <CardTitle className="flex items-center gap-2">
             <Filter className="w-5 h-5" />
-            Filters
+            {t('common.filter')}
           </CardTitle>
         </CardHeader>
         <CardContent className="px-3">
@@ -150,27 +152,27 @@ export default function OrderLogsPage() {
               <label className="text-sm font-medium">Side</label>
               <Select value={filters.side} onValueChange={(v) => handleFilterChange("side", v)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="All sides" />
+                  <SelectValue placeholder={t('common.all')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="ALL">All</SelectItem>
-                  <SelectItem value="BUY">Buy</SelectItem>
-                  <SelectItem value="SELL">Sell</SelectItem>
+                  <SelectItem value="ALL">{t('common.all')}</SelectItem>
+                  <SelectItem value="BUY">{t('trading.buy')}</SelectItem>
+                  <SelectItem value="SELL">{t('trading.sell')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div>
-              <label className="text-sm font-medium">Status</label>
+              <label className="text-sm font-medium">{t('history.status')}</label>
               <Select value={filters.status} onValueChange={(v) => handleFilterChange("status", v)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="All statuses" />
+                  <SelectValue placeholder={t('common.all')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="ALL">All</SelectItem>
+                  <SelectItem value="ALL">{t('common.all')}</SelectItem>
                   <SelectItem value="OPEN">Open</SelectItem>
                   <SelectItem value="PARTIAL">Partial</SelectItem>
                   <SelectItem value="FILLED">Filled</SelectItem>
-                  <SelectItem value="CANCELLED">Cancelled</SelectItem>
+                  <SelectItem value="CANCELLED">{t('history.cancelled')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -190,30 +192,30 @@ export default function OrderLogsPage() {
 
       <Card className="gap-0 ">
         <CardHeader className="px-3">
-          <CardTitle>Orders</CardTitle>
+          <CardTitle>{t('history.orders')}</CardTitle>
           <CardDescription className="mb-2">
-            Showing {orders.length} of {meta?.totalCount || 0} orders
+            {t('table.showing')} {orders.length} {t('table.of')} {meta?.totalCount || 0} {t('table.results')}
           </CardDescription>
         </CardHeader>
         <CardContent className="px-3">
           {loading ? (
             <div className="flex items-center justify-center h-32">
-              <div className="text-muted-foreground">Loading orders...</div>
+              <div className="text-muted-foreground">{t('common.loading')}</div>
             </div>
           ) : (
             <>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Time</TableHead>
+                    <TableHead>{t('history.date')}</TableHead>
                     <TableHead>User</TableHead>
                     <TableHead>Ticker</TableHead>
                     <TableHead>Side</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Qty</TableHead>
-                    <TableHead>Price</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Action</TableHead>
+                    <TableHead>{t('history.type')}</TableHead>
+                    <TableHead>{t('trading.quantity')}</TableHead>
+                    <TableHead>{t('trading.price')}</TableHead>
+                    <TableHead>{t('history.status')}</TableHead>
+                    <TableHead>{t('common.actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

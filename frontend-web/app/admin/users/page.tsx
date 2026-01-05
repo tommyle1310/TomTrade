@@ -3,6 +3,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { useTranslation } from '@/lib/translations';
 import { Badge } from '@/components/ui/badge';
 import {
   Table,
@@ -34,6 +35,7 @@ import Link from 'next/link';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 export default function AdminUsersPage() {
+  const { t } = useTranslation();
   const { isAuthenticated, isAdmin, loading, initialized, user, token } =
     useAuthStore();
   const [query, setQuery] = useState('');
@@ -154,7 +156,7 @@ export default function AdminUsersPage() {
     <div className="space-y-4">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Manage Users</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t('nav.manageUsers')}</h1>
           <p className="text-muted-foreground">
             Search, sort, and manage roles and bans.
           </p>
@@ -165,7 +167,7 @@ export default function AdminUsersPage() {
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search users..."
+              placeholder={`${t('common.search')}...`}
               className="pl-8"
             />
           </div>
@@ -201,13 +203,13 @@ export default function AdminUsersPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>User</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Status</TableHead>
+                <TableHead>{t('admin.users')}</TableHead>
+                <TableHead>{t('auth.email')}</TableHead>
+                <TableHead>{t('user.role')}</TableHead>
+                <TableHead>{t('history.status')}</TableHead>
                 <TableHead>Balance</TableHead>
                 <TableHead>Created</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead className="text-right">{t('common.actions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -311,7 +313,7 @@ export default function AdminUsersPage() {
 
       {!loadingUsers && filtered.length === 0 && (
         <div className="text-center py-8 text-muted-foreground">
-          {query ? 'No users found matching your search.' : 'No users found.'}
+          {t('table.noResults')}
         </div>
       )}
     </div>

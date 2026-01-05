@@ -1,49 +1,106 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { LayoutDashboard, Users2, Shield, Settings, Bell, FileText, TrendingUp } from "lucide-react";
+import { motion } from "motion/react";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "@/lib/translations";
+import { cn } from "@/lib/utils";
+import { navItemHover, staggerContainer, staggerItem } from "@/lib/motionVariants";
 
 export default function Sidebar() {
+  const { t } = useTranslation();
+  const pathname = usePathname();
+
+  const navItems = [
+    { href: "/", icon: LayoutDashboard, label: t('nav.dashboard') },
+    { href: "/admin/users", icon: Users2, label: t('nav.manageUsers') },
+    { href: "/admin/transaction-logs", icon: FileText, label: t('nav.transactionLogs') },
+    { href: "/admin/order-logs", icon: FileText, label: t('nav.orderLogs') },
+    { href: "/charts", icon: TrendingUp, label: t('nav.charts') },
+    { href: "/admin/stocks", icon: FileText, label: t('nav.stocks') },
+    { href: "/risk", icon: Shield, label: t('nav.risk') },
+    { href: "/settings", icon: Settings, label: t('nav.settings') },
+    { href: "/notifications", icon: Bell, label: t('nav.notifications') },
+  ];
+
   return (
-    <aside className="fixed left-0 top-0 h-screen w-54 border-r bg-sidebar z-50">
+    <aside className="fixed left-0 top-0 h-screen w-56 border-r bg-sidebar/95 backdrop-blur-sm z-50 hidden lg:block shadow-sm">
       <div className="h-full flex flex-col">
-        <div className="px-6 py-6 border-b">
-          <div className="text-xl font-bold tracking-tight">TomTrade Admin</div>
-          <div className="text-sm text-muted-foreground">Control Panel</div>
+        <div className="px-5 py-5 border-b bg-gradient-to-r from-primary/5 to-transparent">
+          <div className="text-xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
+            TomTrade
+          </div>
+          <div className="text-sm text-muted-foreground">{t('nav.controlPanel')}</div>
         </div>
-        <nav className="flex-1 p-3">
+        <motion.nav 
+          className="flex-1 p-3 overflow-y-auto"
+          variants={staggerContainer}
+          initial="hidden"
+          animate="visible"
+        >
           <ul className="space-y-1">
-            <NavItem href="/" icon={<LayoutDashboard className="size-4" />} label="Dashboard" />
-            <NavItem href="/admin/users" icon={<Users2 className="size-4" />} label="Manage Users" />
-            <NavItem href="/admin/transaction-logs" icon={<FileText className="size-4" />} label="Transaction Logs" />
-            <NavItem href="/admin/order-logs" icon={<FileText className="size-4" />} label="Order Logs" />
-            <NavItem href="/charts" icon={<TrendingUp className="size-4" />} label="Charts" />
-            <NavItem href="/admin/stocks" icon={<FileText className="size-4" />} label="Stocks" />
-            <NavItem href="/risk" icon={<Shield className="size-4" />} label="Risk" />
-            <NavItem href="/settings" icon={<Settings className="size-4" />} label="Settings" />
-            <NavItem href="/notifications" icon={<Bell className="size-4" />} label="Notifications" />
+            {navItems.map((item) => (
+              <NavItem 
+                key={item.href}
+                href={item.href} 
+                icon={<item.icon className="size-4" />} 
+                label={item.label}
+                isActive={pathname === item.href}
+              />
+            ))}
           </ul>
-        </nav>
-        <div className="p-4 border-t">
-          <Button className="w-full">New Announcement</Button>
+        </motion.nav>
+        <div className="p-4 border-t bg-gradient-to-t from-sidebar to-transparent">
+          <Button className="w-full shadow-sm">{t('nav.newAnnouncement')}</Button>
         </div>
       </div>
     </aside>
   );
 }
 
-function NavItem({ href, icon, label }: { href: string; icon: React.ReactNode; label: string }) {
+function NavItem({ 
+  href, 
+  icon, 
+  label,
+  isActive 
+}: { 
+  href: string; 
+  icon: React.ReactNode; 
+  label: string;
+  isActive: boolean;
+}) {
   return (
-    <li>
+    <motion.li variants={staggerItem}>
       <Link
         href={href}
-        className="group flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium hover:bg-sidebar-accent hover:text-sidebar-accent-foreground border border-transparent hover:border-sidebar-border"
+        className={cn(
+          "group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
+          "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+          "border border-transparent hover:border-sidebar-border/50",
+          isActive && "bg-primary/10 text-primary border-primary/20 shadow-sm"
+        )}
       >
-        <span className="text-muted-foreground group-hover:text-inherit">{icon}</span>
+        <motion.span 
+          className={cn(
+            "text-muted-foreground group-hover:text-inherit transition-colors",
+            isActive && "text-primary"
+          )}
+          whileHover={navItemHover}
+        >
+          {icon}
+        </motion.span>
         <span>{label}</span>
+        {isActive && (
+          <motion.div
+            layoutId="activeNav"
+            className="ml-auto w-1.5 h-1.5 rounded-full bg-primary"
+            transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+          />
+        )}
       </Link>
-    </li>
+    </motion.li>
   );
 }
 
