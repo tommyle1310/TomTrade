@@ -432,99 +432,99 @@ export default function AdminOverview() {
   // Create KPIs from API data
   const kpis: Kpi[] = data
     ? [
-        {
-          id: 'revenue',
-          label: 'Total Revenue',
-          value: formatCurrency(data.totalRevenue.endDate),
-          delta: getDeltaText(
-            data.totalRevenue.startDate,
-            data.totalRevenue.endDate,
-            'currency'
-          ),
-          trend: getTrend(
-            data.totalRevenue.startDate,
-            data.totalRevenue.endDate
-          ),
-          icon: <DollarSign className="size-4" />,
-        },
-        {
-          id: 'trades',
-          label: 'Total Trades Executed',
-          value: formatNumber(data.totalTradesExecuted.endDate),
-          delta: getDeltaText(
-            data.totalTradesExecuted.startDate,
-            data.totalTradesExecuted.endDate,
-            'number'
-          ),
-          trend: getTrend(
-            data.totalTradesExecuted.startDate,
-            data.totalTradesExecuted.endDate
-          ),
-          icon: <BarChart3 className="size-4" />,
-        },
-        {
-          id: 'winrate',
-          label: 'Win Rate',
-          value: formatPercentage(data.winRate.endDate),
-          delta: getDeltaText(
-            data.winRate.startDate,
-            data.winRate.endDate,
-            'percentage'
-          ),
-          trend: getTrend(data.winRate.startDate, data.winRate.endDate),
-          icon: <TrendingUp className="size-4" />,
-        },
-        {
-          id: 'drawdown',
-          label: 'Max Drawdown',
-          value: formatPercentage(data.maxDrawdown.endDate),
-          delta: getDeltaText(
-            data.maxDrawdown.startDate,
-            data.maxDrawdown.endDate,
-            'percentage'
-          ),
-          trend: getTrend(data.maxDrawdown.startDate, data.maxDrawdown.endDate),
-          icon: <Activity className="size-4" />,
-        },
-      ]
+      {
+        id: 'revenue',
+        label: 'Total Revenue',
+        value: formatCurrency(data.totalRevenue.endDate),
+        delta: getDeltaText(
+          data.totalRevenue.startDate,
+          data.totalRevenue.endDate,
+          'currency'
+        ),
+        trend: getTrend(
+          data.totalRevenue.startDate,
+          data.totalRevenue.endDate
+        ),
+        icon: <DollarSign className="size-4" />,
+      },
+      {
+        id: 'trades',
+        label: 'Total Trades Executed',
+        value: formatNumber(data.totalTradesExecuted.endDate),
+        delta: getDeltaText(
+          data.totalTradesExecuted.startDate,
+          data.totalTradesExecuted.endDate,
+          'number'
+        ),
+        trend: getTrend(
+          data.totalTradesExecuted.startDate,
+          data.totalTradesExecuted.endDate
+        ),
+        icon: <BarChart3 className="size-4" />,
+      },
+      {
+        id: 'winrate',
+        label: 'Win Rate',
+        value: formatPercentage(data.winRate.endDate),
+        delta: getDeltaText(
+          data.winRate.startDate,
+          data.winRate.endDate,
+          'percentage'
+        ),
+        trend: getTrend(data.winRate.startDate, data.winRate.endDate),
+        icon: <TrendingUp className="size-4" />,
+      },
+      {
+        id: 'drawdown',
+        label: 'Max Drawdown',
+        value: formatPercentage(data.maxDrawdown.endDate),
+        delta: getDeltaText(
+          data.maxDrawdown.startDate,
+          data.maxDrawdown.endDate,
+          'percentage'
+        ),
+        trend: getTrend(data.maxDrawdown.startDate, data.maxDrawdown.endDate),
+        icon: <Activity className="size-4" />,
+      },
+    ]
     : [];
 
   // Create metrics data from API data
   const metricsData = data
     ? [
-        {
-          metric: 'ARPU',
-          value: formatCurrency(data.arpu.endDate),
-          color: 'text-blue-600',
-        },
-        {
-          metric: 'Churn Rate',
-          value: formatPercentage(data.churnRate.endDate),
-          color: 'text-yellow-600',
-        },
-        {
-          metric: 'Average Trade Size',
-          value: formatCurrency(data.averageTradeSize.endDate),
-          color: 'text-green-600',
-        },
-        {
-          metric: 'Margin Call Alerts',
-          value: data.marginCallAlerts.endDate.toString(),
-          color: 'text-red-600',
-        },
-        {
-          metric: 'Service Uptime',
-          value: formatPercentage(data.serviceUptime.endDate),
-          color: 'text-green-600',
-        },
-        {
-          metric: 'Top Users',
-          value: `${data.topUsers.length} users`,
-          color: 'text-purple-600',
-          isTopUsers: true,
-          topUsers: data.topUsers,
-        },
-      ]
+      {
+        metric: 'ARPU',
+        value: formatCurrency(data.arpu.endDate),
+        color: 'text-blue-600',
+      },
+      {
+        metric: 'Churn Rate',
+        value: formatPercentage(data.churnRate.endDate),
+        color: 'text-yellow-600',
+      },
+      {
+        metric: 'Average Trade Size',
+        value: formatCurrency(data.averageTradeSize.endDate),
+        color: 'text-green-600',
+      },
+      {
+        metric: 'Margin Call Alerts',
+        value: data.marginCallAlerts.endDate.toString(),
+        color: 'text-red-600',
+      },
+      {
+        metric: 'Service Uptime',
+        value: formatPercentage(data.serviceUptime.endDate),
+        color: 'text-green-600',
+      },
+      {
+        metric: 'Top Users',
+        value: `${data.topUsers.length} users`,
+        color: 'text-purple-600',
+        isTopUsers: true,
+        topUsers: data.topUsers,
+      },
+    ]
     : [];
 
   const handleRefresh = () => {
@@ -610,91 +610,98 @@ export default function AdminOverview() {
 
       {/* Seeder Status */}
       {seederStatus.isSeeding && (
-        <div className="flex items-center gap-2 p-3 rounded-lg bg-green-50 border border-green-200">
-          <Database className="size-4 text-green-500 animate-pulse" />
-          <span className="text-green-700 font-medium">
+        <div className="flex items-center gap-3 p-4 rounded-xl glass-strong border border-glass-border shadow-elevated">
+          <Database className="size-5 text-success animate-pulse" />
+          <span className="text-foreground font-semibold">
             Data Seeding Active
           </span>
-          <span className="text-sm text-green-600">
+          <span className="text-sm text-muted-foreground">
             Generating realistic dashboard data every 2 seconds
           </span>
         </div>
       )}
 
       {seederError && (
-        <div className="flex items-center gap-2 p-3 rounded-lg bg-red-50 border border-red-200">
-          <AlertTriangle className="size-4 text-red-500" />
-          <span className="text-red-700">{seederError}</span>
+        <div className="flex items-center gap-3 p-4 rounded-xl glass-strong border border-destructive/30 shadow-elevated">
+          <AlertTriangle className="size-5 text-destructive" />
+          <span className="text-destructive font-medium">{seederError}</span>
         </div>
       )}
 
       {/* Row 1: 4 Main Cards - Compact flex row like image */}
-      <section className="flex gap-3">
+      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {kpis.map((kpi) => (
-          <Card key={kpi.id} className="flex-1 p-3 relative">
-            <div className="flex items-center justify-between">
-              <div className="flex flex-col gap-1">
-                <div className="text-sm text-muted-foreground">{kpi.label}</div>
-                <div className="text-xl font-semibold">{kpi.value}</div>
+          <Card key={kpi.id} className="glass-strong border-glass-border shadow-elevated hover:shadow-elevated-lg transition-all duration-200 cursor-pointer group">
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between mb-3">
+                <div className="p-2.5 rounded-lg bg-gradient-to-br from-primary/10 to-accent/10 group-hover:from-primary/15 group-hover:to-accent/15 transition-colors">
+                  <div className="text-primary">{kpi.icon}</div>
+                </div>
+                <div
+                  className={
+                    kpi.trend === 'up'
+                      ? 'inline-flex items-center gap-1 rounded-full bg-success/10 text-success px-2.5 py-1 text-xs font-medium border border-success/20'
+                      : kpi.trend === 'down'
+                        ? 'inline-flex items-center gap-1 rounded-full bg-danger/10 text-danger px-2.5 py-1 text-xs font-medium border border-danger/20'
+                        : 'inline-flex items-center gap-1 rounded-full bg-muted text-muted-foreground px-2.5 py-1 text-xs font-medium'
+                  }
+                >
+                  {kpi.trend === 'up' ? (
+                    <ArrowUpRight className="size-3.5" />
+                  ) : kpi.trend === 'down' ? (
+                    <ArrowDownRight className="size-3.5" />
+                  ) : null}
+                  <span>{kpi.delta}</span>
+                </div>
               </div>
-              <div className="text-muted-foreground">{kpi.icon}</div>
-            </div>
-            {/* Absolute positioned trend arrow */}
-            <div className="absolute top-2 right-2">
-              <div
-                className={
-                  kpi.trend === 'up'
-                    ? 'inline-flex items-center gap-1 rounded-full w-fit bg-green-50 text-green-700 px-1.5 py-0.5 text-xs'
-                    : kpi.trend === 'down'
-                    ? 'inline-flex items-center gap-1 rounded-full w-fit bg-red-50 text-red-700 px-1.5 py-0.5 text-xs'
-                    : 'inline-flex items-center gap-1 rounded-full w-fit bg-neutral-100 text-neutral-600 px-1.5 py-0.5 text-xs'
-                }
-              >
-                {kpi.trend === 'up' ? (
-                  <ArrowUpRight className="size-3" />
-                ) : kpi.trend === 'down' ? (
-                  <ArrowDownRight className="size-3" />
-                ) : null}
-                <span>{kpi.delta}</span>
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">{kpi.label}</p>
+                <p className="text-2xl font-bold tracking-tight">{kpi.value}</p>
               </div>
-            </div>
+            </CardContent>
           </Card>
         ))}
       </section>
 
       {/* Row 2: Only 2 charts - P&L (8/12) and Pie (4/12) */}
-      <section className="grid w-full  grid-cols-1 xl:grid-cols-12 gap-3">
+      <section className="grid w-full grid-cols-1 xl:grid-cols-12 gap-4">
         <div className="xl:col-span-5">
-          <EquityDrawdownCombo data={data?.equityAndDrawdown || []} />
+          <div className="glass-strong border border-glass-border rounded-xl shadow-elevated">
+            <EquityDrawdownCombo data={data?.equityAndDrawdown || []} />
+          </div>
         </div>
         <div className="xl:col-span-4">
-          <PnLBar data={data?.pnlOverTime || []} />
+          <div className="glass-strong border border-glass-border rounded-xl shadow-elevated">
+            <PnLBar data={data?.pnlOverTime || []} />
+          </div>
         </div>
         <div className="xl:col-span-3">
-          <MostTradedPie data={data?.mostTradedStocks || []} />
+          <div className="glass-strong border border-glass-border rounded-xl shadow-elevated">
+            <MostTradedPie data={data?.mostTradedStocks || []} />
+          </div>
         </div>
       </section>
 
       {/* Row 3: 2 sections - Data table (7/12) and P&L chart (5/12) */}
-      <section className="grid grid-cols-1  xl:grid-cols-12 gap-3">
+      <section className="grid grid-cols-1 xl:grid-cols-12 gap-4">
         {/* Section 1: Shadcn DataTable */}
         <div className="xl:col-span-7">
-          <Card className="px-2">
-            <CardHeader className="pb-2 px-2">
-              <CardTitle className="text-sm">Platform Metrics</CardTitle>
+          <Card className="glass-strong border-glass-border shadow-elevated">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg font-semibold">Platform Metrics</CardTitle>
             </CardHeader>
-            <CardContent className="-mt-6 px-2">
+            <CardContent>
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>Metric</TableHead>
-                    <TableHead>Value</TableHead>
+                  <TableRow className="border-glass-border hover:bg-transparent">
+                    <TableHead className="font-semibold">Metric</TableHead>
+                    <TableHead className="font-semibold">Value</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {metricsData.map((item, index) => (
-                    <TableRow key={index}>
-                      <TableCell className="font-semibold">
+                    <TableRow key={index} className="border-glass-border hover:bg-primary/5 transition-colors">
+                      <TableCell className="font-medium">
                         {item.metric}
                       </TableCell>
                       <TableCell className={`font-semibold ${item.color}`}>
@@ -744,11 +751,10 @@ export default function AdminOverview() {
                                       </div>
                                       <div className="text-right">
                                         <div
-                                          className={`text-sm font-semibold ${
-                                            user.pnl >= 0
+                                          className={`text-sm font-semibold ${user.pnl >= 0
                                               ? 'text-green-600'
                                               : 'text-red-600'
-                                          }`}
+                                            }`}
                                         >
                                           {formatCurrency(user.pnl)}
                                         </div>
@@ -846,13 +852,12 @@ export default function AdminOverview() {
                                   </div>
                                   <div className="flex items-center gap-2">
                                     <div
-                                      className={`w-3 h-3 rounded-full ${
-                                        item.status === 'online'
+                                      className={`w-3 h-3 rounded-full ${item.status === 'online'
                                           ? 'bg-green-500'
                                           : item.status === 'warning'
-                                          ? 'bg-yellow-500'
-                                          : 'bg-red-500'
-                                      }`}
+                                            ? 'bg-yellow-500'
+                                            : 'bg-red-500'
+                                        }`}
                                     ></div>
                                     <span className="text-sm font-mono text-slate-600">
                                       {item.response}

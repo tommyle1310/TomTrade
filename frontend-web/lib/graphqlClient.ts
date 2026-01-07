@@ -204,3 +204,352 @@ export async function getUserMetricCards(token?: string) {
     }[];
   }>(query, {}, token);
 }
+
+export async function getHoldings(page = 1, limit = 10, token?: string) {
+  const query = `
+    query GetHoldings($input: HoldingPaginationInput!) {
+      getHoldings(input: $input) {
+        data {
+          symbol
+          quantity
+          avgPrice
+          currentPrice
+          pnl
+          pnlPercent
+          side
+        }
+        total
+        page
+        totalPages
+      }
+    }
+  `;
+  const variables = { input: { page, limit } };
+  return gqlRequest<{
+    getHoldings: {
+      data: {
+        symbol: string;
+        quantity: number;
+        avgPrice: number;
+        currentPrice: number;
+        pnl: number;
+        pnlPercent: number;
+        side: string;
+      }[];
+      total: number;
+      page: number;
+      totalPages: number;
+    };
+  }>(query, variables, token);
+}
+
+export async function getRecentActivities(page = 1, limit = 20, token?: string) {
+  const query = `
+    query GetRecentActivities($input: ActivityPaginationInput!) {
+      getRecentActivities(input: $input) {
+        data {
+          type
+          timestamp
+          ticker
+          shares
+          avgPrice
+          currentPrice
+        }
+        total
+        page
+        totalPages
+      }
+    }
+  `;
+  const variables = { input: { page, limit } };
+  return gqlRequest<{
+    getRecentActivities: {
+      data: {
+        type: string;
+        timestamp: string;
+        ticker: string;
+        shares: number;
+        avgPrice: number;
+        currentPrice: number;
+      }[];
+      total: number;
+      page: number;
+      totalPages: number;
+    };
+  }>(query, variables, token);
+}
+
+export async function getMarketOverview(page = 1, limit = 10, token?: string) {
+  const query = `
+    query GetMarketOverview($input: MarketOverviewPaginationInput!) {
+      getMarketOverview(input: $input) {
+        data {
+          key
+          label
+          value
+          unit
+          trend
+        }
+        total
+        page
+        totalPages
+      }
+    }
+  `;
+  const variables = { input: { page, limit } };
+  return gqlRequest<{
+    getMarketOverview: {
+      data: {
+        key: string;
+        label: string;
+        value: number;
+        unit: string;
+        trend: string;
+      }[];
+      total: number;
+      page: number;
+      totalPages: number;
+    };
+  }>(query, variables, token);
+}
+
+export async function getTopMovers(page = 1, limit = 10, filter = 'gainers', token?: string) {
+  const query = `
+    query GetTopMovers($input: TopMoversPaginationInput!) {
+      getTopMovers(input: $input) {
+        data {
+          symbol
+          avatar
+          value
+        }
+        total
+        page
+        totalPages
+      }
+    }
+  `;
+  const variables = { input: { page, limit, filter } };
+  return gqlRequest<{
+    getTopMovers: {
+      data: {
+        symbol: string;
+        avatar: string | null;
+        value: number;
+      }[];
+      total: number;
+      page: number;
+      totalPages: number;
+    };
+  }>(query, variables, token);
+}
+
+// Trading Order Mutations and Queries
+
+export async function placeOrder(input: {
+  ticker: string;
+  price: number;
+  quantity: number;
+  side: string;
+  type: string;
+  timeInForce: string;
+}, token?: string) {
+  const mutation = `
+    mutation PlaceOrder($input: PlaceOrderInput!) {
+      placeOrder(input: $input) {
+        id
+        ticker
+        side
+        type
+        price
+        quantity
+        status
+        timeInForce
+        createdAt
+        matchedAt
+      }
+    }
+  `;
+  const variables = { input };
+  return gqlRequest<{
+    placeOrder: {
+      id: string;
+      ticker: string;
+      side: string;
+      type: string;
+      price: number;
+      quantity: number;
+      status: string;
+      timeInForce: string;
+      createdAt: string;
+      matchedAt?: string;
+    };
+  }>(mutation, variables, token);
+}
+
+export async function orderBook(ticker: string, token?: string) {
+  const query = `
+    query OrderBook($ticker: String!) {
+      orderBook(ticker: $ticker) {
+        buyOrders {
+          id
+          ticker
+          side
+          type
+          price
+          quantity
+          status
+          timeInForce
+          createdAt
+        }
+        sellOrders {
+          id
+          ticker
+          side
+          type
+          price
+          quantity
+          status
+          timeInForce
+          createdAt
+        }
+      }
+    }
+  `;
+  const variables = { ticker };
+  return gqlRequest<{
+    orderBook: {
+      buyOrders: Array<{
+        id: string;
+        ticker: string;
+        side: string;
+        type: string;
+        price: number;
+        quantity: number;
+        status: string;
+        timeInForce: string;
+        createdAt: string;
+      }>;
+      sellOrders: Array<{
+        id: string;
+        ticker: string;
+        side: string;
+        type: string;
+        price: number;
+        quantity: number;
+        status: string;
+        timeInForce: string;
+        createdAt: string;
+      }>;
+    };
+  }>(query, variables, token);
+}
+
+export async function myOrders(token?: string) {
+  const query = `
+    query MyOrders {
+      myOrders {
+        id
+        ticker
+        side
+        type
+        price
+        quantity
+        status
+        timeInForce
+        createdAt
+        matchedAt
+      }
+    }
+  `;
+  return gqlRequest<{
+    myOrders: Array<{
+      id: string;
+      ticker: string;
+      side: string;
+      type: string;
+      price: number;
+      quantity: number;
+      status: string;
+      timeInForce: string;
+      createdAt: string;
+      matchedAt?: string;
+    }>;
+  }>(query, {}, token);
+}
+
+export async function cancelOrder(orderId: string, token?: string) {
+  const mutation = `
+    mutation CancelOrder($orderId: String!) {
+      cancelOrder(orderId: $orderId) {
+        id
+        ticker
+        side
+        type
+        price
+        quantity
+        status
+        timeInForce
+        createdAt
+        matchedAt
+      }
+    }
+  `;
+  const variables = { orderId };
+  return gqlRequest<{
+    cancelOrder: {
+      id: string;
+      ticker: string;
+      side: string;
+      type: string;
+      price: number;
+      quantity: number;
+      status: string;
+      timeInForce: string;
+      createdAt: string;
+      matchedAt?: string;
+    };
+  }>(mutation, variables, token);
+}
+
+// Search stocks
+export async function searchStocks(query?: string, token?: string) {
+  const gqlQuery = `
+    query SearchStocks {
+      stocks {
+        ticker
+        companyName
+        avatar
+        exchange
+        sector
+        industry
+        isTradable
+      }
+    }
+  `;
+
+  const result = await gqlRequest<{
+    stocks: Array<{
+      ticker: string;
+      companyName: string;
+      avatar?: string | null;
+      exchange: string;
+      sector?: string;
+      industry?: string;
+      isTradable: boolean;
+    }>;
+  }>(gqlQuery, {}, token);
+
+  // Client-side filtering if query provided
+  if (query && result.stocks) {
+    const lowerQuery = query.toLowerCase();
+    return {
+      stocks: result.stocks.filter(
+        (stock) =>
+          stock.ticker.toLowerCase().includes(lowerQuery) ||
+          stock.companyName.toLowerCase().includes(lowerQuery)
+      ),
+    };
+  }
+
+  return result;
+}

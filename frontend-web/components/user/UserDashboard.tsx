@@ -23,21 +23,12 @@ import { useTranslation } from "@/lib/translations";
 import { staggerContainer, staggerItem, cardHover } from "@/lib/motionVariants";
 import { cn } from "@/lib/utils";
 import { useUserMetricCards } from "@/lib/hooks/useUserMetricCards";
-
-type PortfolioItem = {
-  ticker: string;
-  quantity: number;
-  avgPrice: number;
-  currentPrice: number;
-  pnl: number;
-  pnlPercent: number;
-};
-
-const mockPortfolio: PortfolioItem[] = [
-  { ticker: "AAPL", quantity: 10, avgPrice: 150.00, currentPrice: 165.50, pnl: 155.00, pnlPercent: 10.33 },
-  { ticker: "TSLA", quantity: 5, avgPrice: 200.00, currentPrice: 185.00, pnl: -75.00, pnlPercent: -7.5 },
-  { ticker: "MSFT", quantity: 8, avgPrice: 300.00, currentPrice: 325.00, pnl: 200.00, pnlPercent: 8.33 },
-];
+import { useHoldings } from "@/lib/hooks/useHoldings";
+import { useRecentActivities } from "@/lib/hooks/useRecentActivities";
+import { useMarketOverview } from "@/lib/hooks/useMarketOverview";
+import { useTopMovers } from "@/lib/hooks/useTopMovers";
+import QuickTradeModal from "@/components/trading/QuickTradeModal";
+import { OrderSide } from "@/lib/types";
 
 const mockWatchlist = [
   { ticker: "GOOGL", price: 142.50, change: 2.5, changePercent: 1.78 },
@@ -49,7 +40,14 @@ export default function UserDashboard() {
   const { user, getUserDisplayName } = useAuthStore();
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<'portfolio' | 'watchlist'>('portfolio');
+  const [tradeModalOpen, setTradeModalOpen] = useState(false);
+  const [selectedSide, setSelectedSide] = useState<OrderSide>(OrderSide.BUY);
+  const [selectedTicker, setSelectedTicker] = useState('');
   const { data: metricCards, loading: metricsLoading, error: metricsError } = useUserMetricCards();
+  const { data: holdings, loading: holdingsLoading, error: holdingsError } = useHoldings(1, 10);
+  const { data: activities, loading: activitiesLoading, error: activitiesError } = useRecentActivities(1, 3);
+  const { data: marketOverview, loading: marketLoading, error: marketError } = useMarketOverview(1, 6);
+  const { data: topMovers, loading: moversLoading, error: moversError } = useTopMovers(1, 5, 'gainers');
 
   // Find specific metric cards by title
   const portfolioValueCard = metricCards?.find(card => card.title === 'Portfolio Value');
@@ -68,11 +66,27 @@ export default function UserDashboard() {
           <p className="text-sm text-muted-foreground">{t('dashboard.overview')}</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" className="shadow-sm hover:shadow transition-shadow">
+          <Button
+            variant="outline"
+            className="glass-subtle border-glass-border shadow-md hover:shadow-lg transition-shadow font-medium"
+            onClick={() => {
+              setSelectedSide(OrderSide.BUY);
+              setSelectedTicker('');
+              setTradeModalOpen(true);
+            }}
+          >
             <Plus className="size-4 mr-2" />
             {t('trading.buy')}
           </Button>
-          <Button variant="outline" className="shadow-sm hover:shadow transition-shadow">
+          <Button
+            variant="outline"
+            className="glass-subtle border-glass-border shadow-md hover:shadow-lg transition-shadow font-medium"
+            onClick={() => {
+              setSelectedSide(OrderSide.SELL);
+              setSelectedTicker('');
+              setTradeModalOpen(true);
+            }}
+          >
             <Minus className="size-4 mr-2" />
             {t('trading.sell')}
           </Button>
@@ -88,7 +102,7 @@ export default function UserDashboard() {
       >
         {/* Portfolio Value Card */}
         <motion.div variants={staggerItem}>
-          <Card className="gap-0 py-4 card-interactive border-0 shadow-sm hover:shadow-md">
+          <Card className="glass-strong border-glass-border shadow-elevated hover:shadow-elevated-lg transition-all duration-200 cursor-pointer group">
             <CardHeader className="flex flex-row px-4 items-center justify-between space-y-0">
               <CardTitle className="text-sm font-medium text-muted-foreground">{t('dashboard.portfolioValue')}</CardTitle>
               <div className="p-2 rounded-full bg-primary/10">
@@ -122,7 +136,7 @@ export default function UserDashboard() {
 
         {/* Total P&L Card */}
         <motion.div variants={staggerItem}>
-          <Card className="gap-0 py-4 card-interactive border-0 shadow-sm hover:shadow-md">
+          <Card className="glass-strong border-glass-border shadow-elevated hover:shadow-elevated-lg transition-all duration-200 cursor-pointer group">
             <CardHeader className="flex flex-row px-4 items-center justify-between space-y-0">
               <CardTitle className="text-sm font-medium text-muted-foreground">{t('dashboard.totalPnL')}</CardTitle>
               <div className={cn(
@@ -165,7 +179,7 @@ export default function UserDashboard() {
 
         {/* Open Positions Card */}
         <motion.div variants={staggerItem}>
-          <Card className="gap-0 py-4 card-interactive border-0 shadow-sm hover:shadow-md">
+          <Card className="glass-strong border-glass-border shadow-elevated hover:shadow-elevated-lg transition-all duration-200 cursor-pointer group">
             <CardHeader className="flex flex-row px-4 items-center justify-between space-y-0">
               <CardTitle className="text-sm font-medium text-muted-foreground">{t('dashboard.openPositions')}</CardTitle>
               <div className="p-2 rounded-full bg-chart-1/10">
@@ -196,7 +210,7 @@ export default function UserDashboard() {
 
         {/* Account Status Card */}
         <motion.div variants={staggerItem}>
-          <Card className="gap-0 py-4 card-interactive border-0 shadow-sm hover:shadow-md">
+          <Card className="glass-strong border-glass-border shadow-elevated hover:shadow-elevated-lg transition-all duration-200 cursor-pointer group">
             <CardHeader className="flex flex-row px-4 items-center justify-between space-y-0">
               <CardTitle className="text-sm font-medium text-muted-foreground">Account Status</CardTitle>
               <div className={cn(
@@ -267,42 +281,69 @@ export default function UserDashboard() {
                   <CardTitle>{t('portfolio.holdings')}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-3">
-                    {mockPortfolio.map((item) => (
-                      <motion.div
-                        key={item.ticker}
-                        className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/50 transition-colors"
-                        whileHover={{ scale: 1.01 }}
-                        transition={{ duration: 0.15 }}
-                      >
-                        <div className="flex items-center space-x-3">
-                          <div>
-                            <div className="font-semibold">{item.ticker}</div>
-                            <div className="text-sm text-muted-foreground">
-                              {item.quantity} {t('portfolio.quantity').toLowerCase()} @ ${item.avgPrice}
+                  {holdingsLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="size-6 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : holdingsError ? (
+                    <p className="text-sm text-danger py-4 text-center">Failed to load holdings</p>
+                  ) : !holdings?.data || holdings.data.length === 0 ? (
+                    <p className="text-sm text-muted-foreground py-4 text-center">No positions yet. Start trading to build your portfolio.</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {holdings.data.map((item) => (
+                        <motion.div
+                          key={item.symbol}
+                          className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/50 transition-colors"
+                          whileHover={{ scale: 1.01 }}
+                          transition={{ duration: 0.15 }}
+                        >
+                          <div className="flex items-center space-x-3">
+                            <div>
+                              <div className="font-semibold">{item.symbol}</div>
+                              <div className="text-sm text-muted-foreground">
+                                {item.quantity} {t('portfolio.quantity').toLowerCase()} @ ${item.avgPrice.toFixed(2)}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                        <div className="text-right">
-                          <div className="font-semibold">${item.currentPrice}</div>
-                          <div className={cn(
-                            "text-sm font-medium",
-                            item.pnl >= 0 ? "text-success" : "text-danger"
-                          )}>
-                            {item.pnl >= 0 ? '+' : ''}${item.pnl.toFixed(2)} ({item.pnlPercent >= 0 ? '+' : ''}{item.pnlPercent.toFixed(2)}%)
+                          <div className="text-right">
+                            <div className="font-semibold">${item.currentPrice.toFixed(2)}</div>
+                            <div className="flex items-center gap-1">
+                              <Badge variant={item.side === 'profit' ? 'default' : 'destructive'} className="text-xs">
+                                {item.pnl >= 0 ? '+' : ''}${item.pnl.toFixed(2)} ({item.pnlPercent >= 0 ? '+' : ''}{item.pnlPercent.toFixed(2)}%)
+                              </Badge>
+                            </div>
                           </div>
-                        </div>
-                        <div className="flex space-x-1">
-                          <Button size="sm" variant="outline" className="h-8 w-8 p-0">
-                            <Plus className="size-3" />
-                          </Button>
-                          <Button size="sm" variant="outline" className="h-8 w-8 p-0">
-                            <Minus className="size-3" />
-                          </Button>
-                        </div>
-                      </motion.div>
-                    ))}
-                  </div>
+                          <div className="flex space-x-1">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-8 w-8 p-0"
+                              onClick={() => {
+                                setSelectedSide(OrderSide.BUY);
+                                setSelectedTicker(item.symbol);
+                                setTradeModalOpen(true);
+                              }}
+                            >
+                              <Plus className="size-3" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-8 w-8 p-0"
+                              onClick={() => {
+                                setSelectedSide(OrderSide.SELL);
+                                setSelectedTicker(item.symbol);
+                                setTradeModalOpen(true);
+                              }}
+                            >
+                              <Minus className="size-3" />
+                            </Button>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             ) : (
@@ -364,58 +405,46 @@ export default function UserDashboard() {
               <CardTitle>{t('dashboard.recentTransactions')}</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                <motion.div
-                  className="flex items-center justify-between"
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.1 }}
-                >
-                  <div className="flex items-center space-x-3">
-                    <div className="w-2 h-2 bg-success rounded-full"></div>
-                    <div>
-                      <div className="font-medium text-sm">{t('trading.buy')} 5 AAPL</div>
-                      <div className="text-xs text-muted-foreground">{t('time.hoursAgo', { count: '2' })}</div>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-medium text-sm">$825.00</div>
-                    <div className="text-xs text-muted-foreground">@ $165.00</div>
-                  </div>
-                </motion.div>
-                <motion.div
-                  className="flex items-center justify-between"
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.2 }}
-                >
-                  <div className="flex items-center space-x-3">
-                    <div className="w-2 h-2 bg-danger rounded-full"></div>
-                    <div>
-                      <div className="font-medium text-sm">{t('trading.sell')} 3 TSLA</div>
-                      <div className="text-xs text-muted-foreground">{t('time.daysAgo', { count: '1' })}</div>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-medium text-sm">$555.00</div>
-                    <div className="text-xs text-muted-foreground">@ $185.00</div>
-                  </div>
-                </motion.div>
-                <motion.div
-                  className="flex items-center justify-between"
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.3 }}
-                >
-                  <div className="flex items-center space-x-3">
-                    <div className="w-2 h-2 bg-primary rounded-full"></div>
-                    <div>
-                      <div className="font-medium text-sm">{t('common.add')} GOOGL {t('nav.watchlist').toLowerCase()}</div>
-                      <div className="text-xs text-muted-foreground">{t('time.daysAgo', { count: '3' })}</div>
-                    </div>
-                  </div>
-                </motion.div>
-              </div>
+              {activitiesLoading ? (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="size-5 animate-spin text-muted-foreground" />
+                </div>
+              ) : activitiesError ? (
+                <p className="text-sm text-danger py-4 text-center">Failed to load activities</p>
+              ) : !activities?.data || activities.data.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-4 text-center">No recent activities</p>
+              ) : (
+                <div className="space-y-3">
+                  {activities.data.map((activity, idx) => (
+                    <motion.div
+                      key={`${activity.ticker}-${activity.timestamp}`}
+                      className="flex items-center justify-between"
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: idx * 0.1 }}
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className={cn(
+                          "w-2 h-2 rounded-full",
+                          activity.type === 'BUY' ? "bg-success" : "bg-danger"
+                        )}></div>
+                        <div>
+                          <div className="font-medium text-sm">
+                            {activity.type === 'BUY' ? t('trading.buy') : t('trading.sell')} {activity.shares} {activity.ticker}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {new Date(activity.timestamp).toLocaleDateString()}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-medium text-sm">${(activity.avgPrice * activity.shares).toFixed(2)}</div>
+                        <div className="text-xs text-muted-foreground">@ ${activity.avgPrice.toFixed(2)}</div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -425,36 +454,33 @@ export default function UserDashboard() {
               <CardTitle>{t('dashboard.marketOverview')}</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>S&P 500</span>
-                    <span className="text-success">+1.2%</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span>NASDAQ</span>
-                    <span className="text-danger">-0.8%</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span>DOW</span>
-                    <span className="text-success">+0.5%</span>
-                  </div>
+              {marketLoading ? (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="size-5 animate-spin text-muted-foreground" />
                 </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>VIX</span>
-                    <span className="text-muted-foreground">18.5</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span>10Y Treasury</span>
-                    <span className="text-muted-foreground">4.2%</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span>USD Index</span>
-                    <span className="text-success">+0.3%</span>
-                  </div>
+              ) : marketError ? (
+                <p className="text-sm text-danger py-4 text-center">Failed to load market data</p>
+              ) : !marketOverview?.data || marketOverview.data.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-4 text-center">Market data unavailable</p>
+              ) : (
+                <div className="grid grid-cols-2 gap-4">
+                  {marketOverview.data.map((item) => (
+                    <div key={item.key} className="flex justify-between items-center text-sm">
+                      <span>{item.label}</span>
+                      <span className={cn(
+                        "flex items-center gap-1 font-medium",
+                        item.trend === 'up' ? "text-success" :
+                          item.trend === 'down' ? "text-danger" :
+                            "text-muted-foreground"
+                      )}>
+                        {item.trend === 'up' && <ArrowUpRight className="size-3" />}
+                        {item.trend === 'down' && <ArrowDownRight className="size-3" />}
+                        {item.value > 0 && item.unit === '%' ? '+' : ''}{item.value}{item.unit}
+                      </span>
+                    </div>
+                  ))}
                 </div>
-              </div>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -487,28 +513,39 @@ export default function UserDashboard() {
               <CardTitle>{t('dashboard.topMovers')}</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium">NVDA</span>
-                  <span className="text-sm text-success">+15.2%</span>
+              {moversLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="size-5 animate-spin text-muted-foreground" />
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium">TSLA</span>
-                  <span className="text-sm text-danger">-8.5%</span>
+              ) : moversError ? (
+                <p className="text-sm text-danger py-4 text-center">Failed to load top movers</p>
+              ) : !topMovers?.data || topMovers.data.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-4 text-center">No data available</p>
+              ) : (
+                <div className="space-y-3">
+                  {topMovers.data.map((mover) => (
+                    <div key={mover.symbol} className="flex justify-between items-center">
+                      <div className="flex items-center gap-2">
+                        {mover.avatar ? (
+                          <img
+                            src={mover.avatar}
+                            alt={mover.symbol}
+                            className="size-6 rounded-full object-cover"
+                          />
+                        ) : (
+                          <div className="size-6 rounded-full bg-muted flex items-center justify-center">
+                            <BarChart3 className="size-3" />
+                          </div>
+                        )}
+                        <span className="text-sm font-medium">{mover.symbol}</span>
+                      </div>
+                      <Badge variant={mover.value > 0 ? 'default' : 'destructive'} className="text-xs">
+                        {mover.value > 0 ? '+' : ''}{mover.value.toFixed(2)}%
+                      </Badge>
+                    </div>
+                  ))}
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium">META</span>
-                  <span className="text-sm text-success">+6.3%</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium">AAPL</span>
-                  <span className="text-sm text-success">+3.1%</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium">GOOGL</span>
-                  <span className="text-sm text-danger">-2.4%</span>
-                </div>
-              </div>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -521,11 +558,29 @@ export default function UserDashboard() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 gap-3">
-                <Button variant="outline" size="sm" className="cursor-pointer">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="cursor-pointer"
+                  onClick={() => {
+                    setSelectedSide(OrderSide.BUY);
+                    setSelectedTicker('');
+                    setTradeModalOpen(true);
+                  }}
+                >
                   <Plus className="size-4 mr-2" />
                   {t('trading.buy')}
                 </Button>
-                <Button variant="outline" size="sm" className="cursor-pointer">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="cursor-pointer"
+                  onClick={() => {
+                    setSelectedSide(OrderSide.SELL);
+                    setSelectedTicker('');
+                    setTradeModalOpen(true);
+                  }}
+                >
                   <Minus className="size-4 mr-2" />
                   {t('trading.sell')}
                 </Button>
@@ -542,6 +597,14 @@ export default function UserDashboard() {
           </Card>
         </div>
       </div>
+
+      {/* Quick Trade Modal */}
+      <QuickTradeModal
+        open={tradeModalOpen}
+        onOpenChange={setTradeModalOpen}
+        defaultSide={selectedSide}
+        defaultTicker={selectedTicker}
+      />
     </div>
   );
 }

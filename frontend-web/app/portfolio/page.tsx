@@ -78,17 +78,17 @@ export default function PortfolioPage() {
   }));
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6">
       {/* Portfolio Summary */}
-      <Card className="bg-gradient-to-r from-blue-600 to-purple-600 text-white">
+      <Card className="glass-strong border-glass-border shadow-elevated-lg bg-gradient-to-br from-primary/10 via-transparent to-accent/10">
         <CardHeader>
-          <CardTitle className="text-2xl font-bold">{t('portfolio.title')}</CardTitle>
+          <CardTitle className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">{t('portfolio.title')}</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-4xl font-bold mb-2">
+          <div className="text-5xl font-bold mb-2">
             ${portfolio.totalValue.toLocaleString()}
           </div>
-          <div className="text-blue-100">
+          <div className="text-sm text-muted-foreground font-medium">
             {t('dashboard.portfolioValue')}
           </div>
         </CardContent>
@@ -96,7 +96,7 @@ export default function PortfolioPage() {
 
       <div className="grid gap-6 md:grid-cols-2">
         {/* Holdings Allocation */}
-        <Card>
+        <Card className="glass-strong border-glass-border shadow-elevated">
           <CardHeader>
             <CardTitle className="text-xl font-semibold">{t('portfolio.allocation')}</CardTitle>
           </CardHeader>
@@ -123,17 +123,17 @@ export default function PortfolioPage() {
                 {/* Holdings List */}
                 <div className="space-y-2">
                   {portfolio.holdings.map((holding, index) => (
-                    <div key={holding.symbol} className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/30 transition-colors">
+                    <div key={holding.symbol} className="flex items-center justify-between p-3 rounded-lg glass-subtle border-glass-border hover:bg-primary/5 transition-colors cursor-pointer">
                       <div className="flex items-center gap-3">
                         <div
-                          className="w-4 h-4 rounded-full"
+                          className="w-4 h-4 rounded-full shadow-sm"
                           style={{ backgroundColor: COLORS[index % COLORS.length] }}
                         />
                         <div className="font-semibold">{holding.symbol}</div>
                       </div>
                       <div className="text-right">
                         <div className="font-bold">${holding.value.toLocaleString()}</div>
-                        <div className="text-sm text-muted-foreground">{holding.percentage.toFixed(1)}%</div>
+                        <div className="text-xs text-muted-foreground">{holding.percentage.toFixed(1)}%</div>
                       </div>
                     </div>
                   ))}
@@ -150,7 +150,7 @@ export default function PortfolioPage() {
         </Card>
 
         {/* Equity Curve */}
-        <Card>
+        <Card className="glass-strong border-glass-border shadow-elevated">
           <CardHeader>
             <CardTitle className="text-xl font-semibold">{t('dashboard.portfolioPerformance')}</CardTitle>
           </CardHeader>

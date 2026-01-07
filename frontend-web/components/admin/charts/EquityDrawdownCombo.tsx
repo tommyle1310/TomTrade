@@ -2,7 +2,6 @@
 
 import { TrendingUp } from "lucide-react";
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { EquityDrawdownPoint } from "@/lib/types";
 
@@ -34,14 +33,14 @@ export default function EquityDrawdownCombo({ data }: EquityDrawdownComboProps) 
   const endDate = data.length > 0 ? new Date(data[data.length - 1].date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Aug 31';
 
   return (
-    <Card className="h-full py-3 gap-2">
-      <CardHeader className="px-3 ">
-        <CardTitle>Equity & Drawdown</CardTitle>
-        <CardDescription>{startDate}–{endDate}</CardDescription>
-      </CardHeader>
-      <CardContent className="px-3 my-0 ">
-        <ChartContainer config={chartConfig} className="h-[120px] ">
-          <LineChart accessibilityLayer data={fallbackData} >
+    <div className="h-full flex flex-col p-5">
+      <div className="mb-4">
+        <h3 className="text-lg font-semibold">Equity & Drawdown</h3>
+        <p className="text-sm text-muted-foreground">{startDate}–{endDate}</p>
+      </div>
+      <div className="flex-1">
+        <ChartContainer config={chartConfig} className="h-[120px]">
+          <LineChart accessibilityLayer data={fallbackData}>
             <CartesianGrid vertical={false} />
             <XAxis dataKey="day" tickLine={false} axisLine={false} tickMargin={8} />
             <YAxis yAxisId="left" orientation="left" tickLine={false} axisLine={false} width={40} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
@@ -51,18 +50,18 @@ export default function EquityDrawdownCombo({ data }: EquityDrawdownComboProps) 
             <Line yAxisId="right" dataKey="drawdown" type="monotone" stroke="var(--color-drawdown)" strokeWidth={2} dot={false} />
           </LineChart>
         </ChartContainer>
-      </CardContent>
-      <CardFooter className="px-3 my-0 ">
+      </div>
+      <div className="mt-4">
         <div className="flex w-full items-start gap-2 text-sm">
           <div className="grid gap-1">
-            <div className="flex items-center gap-2 leading-none font-medium">
+            <div className="flex items-center gap-2 leading-none font-medium text-muted-foreground">
               Monitoring equity trend and peak-to-trough declines <TrendingUp className="h-4 w-4" />
             </div>
-            <div className="text-muted-foreground leading-none">Left axis: $ equity • Right axis: % drawdown</div>
+            <div className="text-xs text-muted-foreground leading-none">Left axis: $ equity • Right axis: % drawdown</div>
           </div>
         </div>
-      </CardFooter>
-    </Card>
+      </div>
+    </div>
   );
 }
 

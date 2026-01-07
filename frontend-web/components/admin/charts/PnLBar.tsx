@@ -2,7 +2,6 @@
 
 import { TrendingUp } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, Rectangle, XAxis } from "recharts";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { PnLPoint } from "@/lib/types";
 
@@ -55,12 +54,12 @@ export default function PnLBar({ data }: PnLBarProps) {
   };
 
   return (
-    <Card className="h-full py-3 gap-2">
-      <CardHeader className="px-3">
-        <CardTitle>P&amp;L Over Time</CardTitle>
-        <CardDescription>{period}</CardDescription>
-      </CardHeader>
-      <CardContent className="px-3">
+    <div className="h-full flex flex-col p-5">
+      <div className="mb-4">
+        <h3 className="text-lg font-semibold">P&amp;L Over Time</h3>
+        <p className="text-sm text-muted-foreground">{period}</p>
+      </div>
+      <div className="flex-1">
         <ChartContainer config={chartConfig} className="h-[120px]">
           <BarChart accessibilityLayer data={fallbackData}>
             <CartesianGrid vertical={false} />
@@ -77,14 +76,14 @@ export default function PnLBar({ data }: PnLBarProps) {
             />
           </BarChart>
         </ChartContainer>
-      </CardContent>
-      <CardFooter className="px-3 flex-col items-start gap-2 text-sm">
-        <div className="flex gap-2 leading-none font-medium">
+      </div>
+      <div className="mt-4 flex flex-col gap-2 text-sm">
+        <div className="flex gap-2 leading-none font-medium text-muted-foreground">
           Trending up overall <TrendingUp className="h-4 w-4" />
         </div>
-        <div className="text-muted-foreground leading-none">Realized P&amp;L from closed trades</div>
-      </CardFooter>
-    </Card>
+        <div className="text-xs text-muted-foreground leading-none">Realized P&amp;L from closed trades</div>
+      </div>
+    </div>
   );
 }
 

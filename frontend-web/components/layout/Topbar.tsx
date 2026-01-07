@@ -171,32 +171,32 @@ export default function Topbar({
   };
 
   return (
-    <header className="sticky top-0 z-20 border-b bg-background/80 backdrop-blur-xl supports-backdrop-blur:bg-background/60 shadow-sm">
-      <div className="flex items-center gap-3 px-4 lg:px-6 h-14">
+    <header className="sticky top-4 mx-4 z-20 glass-strong border border-glass-border rounded-xl shadow-elevated-lg">
+      <div className="flex items-center gap-3 px-4 lg:px-6 h-16">
         <Button
           variant="ghost"
           size="icon"
-          className="lg:hidden h-9 w-9 hover:bg-accent/80 transition-colors"
+          className="lg:hidden h-9 w-9 hover:bg-primary/10 transition-colors"
           onClick={onToggleSidebar}
         >
-          <Menu className="size-4" />
+          <Menu className="size-5" />
         </Button>
-        <div className="font-semibold text-foreground/90">
+        <div className="font-bold text-lg bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
           {isAdmin() ? t('nav.adminPanel') : 'TomTrade'}
         </div>
-        <div className="ml-auto flex items-center gap-1.5">
+        <div className="ml-auto flex items-center gap-2">
           <LanguageSwitcher />
-          
+
           {isAuthenticated ? (
             <>
               <motion.button
                 aria-label={t('notifications.title')}
-                className="relative rounded-full p-2 hover:bg-accent/80 transition-colors"
+                className="relative rounded-full p-2.5 hover:bg-primary/10 transition-colors cursor-pointer"
                 variants={bellShake}
                 initial="idle"
                 whileHover="shake"
               >
-                <Bell className="size-4" />
+                <Bell className="size-5" />
                 <AnimatePresence>
                   {count > 0 && (
                     <motion.span
@@ -215,23 +215,23 @@ export default function Topbar({
                 <PopoverTrigger asChild>
                   <button
                     aria-label={t('user.profile')}
-                    className="rounded-full p-0.5 hover:ring-2 hover:ring-primary/20 transition-all"
+                    className="rounded-full p-0.5 hover:ring-2 hover:ring-primary/30 transition-all cursor-pointer"
                   >
-                    <Avatar className="h-8 w-8 border-2 border-background shadow-sm">
+                    <Avatar className="h-9 w-9 border-2 border-primary/20 shadow-md hover:border-primary/40 transition-colors">
                       <AvatarImage
                         src={user?.avatar || undefined}
                         alt="avatar"
                       />
-                      <AvatarFallback className="bg-primary/10 text-primary font-medium">
+                      <AvatarFallback className="bg-gradient-to-br from-primary/20 to-accent/20 text-primary font-semibold">
                         {avatarFallback}
                       </AvatarFallback>
                     </Avatar>
                   </button>
                 </PopoverTrigger>
-                <PopoverContent className="w-48 p-1.5" align="end">
-                  <div className="px-2 py-2 text-sm font-medium border-b mb-1.5">
-                    <div className="truncate">{getUserDisplayName()}</div>
-                    <div className="text-xs text-muted-foreground font-normal">
+                <PopoverContent className="w-56 p-2 glass-strong border-glass-border shadow-elevated-lg" align="end">
+                  <div className="px-3 py-2.5 text-sm font-medium border-b border-glass-border mb-2">
+                    <div className="truncate font-semibold">{getUserDisplayName()}</div>
+                    <div className="text-xs text-muted-foreground font-normal mt-0.5">
                       {isAdmin() ? t('user.admin') : t('user.regularUser')}
                     </div>
                   </div>
@@ -249,7 +249,7 @@ export default function Topbar({
             <Button
               variant="default"
               size="sm"
-              className="shadow-sm"
+              className="shadow-md hover:shadow-lg transition-shadow font-medium"
               onClick={() => {
                 setAuthMode('signin');
                 setAuthOpen(true);
@@ -263,7 +263,7 @@ export default function Topbar({
 
       <Dialog open={authOpen} onOpenChange={setAuthOpen}>
         <DialogContent className="sm:max-w-2xl p-0 overflow-hidden border-0 shadow-xl">
-          <motion.div 
+          <motion.div
             className="grid md:grid-cols-2"
             initial="hidden"
             animate="visible"
@@ -300,7 +300,7 @@ export default function Topbar({
                     : t('auth.signUpToStart')}
                 </DialogDescription>
                 {error && (
-                  <motion.div 
+                  <motion.div
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
                     className="mt-2 p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm"
@@ -396,10 +396,10 @@ export default function Topbar({
                             <FormItem>
                               <FormLabel>{t('auth.name')}</FormLabel>
                               <FormControl>
-                                <Input 
-                                  placeholder={t('auth.name')} 
+                                <Input
+                                  placeholder={t('auth.name')}
                                   className="transition-all focus:ring-2 focus:ring-primary/20"
-                                  {...field} 
+                                  {...field}
                                 />
                               </FormControl>
                               <FormMessage />
@@ -490,8 +490,8 @@ export default function Topbar({
                     {t('auth.facebook')}
                   </Button>
                   <Popover>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" className="col-span-2">Demo Account</Button>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="col-span-2">Demo Account</Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-80 flex justify-between gap-2">
                       <Button className='w-[48%]' onClick={() => handleDemoAccount('admin')}>{t('user.admin')}</Button>

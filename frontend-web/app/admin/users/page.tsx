@@ -153,31 +153,32 @@ export default function AdminUsersPage() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">{t('nav.manageUsers')}</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-3xl font-bold tracking-tight">{t('nav.manageUsers')}</h1>
+          <p className="text-sm text-muted-foreground mt-1">
             Search, sort, and manage roles and bans.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <div className="relative w-64">
-            <Search className="absolute left-2 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder={`${t('common.search')}...`}
-              className="pl-8"
+              className="pl-9 glass-subtle border-glass-border shadow-sm"
             />
           </div>
-          <Button variant="outline" onClick={() => setSortAsc((s) => !s)}>
+          <Button variant="outline" onClick={() => setSortAsc((s) => !s)} className="shadow-sm hover:shadow-md transition-shadow">
             <ArrowUpDown className="size-4 mr-2" /> Sort
           </Button>
           <Button
             variant="outline"
             onClick={fetchUsers}
             disabled={loadingUsers}
+            className="shadow-sm hover:shadow-md transition-shadow"
           >
             <RefreshCw
               className={`size-4 mr-2 ${loadingUsers ? 'animate-spin' : ''}`}
@@ -188,9 +189,9 @@ export default function AdminUsersPage() {
       </div>
 
       {error && (
-        <div className="flex items-center gap-2 p-3 rounded-lg bg-red-50 border border-red-200">
-          <AlertTriangle className="size-4 text-red-500" />
-          <span className="text-red-700">{error}</span>
+        <div className="flex items-center gap-3 p-4 rounded-xl glass-strong border border-destructive/30 shadow-elevated">
+          <AlertTriangle className="size-5 text-destructive" />
+          <span className="text-destructive font-medium">{error}</span>
         </div>
       )}
 
@@ -199,33 +200,33 @@ export default function AdminUsersPage() {
           <LoadingSpinner size="lg" />
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl border">
+        <div className="glass-strong border border-glass-border rounded-xl shadow-elevated overflow-hidden">
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead>{t('admin.users')}</TableHead>
-                <TableHead>{t('auth.email')}</TableHead>
-                <TableHead>{t('user.role')}</TableHead>
-                <TableHead>{t('history.status')}</TableHead>
-                <TableHead>Balance</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead className="text-right">{t('common.actions')}</TableHead>
+              <TableRow className="border-glass-border hover:bg-transparent">
+                <TableHead className="font-semibold">{t('admin.users')}</TableHead>
+                <TableHead className="font-semibold">{t('auth.email')}</TableHead>
+                <TableHead className="font-semibold">{t('user.role')}</TableHead>
+                <TableHead className="font-semibold">{t('history.status')}</TableHead>
+                <TableHead className="font-semibold">Balance</TableHead>
+                <TableHead className="font-semibold">Created</TableHead>
+                <TableHead className="text-right font-semibold">{t('common.actions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filtered.map((user) => (
-                <TableRow key={user.id}>
+                <TableRow key={user.id} className="border-glass-border hover:bg-primary/5 transition-colors cursor-pointer">
                   <TableCell>
                     <div className="flex items-center gap-3">
-                      <Avatar className="size-8">
+                      <Avatar className="size-9 border-2 border-primary/20">
                         <AvatarImage src={user.avatar || undefined} />
-                        <AvatarFallback>
+                        <AvatarFallback className="bg-gradient-to-br from-primary/20 to-accent/20 font-semibold">
                           {user.name?.charAt(0).toUpperCase() ||
                             user.email.charAt(0).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
                       <div>
-                        <div className="font-medium">
+                        <div className="font-semibold">
                           {user.name || 'No name'}
                         </div>
                         <div className="text-xs text-muted-foreground">
@@ -234,75 +235,77 @@ export default function AdminUsersPage() {
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell>{user.email}</TableCell>
+                  <TableCell className="font-medium">{user.email}</TableCell>
                   <TableCell>
                     <Badge
                       variant={user.role === 'ADMIN' ? 'default' : 'secondary'}
                     >
+                      {user.role === 'ADMIN' && <Crown className="size-3 mr-1" />}
                       {user.role}
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={user.isBanned ? 'destructive' : 'default'}>
+                    <Badge variant={user.isBanned ? 'destructive' : 'success'}>
+                      {user.isBanned ? <Ban className="size-3 mr-1" /> : <Check className="size-3 mr-1" />}
                       {user.isBanned ? 'Banned' : 'Active'}
                     </Badge>
                   </TableCell>
-                  <TableCell>{formatCurrency(user.balance)}</TableCell>
+                  <TableCell className="font-semibold">{formatCurrency(user.balance)}</TableCell>
                   <TableCell>{formatDate(user.createdAt)}</TableCell>
                   <TableCell className="text-right space-x-2">
                     <Popover>
                       <PopoverTrigger asChild>
-                        <Button variant="outline">
-                        <Ellipsis className="size-4 mr-1" />
+                        <Button variant="outline" size="sm" className="shadow-sm hover:shadow-md transition-shadow">
+                          <Ellipsis className="size-4" />
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-80 flex-col flex">
-                      <Link href={`/admin/users/${user.id}/transactions`} className='w-full'>
-                      <Button variant="outline" size="sm" className='w-full'>
-                        <FileText className="size-4 mr-1" />
-                        Transactions
-                      </Button>
-                    </Link>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => toggleBan(user.id)}
-                      disabled={
-                        actionLoading === user.id || user.role === 'ADMIN'
-                      }
-                    >
-                      {actionLoading === user.id ? (
-                        <RefreshCw className="size-4 mr-1 animate-spin" />
-                      ) : user.isBanned ? (
-                        <Check className="size-4 mr-1" />
-                      ) : (
-                        <Ban className="size-4 mr-1" />
-                      )}
-                      {user.isBanned ? 'Unban' : 'Ban'}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => promote(user.id)}
-                      disabled={
-                        actionLoading === user.id || user.role === 'ADMIN'
-                      }
-                    >
-                      <Crown className="size-4 mr-1" /> Promote
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => demote(user.id)}
-                      disabled={
-                        actionLoading === user.id || user.role === 'USER'
-                      }
-                    >
-                      <UserMinus className="size-4 mr-1" /> Demote
-                    </Button>
+                      <PopoverContent className="w-80 flex-col flex glass-strong border-glass-border shadow-elevated-lg">
+                        <Link href={`/admin/users/${user.id}/transactions`} className='w-full'>
+                          <Button variant="outline" size="sm" className='w-full'>
+                            <FileText className="size-4 mr-1" />
+                            Transactions
+                          </Button>
+                        </Link>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => toggleBan(user.id)}
+                          disabled={
+                            actionLoading === user.id || user.role === 'ADMIN'
+                          }
+                        >
+                          {actionLoading === user.id ? (
+                            <RefreshCw className="size-4 mr-1 animate-spin" />
+                          ) : user.isBanned ? (
+                            <Check className="size-4 mr-1" />
+                          ) : (
+                            <Ban className="size-4 mr-1" />
+                          )}
+                          {user.isBanned ? 'Unban' : 'Ban'}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => promote(user.id)}
+                          disabled={
+                            actionLoading === user.id || user.role === 'ADMIN'
+                          }
+                        >
+                          <Crown className="size-4 mr-1" /> Promote
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => demote(user.id)}
+                          disabled={
+                            actionLoading === user.id || user.role === 'USER'
+                          }
+                        >
+                          <UserMinus className="size-4 mr-1" /> Demote
+                        </Button>
                       </PopoverContent>
                     </Popover>
-               
+
                   </TableCell>
                 </TableRow>
               ))}

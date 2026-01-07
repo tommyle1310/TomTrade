@@ -2,12 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { 
-  LayoutDashboard, 
-  BarChart3, 
-  TrendingUp, 
-  Eye, 
-  Settings, 
+import {
+  LayoutDashboard,
+  BarChart3,
+  TrendingUp,
+  Eye,
+  Settings,
   Wallet,
   History,
   Target,
@@ -37,15 +37,15 @@ export default function UserSidebar() {
   ];
 
   return (
-    <aside className="fixed left-0 top-0 h-screen w-56 border-r bg-sidebar/95 backdrop-blur-sm z-50 hidden lg:block shadow-sm">
+    <aside className="fixed left-0 top-0 h-screen w-56 glass-strong border-r border-glass-border z-50 hidden lg:block shadow-elevated-lg">
       <div className="h-full flex flex-col">
-        <div className="px-5 py-5 border-b bg-gradient-to-r from-primary/5 to-transparent">
-          <div className="text-xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
+        <div className="px-5 py-6 border-b border-glass-border bg-gradient-to-br from-primary/10 via-transparent to-accent/5">
+          <div className="text-xl font-bold tracking-tight bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
             TomTrade
           </div>
-          <div className="text-sm text-muted-foreground">Trading Platform</div>
+          <div className="text-xs text-muted-foreground mt-1 font-medium">Trading Platform</div>
         </div>
-        <motion.nav 
+        <motion.nav
           className="flex-1 p-3 overflow-y-auto"
           variants={staggerContainer}
           initial="hidden"
@@ -53,35 +53,35 @@ export default function UserSidebar() {
         >
           <ul className="space-y-1">
             {navItems.map((item) => (
-              <NavItem 
+              <NavItem
                 key={item.href}
-                href={item.href} 
-                icon={<item.icon className="size-4" />} 
+                href={item.href}
+                icon={<item.icon className="size-4" />}
                 label={item.label}
                 isActive={pathname === item.href}
               />
             ))}
           </ul>
         </motion.nav>
-        <div className="p-4 border-t bg-gradient-to-t from-sidebar to-transparent">
-          <div className="text-sm text-muted-foreground mb-2 truncate">
-            {t('dashboard.welcome')}, <span className="font-medium text-foreground">{getUserDisplayName()}</span>
+        <div className="p-4 border-t border-glass-border bg-gradient-to-t from-accent/5 to-transparent">
+          <div className="text-xs text-muted-foreground mb-2 truncate">
+            {t('dashboard.welcome')}, <span className="font-semibold text-foreground">{getUserDisplayName()}</span>
           </div>
-          <Button className="w-full shadow-sm">{t('trading.placeOrder')}</Button>
+          <Button className="w-full shadow-md hover:shadow-lg transition-shadow">{t('trading.placeOrder')}</Button>
         </div>
       </div>
     </aside>
   );
 }
 
-function NavItem({ 
-  href, 
-  icon, 
+function NavItem({
+  href,
+  icon,
   label,
-  isActive 
-}: { 
-  href: string; 
-  icon: React.ReactNode; 
+  isActive
+}: {
+  href: string;
+  icon: React.ReactNode;
   label: string;
   isActive: boolean;
 }) {
@@ -90,26 +90,26 @@ function NavItem({
       <Link
         href={href}
         className={cn(
-          "group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
-          "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-          "border border-transparent hover:border-sidebar-border/50",
-          isActive && "bg-primary/10 text-primary border-primary/20 shadow-sm"
+          "group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 cursor-pointer",
+          "hover:bg-primary/10 hover:text-foreground hover:shadow-sm",
+          "border border-transparent hover:border-primary/20",
+          isActive && "glass-subtle bg-gradient-to-r from-primary/15 to-accent/10 text-primary border-primary/30 shadow-md shadow-primary/10"
         )}
       >
-        <motion.span 
+        <motion.span
           className={cn(
-            "text-muted-foreground group-hover:text-inherit transition-colors",
+            "text-muted-foreground group-hover:text-primary transition-colors",
             isActive && "text-primary"
           )}
           whileHover={navItemHover}
         >
           {icon}
         </motion.span>
-        <span>{label}</span>
+        <span className={isActive ? "font-semibold" : ""}>{label}</span>
         {isActive && (
           <motion.div
             layoutId="userActiveNav"
-            className="ml-auto w-1.5 h-1.5 rounded-full bg-primary"
+            className="ml-auto w-2 h-2 rounded-full bg-primary shadow-glow"
             transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
           />
         )}

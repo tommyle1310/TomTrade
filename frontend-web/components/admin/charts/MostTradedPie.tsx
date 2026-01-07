@@ -2,7 +2,6 @@
 
 import { TrendingUp } from "lucide-react";
 import { Label, Pie, PieChart, Sector } from "recharts";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import type { PieSectorDataItem } from "recharts/types/polar/Pie";
 import { MostTradedStock } from "@/lib/types";
@@ -57,13 +56,13 @@ export default function MostTradedPie({ data }: MostTradedPieProps) {
   const topStock = data.length > 0 ? data[0].ticker : 'AAPL';
 
   return (
-    <Card className="flex flex-col py-3 gap-2">
-      <CardHeader className="items-center pb-0 px-3">
-        <CardTitle>Most Traded Stocks</CardTitle>
-        <CardDescription>By share of volume</CardDescription>
-      </CardHeader>
-      <CardContent className="flex-1 pb-0 px-3">
-        <ChartContainer config={chartConfig} className="mx-auto h-[120px] w-[120px] ">
+    <div className="flex flex-col h-full p-5">
+      <div className="text-center mb-4">
+        <h3 className="text-lg font-semibold">Most Traded Stocks</h3>
+        <p className="text-sm text-muted-foreground">By share of volume</p>
+      </div>
+      <div className="flex-1 flex items-center justify-center">
+        <ChartContainer config={chartConfig} className="mx-auto h-[140px] w-[140px]">
           <PieChart>
             <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
             <Pie
@@ -77,14 +76,14 @@ export default function MostTradedPie({ data }: MostTradedPieProps) {
             />
           </PieChart>
         </ChartContainer>
-      </CardContent>
-      <CardFooter className="flex-col gap-2 text-sm px-3">
-        <div className="flex items-center gap-2 leading-none font-medium">
+      </div>
+      <div className="mt-4 flex flex-col gap-2 text-sm text-center">
+        <div className="flex items-center justify-center gap-2 leading-none font-medium text-muted-foreground">
           Trending up for {topStock} <TrendingUp className="h-4 w-4" />
         </div>
-        <div className="text-muted-foreground leading-none">Distribution of trades across symbols</div>
-      </CardFooter>
-    </Card>
+        <div className="text-xs text-muted-foreground leading-none">Distribution of trades across symbols</div>
+      </div>
+    </div>
   );
 }
 
