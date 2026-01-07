@@ -2,6 +2,27 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
 # ------------------------------------------------------
 
+type Activity {
+  avgPrice: Float!
+  currentPrice: Float!
+  shares: Float!
+  ticker: String!
+  timestamp: DateTime!
+  type: String!
+}
+
+input ActivityPaginationInput {
+  limit: Int! = 20
+  page: Int! = 1
+}
+
+type ActivityPaginationResponse {
+  data: [Activity!]!
+  page: Int!
+  total: Int!
+  totalPages: Int!
+}
+
 input AddStockToWatchlistInput {
   ticker: String!
   watchlistId: String!
@@ -136,6 +157,28 @@ type Hello {
   message: String!
 }
 
+type Holding {
+  avgPrice: Float!
+  currentPrice: Float!
+  pnl: Float!
+  pnlPercent: Float!
+  quantity: Float!
+  side: String!
+  symbol: String!
+}
+
+input HoldingPaginationInput {
+  limit: Int! = 20
+  page: Int! = 1
+}
+
+type HoldingPaginationResponse {
+  data: [Holding!]!
+  page: Int!
+  total: Int!
+  totalPages: Int!
+}
+
 type HoldingSlice {
   percentage: Float!
   symbol: String!
@@ -175,6 +218,26 @@ type MarketData {
   ticker: String!
   timestamp: String!
   volume: String!
+}
+
+type MarketOverviewItem {
+  key: String!
+  label: String!
+  trend: String!
+  unit: String!
+  value: Float!
+}
+
+input MarketOverviewPaginationInput {
+  limit: Int! = 20
+  page: Int! = 1
+}
+
+type MarketOverviewPaginationResponse {
+  data: [MarketOverviewItem!]!
+  page: Int!
+  total: Int!
+  totalPages: Int!
 }
 
 type MetricCard {
@@ -386,16 +449,20 @@ type Query {
   getDashboard: DashboardResult!
   getDashboardSeedingStatus: String!
   getEMA(interval: Interval! = _1d, period: Float! = 20, ticker: String!): [Float!]!
+  getHoldings(input: HoldingPaginationInput!): HoldingPaginationResponse!
+  getMarketOverview(input: MarketOverviewPaginationInput!): MarketOverviewPaginationResponse!
   getMyAlertRules: [AlertRule!]!
   getMyBalance: Float!
   getPortfolioSummary: String!
   getPositionPnL(ticker: String!): String!
   getRSI(interval: Interval! = _1d, period: Float! = 14, ticker: String!): [Float!]!
+  getRecentActivities(input: ActivityPaginationInput!): ActivityPaginationResponse!
   getRiskConfig: RiskConfig!
   getRiskReport: RiskReport!
   getSMA(interval: Interval! = _1d, period: Float! = 20, ticker: String!): [Float!]!
   getStockPosition(ticker: String!): StockPosition
   getSystemDashboard(input: SystemDashboardInput!): SystemDashboardResult!
+  getTopMovers(input: TopMoversPaginationInput!): TopMoversPaginationResponse!
   getTotalPnL: String!
   getUserById(userId: String!): AdminUser!
   getUserMetricCards: [MetricCard!]!
@@ -540,6 +607,25 @@ enum TimeInForce {
   FOK
   GTC
   IOC
+}
+
+type TopMover {
+  avatar: String
+  symbol: String!
+  value: Float!
+}
+
+input TopMoversPaginationInput {
+  filter: String = "gainers"
+  limit: Int! = 20
+  page: Int! = 1
+}
+
+type TopMoversPaginationResponse {
+  data: [TopMover!]!
+  page: Int!
+  total: Int!
+  totalPages: Int!
 }
 
 type TopUser {

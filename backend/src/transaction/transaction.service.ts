@@ -12,6 +12,8 @@ import {
   TransactionPaginationResponse,
   TransactionStats,
 } from './entities/transaction-admin.entity';
+import { ActivityPaginationInput } from './dto/activity.input';
+import { ActivityPaginationResponse } from './entities/activity.entity';
 
 @Injectable()
 export class TransactionService {
@@ -481,5 +483,58 @@ export class TransactionService {
     });
 
     console.log(`✅ Transactions recorded for both buyer and seller`);
+  }
+
+  async getRecentActivities(
+    userId: string,
+    input: ActivityPaginationInput,
+  ): Promise<ActivityPaginationResponse> {
+    const { page, limit } = input;
+    const skip = (page - 1) * limit;
+
+    // Get total count
+    const total = await this.prisma.transaction.count({
+      where: { userId },
+    });
+
+    // Get transactions with pagination
+    const transactions = await this.prisma.transaction.findMany({
+      where: { userId },
+      orderBy: { timestamp: 'desc' },
+      skip,
+      take: limit,
+    });
+
+    // Fetch current prices for all tickers
+    const activities = await Promise.all(
+      transactions.map(async (tx) => {
+        // Get latest market data for current price
+        const latestMarketData = await this.prisma.marketData.findFirst({
+          where: { ticker: tx.ticker },
+          orderBy: { timestamp: 'desc' },
+          select: { close: true },
+        });
+
+        const currentPrice = latestMarketData?.close ?? tx.price;
+
+        return {
+          type: tx.action, // BUY or SELL
+          timestamp: tx.timestamp,
+          avgPrice: tx.price,
+          currentPrice,
+          ticker: tx.ticker,
+          shares: tx.shares,
+        };
+      }),
+    );
+
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      data: activities,
+      total,
+      page,
+      totalPages,
+    };
   }
 }

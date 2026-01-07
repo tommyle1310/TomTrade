@@ -5,6 +5,7 @@ import {
   ResolveField,
   Mutation,
   Args,
+  Query,
 } from '@nestjs/graphql';
 import { Stock } from '../entities/stock.entity';
 import { MarketData } from '../entities/market-data.entity';
@@ -12,6 +13,10 @@ import { Interval } from '../enums/interval.enum';
 import { MarketDataService } from './market-data.service';
 import { SocketService } from '../../core/socket-gateway.service';
 import { AlertDispatcherService } from '../../alert-rule/alert-dispatcher.service';
+import { MarketOverviewPaginationInput } from '../dto/market-overview.input';
+import { MarketOverviewPaginationResponse } from '../entities/market-overview.entity';
+import { TopMoversPaginationInput } from '../dto/top-movers.input';
+import { TopMoversPaginationResponse } from '../entities/top-mover.entity';
 
 @Resolver(() => Stock)
 export class MarketDataResolver {
@@ -98,5 +103,15 @@ export class MarketDataResolver {
       volume: '1000000',
       afterHours: price,
     };
+  }
+
+  @Query(() => MarketOverviewPaginationResponse, { name: 'getMarketOverview' })
+  getMarketOverview(@Args('input') input: MarketOverviewPaginationInput) {
+    return this.marketDataService.getMarketOverview(input);
+  }
+
+  @Query(() => TopMoversPaginationResponse, { name: 'getTopMovers' })
+  getTopMovers(@Args('input') input: TopMoversPaginationInput) {
+    return this.marketDataService.getTopMovers(input);
   }
 }

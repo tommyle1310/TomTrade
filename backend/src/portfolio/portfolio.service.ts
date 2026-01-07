@@ -1,6 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'prisma/prisma.service';
 import { Prisma } from '@prisma/client';
+import { HoldingPaginationInput } from './dto/holding.input';
+import { HoldingPaginationResponse } from './entities/holding.entity';
 
 @Injectable()
 export class PortfolioService {
@@ -209,5 +211,70 @@ export class PortfolioService {
         quantity: { decrement: quantity },
       },
     });
+  }
+
+  async getHoldings(
+    userId: string,
+    input: HoldingPaginationInput,
+  ): Promise<HoldingPaginationResponse> {
+    const { page, limit } = input;
+    const skip = (page - 1) * limit;
+
+    // Get total count
+    const total = await this.prisma.portfolio.count({
+      where: { userId, quantity: { gt: 0 } },
+    });
+
+    // Get portfolio positions with pagination
+    const positions = await this.prisma.portfolio.findMany({
+      where: { userId, quantity: { gt: 0 } },
+      skip,
+      take: limit,
+      orderBy: { ticker: 'asc' },
+    });
+
+    // Fetch current prices for all tickers
+    const tickers = positions.map((p) => p.ticker);
+    const holdings = await Promise.all(
+      positions.map(async (position) => {
+        // Get latest market data for current price
+        const latestMarketData = await this.prisma.marketData.findFirst({
+          where: { ticker: position.ticker },
+          orderBy: { timestamp: 'desc' },
+          select: { close: true },
+        });
+
+        const currentPrice = latestMarketData?.close ?? position.averagePrice;
+        const pnl = (currentPrice - position.averagePrice) * position.quantity;
+        const pnlPercent =
+          position.averagePrice > 0
+            ? ((currentPrice - position.averagePrice) / position.averagePrice) *
+              100
+            : 0;
+
+        let side = 'neutral';
+        if (pnl > 0) side = 'profit';
+        else if (pnl < 0) side = 'loss';
+
+        return {
+          symbol: position.ticker,
+          quantity: position.quantity,
+          avgPrice: position.averagePrice,
+          currentPrice,
+          pnl,
+          pnlPercent,
+          side,
+        };
+      }),
+    );
+
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      data: holdings,
+      total,
+      page,
+      totalPages,
+    };
   }
 }

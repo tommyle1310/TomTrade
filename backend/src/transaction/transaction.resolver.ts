@@ -22,6 +22,8 @@ import {
 } from './entities/transaction-admin.entity';
 import { TradeTick } from './entities/trade-tick.entity';
 import { PrismaService } from 'prisma/prisma.service';
+import { ActivityPaginationInput } from './dto/activity.input';
+import { ActivityPaginationResponse } from './entities/activity.entity';
 
 @Resolver(() => Transaction)
 export class TransactionResolver {
@@ -34,6 +36,15 @@ export class TransactionResolver {
   @UseGuards(GqlAuthGuard)
   myTransactions(@CurrentUser() user: User) {
     return this.transactionService.getByUser(user.id);
+  }
+
+  @Query(() => ActivityPaginationResponse, { name: 'getRecentActivities' })
+  @UseGuards(GqlAuthGuard)
+  getRecentActivities(
+    @CurrentUser() user: User,
+    @Args('input') input: ActivityPaginationInput,
+  ) {
+    return this.transactionService.getRecentActivities(user.id, input);
   }
 
   // Admin queries for transaction monitoring
