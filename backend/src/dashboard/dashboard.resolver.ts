@@ -5,6 +5,7 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { DashboardService } from './dashboard.service';
 import { DashboardResult } from './entities/dashboard-result.entity';
 import { StockPosition } from './entities/stock-position.entity';
+import { MetricCard } from './entities/metric-card.entity';
 
 @Resolver()
 @UseGuards(GqlAuthGuard)
@@ -28,5 +29,15 @@ export class DashboardResolver {
     @Args('ticker') ticker: string,
   ): Promise<StockPosition | null> {
     return this.dashboardService.getStockPosition(user.id, ticker);
+  }
+
+  @Query(() => [MetricCard], { name: 'getUserMetricCards' })
+  async getUserMetricCards(
+    @CurrentUser() user: { id: string },
+  ): Promise<MetricCard[]> {
+    console.log(
+      `🔍 DashboardResolver.getUserMetricCards called for user: ${user.id}`,
+    );
+    return this.dashboardService.getUserMetricCards(user.id);
   }
 }

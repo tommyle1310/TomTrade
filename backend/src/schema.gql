@@ -177,6 +177,17 @@ type MarketData {
   volume: String!
 }
 
+type MetricCard {
+  change: Float
+  changeExtraData: String
+  changeType: String
+  extraData: String
+  title: String!
+  value: String!
+  valueType: String
+  valueUnit: String
+}
+
 type MetricWithDateRange {
   endDate: Float!
   startDate: Float!
@@ -387,6 +398,7 @@ type Query {
   getSystemDashboard(input: SystemDashboardInput!): SystemDashboardResult!
   getTotalPnL: String!
   getUserById(userId: String!): AdminUser!
+  getUserMetricCards: [MetricCard!]!
   indicators(indicators: [String!], interval: String!, period: Float, symbol: String!): [IndicatorSeries!]!
   me: User!
   myOrders: [Order!]!

@@ -7,6 +7,7 @@ import { BalanceService } from '../balance/balance.service';
 import { PortfolioPnLService } from '../portfolio/portfolio-pnl.service';
 import { StockPosition } from './entities/stock-position.entity';
 import { DashboardResult } from './entities/dashboard-result.entity';
+import { MetricCard } from './entities/metric-card.entity';
 
 @Injectable()
 export class DashboardService {
@@ -299,5 +300,121 @@ export class DashboardService {
     stockPosition.unrealizedPnLPercent = unrealizedPnLPercent;
 
     return stockPosition;
+  }
+
+  /**
+   * Get user metric cards for dashboard display
+   * Returns an array of standardized metric cards with trading statistics
+   */
+  async getUserMetricCards(userId: string): Promise<MetricCard[]> {
+    console.log(
+      `🔍 DashboardService.getUserMetricCards called for user: ${userId}`,
+    );
+
+    try {
+      // Get user data for account status
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          createdAt: true,
+          isBanned: true,
+        },
+      });
+
+      if (!user) {
+        console.error(`❌ User ${userId} not found`);
+        throw new Error('User not found');
+      }
+
+      // Get dashboard data which includes portfolio value and P&L
+      const dashboardData = await this.getDashboard(userId);
+
+      // Calculate initial investment (for Portfolio Value change calculation)
+      const totalCost = dashboardData.stockPositions.reduce(
+        (sum, pos) => sum + pos.averageBuyPrice * pos.quantity,
+        0,
+      );
+
+      // Portfolio Value is current total assets (stocks + cash)
+      const portfolioValue = dashboardData.totalPortfolioValue;
+      const initialInvestment = totalCost + dashboardData.cashBalance;
+      const portfolioChange = portfolioValue - initialInvestment;
+      const portfolioChangePercent =
+        initialInvestment > 0 ? (portfolioChange / initialInvestment) * 100 : 0;
+
+      // Total P&L
+      const totalPnL = dashboardData.totalPnL;
+      const totalInvested = totalCost > 0 ? totalCost : 1; // Avoid division by zero
+      const pnlPercent = (totalPnL / totalInvested) * 100;
+
+      // Open Positions
+      const openPositionsCount = dashboardData.stockPositions.length;
+      const profitablePositionsCount = dashboardData.stockPositions.filter(
+        (pos) => pos.unrealizedPnL > 0,
+      ).length;
+
+      // Format join date
+      const joinDate = new Date(user.createdAt);
+      const formattedJoinDate = `${joinDate.getMonth() + 1}/${joinDate.getDate()}/${joinDate.getFullYear()}`;
+
+      // Create metric cards array
+      const metricCards: MetricCard[] = [
+        // Portfolio Value Card
+        {
+          title: 'Portfolio Value',
+          value: portfolioValue.toFixed(0),
+          valueUnit: 'currency',
+          valueType: 'dollar',
+          change: parseFloat(portfolioChange.toFixed(2)),
+          changeType: 'dollar',
+          changeExtraData: `${portfolioChangePercent >= 0 ? '+' : ''}${portfolioChangePercent.toFixed(2)}%`,
+        },
+        // Total P&L Card
+        {
+          title: 'Total P&L',
+          value: totalPnL.toFixed(0),
+          valueUnit: 'currency',
+          valueType: 'dollar',
+          change: parseFloat(pnlPercent.toFixed(2)),
+          changeType: 'percent',
+          changeExtraData: 'today',
+        },
+        // Open Positions Card
+        {
+          title: 'Open Position',
+          value: openPositionsCount.toString(),
+          valueUnit: 'quantity',
+          valueType: 'number',
+          change: profitablePositionsCount,
+          changeType: 'number',
+          changeExtraData: 'profitable',
+        },
+        // Account Status Card
+        {
+          title: 'Account Status',
+          value: user.isBanned ? 'Inactive' : 'Active',
+          valueUnit: 'Active/Inactive',
+          valueType: 'status',
+          change: undefined,
+          changeType: undefined,
+          changeExtraData: undefined,
+          extraData: `Joined on ${formattedJoinDate}`,
+        },
+      ];
+
+      console.log(`✅ Generated ${metricCards.length} metric cards for ${userId}`);
+      console.log(`  Portfolio Value: $${portfolioValue.toFixed(2)} (${portfolioChangePercent >= 0 ? '+' : ''}${portfolioChangePercent.toFixed(2)}%)`);
+      console.log(`  Total P&L: $${totalPnL.toFixed(2)} (${pnlPercent.toFixed(2)}%)`);
+      console.log(`  Open Positions: ${openPositionsCount} (${profitablePositionsCount} profitable)`);
+      console.log(`  Account Status: ${user.isBanned ? 'Inactive' : 'Active'}`);
+
+      return metricCards;
+    } catch (error) {
+      console.error(
+        `❌ Error in DashboardService.getUserMetricCards:`,
+        error,
+      );
+      throw error;
+    }
   }
 }
