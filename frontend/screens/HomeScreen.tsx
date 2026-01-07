@@ -24,7 +24,7 @@ interface HomeScreenProps {
 
 export default function HomeScreen({ navigation }: HomeScreenProps) {
   console.log('🔍 HomeScreen component rendering');
-  
+
   const { user } = useAuthStore();
   const {
     dashboard,
@@ -36,23 +36,23 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
     setDashboard,
     setBalance,
   } = usePortfolioStore();
-  
+
   // CRITICAL FIX: Use direct state subscription with force re-render
   const [localPortfolioValue, setLocalPortfolioValue] = useState<number | null>(null);
   const [localCashBalance, setLocalCashBalance] = useState<number | null>(null);
   const [localBalanceValue, setLocalBalanceValue] = useState<number>(0);
-  
+
   // CRITICAL FIX: Add force re-render state
   const [forceUpdate, setForceUpdate] = useState(0);
-  
+
   // CRITICAL FIX: Add flag to prevent useEffect from overriding socket updates
   const [isSocketUpdate, setIsSocketUpdate] = useState(false);
-  
+
   // CRITICAL FIX: Set initial values from Zustand state only once
   useEffect(() => {
     console.log('🔍 useEffect [] triggered (component mount)');
     console.log('🔍 Setting initial values from Zustand state...');
-    
+
     // Set initial values from Zustand state
     const currentState = usePortfolioStore.getState();
     console.log('🔍 Current Zustand state:', {
@@ -60,45 +60,45 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
       cashBalance: currentState.dashboard?.cashBalance,
       balance: currentState.balance,
     });
-    
+
     setLocalPortfolioValue(currentState.dashboard?.totalPortfolioValue || null);
     setLocalCashBalance(currentState.dashboard?.cashBalance || null);
     setLocalBalanceValue(currentState.balance || 0);
-    
+
     console.log('🔍 Initial values set');
   }, []);
-  
+
   console.log('🔍 Component state check - portfolio:', localPortfolioValue, 'balance:', localBalanceValue, 'dashboard balance:', localCashBalance)
-  
+
   // CRITICAL FIX: Sync local state with dashboard when it changes (for GraphQL updates)
   useEffect(() => {
     console.log('🔍 useEffect [dashboard, isSocketUpdate] triggered');
     console.log('🔍 dashboard:', dashboard?.totalPortfolioValue);
     console.log('🔍 isSocketUpdate:', isSocketUpdate);
-    
+
     // CRITICAL FIX: Only sync if this is NOT a socket update AND the dashboard data is NEWER
     if (dashboard && !isSocketUpdate) {
       // Check if dashboard data is actually newer than current local state
       const dashboardTotal = dashboard.totalPortfolioValue;
       const currentLocalTotal = localPortfolioValue;
-      
+
       console.log('🔍 Dashboard vs Local comparison:', {
         dashboard: dashboardTotal,
         local: currentLocalTotal,
         difference: dashboardTotal - (currentLocalTotal || 0)
       });
-      
+
       // CRITICAL FIX: Prevent stale data from overriding fresh socket data
       // Only update if dashboard data is significantly different AND not the stale fallback value
       const isStaleFallback = Math.abs(dashboardTotal - 70050) < 100; // Check if it's the known stale value
       const isZeroOrVeryLow = dashboardTotal < 1000; // Check if dashboard shows 0 or very low value
-      
+
       if (isStaleFallback || isZeroOrVeryLow) {
         console.log('🔄 CRITICAL: Detected stale/zero dashboard data, skipping GraphQL sync');
         console.log('🔄 Dashboard total:', dashboardTotal, 'isStaleFallback:', isStaleFallback, 'isZeroOrVeryLow:', isZeroOrVeryLow);
         return;
       }
-      
+
       // CRITICAL FIX: Only update if dashboard data is significantly higher than current local state
       // This prevents stale low values from overriding fresh high values
       if (dashboardTotal > (currentLocalTotal || 0) + 1000) {
@@ -120,30 +120,30 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
     console.log('🔍 useEffect [balance, isSocketUpdate] triggered');
     console.log('🔍 balance:', balance);
     console.log('🔍 isSocketUpdate:', isSocketUpdate);
-    
+
     // CRITICAL FIX: Only sync if this is NOT a socket update AND the balance data is NEWER
     if (balance !== undefined && !isSocketUpdate) {
       // Check if balance data is actually newer than current local state
       const balanceValue = balance;
       const currentLocalBalance = localBalanceValue;
-      
+
       console.log('🔍 Balance vs Local comparison:', {
         balance: balanceValue,
         local: currentLocalBalance,
         difference: balanceValue - currentLocalBalance
       });
-      
+
       // CRITICAL FIX: Prevent stale data from overriding fresh socket data
       // Only update if balance data is significantly different AND not the stale fallback value
       const isStaleFallback = Math.abs(balanceValue - 70050) < 100; // Check if it's the known stale value
       const isZeroOrVeryLow = balanceValue < 1000; // Check if balance shows 0 or very low value
-      
+
       if (isStaleFallback || isZeroOrVeryLow) {
         console.log('🔄 CRITICAL: Detected stale/zero balance data, skipping GraphQL balance sync');
         console.log('🔄 Balance value:', balanceValue, 'isStaleFallback:', isStaleFallback, 'isZeroOrVeryLow:', isZeroOrVeryLow);
         return;
       }
-      
+
       // CRITICAL FIX: Only update if balance data is significantly higher than current local state
       // This prevents stale low values from overriding fresh high values
       if (balanceValue > currentLocalBalance + 1000) {
@@ -191,8 +191,8 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
 
   const handleOrderNotification = useCallback((data: OrderNotification) => {
     console.log('🔔 HomeScreen: Order notification received:', data);
-    const typeText = data.type === 'ORDER_FILLED' ? 'filled' : 
-                     data.type === 'ORDER_PARTIAL' ? 'partially filled' : 'cancelled';
+    const typeText = data.type === 'ORDER_FILLED' ? 'filled' :
+      data.type === 'ORDER_PARTIAL' ? 'partially filled' : 'cancelled';
 
     showToast({
       type: data.type === 'ORDER_CANCELLED' ? 'warning' : 'success',
@@ -221,7 +221,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
     console.log('🔍 Portfolio update data keys:', Object.keys(data));
     console.log('🔍 Portfolio update totalValue:', data.totalValue);
     console.log('📊 HomeScreen: Current local state before update - portfolio:', localPortfolioValue, 'cash:', localCashBalance);
-    
+
     // CRITICAL FIX: Check if this is actually NEW data or stale data
     const isNewData = localPortfolioValue === null || Math.abs(data.totalValue - (localPortfolioValue || 0)) > 10;
     console.log('🔍 CRITICAL: Is this NEW data?', isNewData, {
@@ -229,23 +229,23 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
       oldValue: localPortfolioValue,
       difference: data.totalValue - (localPortfolioValue || 0)
     });
-    
+
     if (isNewData) {
       console.log('🎉 CRITICAL: This is FRESH portfolio data! Updating UI immediately...');
     } else {
       console.log('⚠️ CRITICAL: This appears to be STALE portfolio data. Skipping update...');
       return; // Don't update with stale data
     }
-    
+
     // CRITICAL FIX: Set socket update flag to prevent useEffect override
     setIsSocketUpdate(true);
-    
+
     // CRITICAL FIX: Calculate cash balance from socket data
     const totalStocksValue = data.positions.reduce((sum, pos) => sum + pos.marketValue, 0);
     const calculatedCashBalance = data.totalValue - totalStocksValue;
-    
+
     console.log(`🔍 Calculated cash balance: ${data.totalValue} - ${totalStocksValue} = ${calculatedCashBalance}`);
-    
+
     // CRITICAL FIX: Update local state IMMEDIATELY for instant UI update
     console.log('🔍 Setting local portfolio value to:', data.totalValue);
     setLocalPortfolioValue(data.totalValue);
@@ -253,9 +253,9 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
     setLocalCashBalance(calculatedCashBalance);
     console.log('🔍 Setting local balance value to:', calculatedCashBalance);
     setLocalBalanceValue(calculatedCashBalance);
-    
+
     console.log('🔍 Local state update calls completed');
-    
+
     // CRITICAL FIX: Force immediate re-render
     console.log('🔍 Forcing re-render...');
     setForceUpdate(prev => {
@@ -263,7 +263,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
       return prev + 1;
     });
     console.log('🔍 Force update call completed');
-    
+
     // CRITICAL FIX: Create dashboard object and update Zustand state
     const updatedDashboard = {
       totalPortfolioValue: data.totalValue,
@@ -283,23 +283,23 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
       totalRealizedPnL: dashboard?.totalRealizedPnL || 0,
       totalUnrealizedPnL: dashboard?.totalUnrealizedPnL || 0,
     };
-    
+
     // CRITICAL FIX: Update Zustand state after local state
     console.log('🔍 Updating Zustand dashboard...');
     setDashboard(updatedDashboard);
     console.log('🔍 Updating Zustand balance...');
     setBalance(calculatedCashBalance);
-    
+
     console.log('🔍 Zustand state update calls completed');
-    
+
     console.log('🔍 Local state updated - portfolio:', data.totalValue, 'cash:', calculatedCashBalance);
-    
+
     // CRITICAL FIX: Clear socket update flag after a longer delay to prevent GraphQL override
     setTimeout(() => {
       setIsSocketUpdate(false);
       console.log('🔍 Socket update flag cleared (preventing GraphQL override)');
     }, 5000); // Increased to 5000ms to prevent GraphQL from overriding socket updates
-    
+
     Animated.sequence([
       Animated.timing(portfolioPulse, { toValue: 1, duration: 250, useNativeDriver: false }),
       Animated.timing(portfolioPulse, { toValue: 0, duration: 450, useNativeDriver: false }),
@@ -308,7 +308,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
 
   const handleBalanceUpdate = useCallback((data: BalanceUpdate) => {
     console.log('💰 HomeScreen: Balance update received:', data);
-    
+
     // CRITICAL FIX: Check if this is actually NEW data or stale data
     const isNewData = localBalanceValue === 0 || Math.abs(data.balance - localBalanceValue) > 10;
     console.log('🔍 CRITICAL: Is this NEW balance data?', isNewData, {
@@ -316,27 +316,27 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
       oldValue: localBalanceValue,
       difference: data.balance - localBalanceValue
     });
-    
+
     if (isNewData) {
       console.log('🎉 CRITICAL: This is FRESH balance data! Updating UI immediately...');
     } else {
       console.log('⚠️ CRITICAL: This appears to be STALE balance data. Skipping update...');
       return; // Don't update with stale data
     }
-    
+
     // CRITICAL FIX: Set socket update flag to prevent useEffect override
     setIsSocketUpdate(true);
-    
+
     // CRITICAL FIX: Update local state IMMEDIATELY for instant UI update
     setLocalBalanceValue(data.balance);
     setLocalCashBalance(data.balance);
-    
+
     // CRITICAL FIX: Force immediate re-render
     setForceUpdate(prev => prev + 1);
-    
+
     // CRITICAL FIX: Update Zustand state
     setBalance(data.balance);
-    
+
     // CRITICAL FIX: Update dashboard cash balance if dashboard exists
     if (dashboard) {
       const updatedDashboard = {
@@ -345,9 +345,9 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
       };
       setDashboard(updatedDashboard);
     }
-    
+
     console.log('🔍 Local state updated - balance:', data.balance);
-    
+
     // CRITICAL FIX: Clear socket update flag after a longer delay to prevent GraphQL override
     console.log('🔍 Setting timeout to clear socket update flag (balance update)...');
     setTimeout(() => {
@@ -355,7 +355,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
       console.log('🔍 Socket update flag cleared (balance update) (preventing GraphQL override)');
     }, 5000); // Increased to 5000ms to prevent GraphQL from overriding socket updates
     console.log('🔍 Timeout set for clearing socket update flag (balance update) - 5000ms delay');
-    
+
     Animated.sequence([
       Animated.timing(balancePulse, { toValue: 1, duration: 250, useNativeDriver: false }),
       Animated.timing(balancePulse, { toValue: 0, duration: 450, useNativeDriver: false }),
@@ -381,7 +381,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
   useEffect(() => {
     console.log('🔍 useEffect [isConnected, connectionStatus] triggered');
     console.log('🔍 isConnected:', isConnected, 'connectionStatus:', connectionStatus);
-    
+
     setSocketConnected(isConnected);
     console.log(`🔍 HomeScreen: Socket connection status changed to: ${connectionStatus}`);
   }, [isConnected, connectionStatus]);
@@ -389,24 +389,24 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
   // Fetch data on component mount
   useEffect(() => {
     console.log('🔍 useEffect [fetchDashboard, fetchBalance] triggered (initial fetch)');
-    
+
     // CRITICAL FIX: Only fetch initial data if no socket data available
     const { isDataFromSocket, lastSocketUpdate } = usePortfolioStore.getState();
     const currentTime = Date.now();
-    
+
     console.log('🔍 Initial fetch state check - isDataFromSocket:', isDataFromSocket, 'lastSocketUpdate:', lastSocketUpdate, 'timeSinceUpdate:', currentTime - lastSocketUpdate);
-    
-          if (isDataFromSocket && (currentTime - lastSocketUpdate) < 10000) {
-        console.log('🔄 Skipping initial fetch - recent socket data available (within 10s)');
-        // CRITICAL FIX: Still request fresh socket update to get LATEST data
-        if (isConnected && user?.id) {
-          console.log('🔍 CRITICAL: Requesting FRESH socket update on initial load...');
-          console.log('🔍 This ensures we get the LATEST portfolio data, not stale data');
-          requestPortfolioUpdateWithCurrentPrices();
-        }
-        return;
+
+    if (isDataFromSocket && (currentTime - lastSocketUpdate) < 10000) {
+      console.log('🔄 Skipping initial fetch - recent socket data available (within 10s)');
+      // CRITICAL FIX: Still request fresh socket update to get LATEST data
+      if (isConnected && user?.id) {
+        console.log('🔍 CRITICAL: Requesting FRESH socket update on initial load...');
+        console.log('🔍 This ensures we get the LATEST portfolio data, not stale data');
+        requestPortfolioUpdateWithCurrentPrices();
       }
-    
+      return;
+    }
+
     console.log('🔄 Initial fetch: Fetching data via GraphQL...');
     fetchDashboard();
     fetchBalance();
@@ -416,7 +416,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
   useEffect(() => {
     console.log('🔍 useEffect [isConnected, user?.id, requestPortfolioUpdateWithCurrentPrices] triggered');
     console.log('🔍 isConnected:', isConnected, 'user?.id:', user?.id);
-    
+
     if (isConnected && user?.id) {
       console.log('🔄 CRITICAL: Requesting FRESH portfolio update via socket...');
       console.log('🔍 This will get the LATEST portfolio data, not stale cached data');
@@ -431,13 +431,13 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
   useFocusEffect(
     useCallback(() => {
       console.log('🔍 useFocusEffect triggered');
-      
+
       // CRITICAL FIX: Only fetch fresh data if no recent socket data
       const { isDataFromSocket, lastSocketUpdate } = usePortfolioStore.getState();
       const currentTime = Date.now();
-      
+
       console.log('🔍 Focus effect state check - isDataFromSocket:', isDataFromSocket, 'lastSocketUpdate:', lastSocketUpdate, 'timeSinceUpdate:', currentTime - lastSocketUpdate);
-      
+
       if (isDataFromSocket && (currentTime - lastSocketUpdate) < 10000) {
         console.log('🔄 Skipping focus fetch - recent socket data available (within 10s)');
         // CRITICAL FIX: Always request fresh socket update to get LATEST data
@@ -448,11 +448,11 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
         }
         return;
       }
-      
+
       console.log('🔄 Screen focused, fetching fresh data...');
       fetchDashboard();
       fetchBalance();
-      
+
       // Also request real-time update if socket is connected
       if (isConnected && user?.id) {
         console.log('🔄 Also requesting real-time update via socket...');
@@ -507,24 +507,24 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
 
   const handleRefresh = async () => {
     console.log('🔍 handleRefresh called');
-    
+
     // CRITICAL FIX: Only refresh if no recent socket data
     const { isDataFromSocket, lastSocketUpdate } = usePortfolioStore.getState();
     const currentTime = Date.now();
-    
+
     console.log('🔍 Refresh state check - isDataFromSocket:', isDataFromSocket, 'lastSocketUpdate:', lastSocketUpdate, 'timeSinceUpdate:', currentTime - lastSocketUpdate);
-    
-          if (isDataFromSocket && (currentTime - lastSocketUpdate) < 10000) {
-        console.log('🔄 Skipping refresh - recent socket data available (within 10s)');
-        // CRITICAL FIX: Always request fresh socket update to get LATEST data
-        if (isConnected && user?.id) {
-          console.log('🔍 CRITICAL: Requesting FRESH socket update instead of refresh...');
-          console.log('🔍 This ensures we get the LATEST portfolio data, not stale data');
-          requestPortfolioUpdateWithCurrentPrices();
-        }
-        return;
+
+    if (isDataFromSocket && (currentTime - lastSocketUpdate) < 10000) {
+      console.log('🔄 Skipping refresh - recent socket data available (within 10s)');
+      // CRITICAL FIX: Always request fresh socket update to get LATEST data
+      if (isConnected && user?.id) {
+        console.log('🔍 CRITICAL: Requesting FRESH socket update instead of refresh...');
+        console.log('🔍 This ensures we get the LATEST portfolio data, not stale data');
+        requestPortfolioUpdateWithCurrentPrices();
       }
-    
+      return;
+    }
+
     console.log('🔄 Forcing refresh - no recent socket data');
     await refreshAll();
   };
@@ -539,7 +539,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
   // CRITICAL FIX: Add debug method to show current state
   const debugCurrentState = () => {
     console.log('🔍 debugCurrentState called');
-    
+
     const { isDataFromSocket, lastSocketUpdate, dashboard, balance } = usePortfolioStore.getState();
     const currentTime = Date.now();
     console.log('🔍 Current State Debug:');
@@ -551,7 +551,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
     console.log(`  - balance: ${balance}`);
     console.log(`  - isConnected: ${isConnected}`);
     console.log(`  - dashboard.stockPositions:`, dashboard?.stockPositions);
-    
+
     // CRITICAL FIX: Show the difference between socket and GraphQL data
     if (dashboard) {
       const totalStocksValue = dashboard.stockPositions.reduce((sum, pos) => sum + pos.marketValue, 0);
@@ -559,7 +559,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
       console.log(`  - Calculated total from positions: ${calculatedTotal}`);
       console.log(`  - Difference: ${dashboard.totalPortfolioValue - calculatedTotal}`);
     }
-    
+
     // CRITICAL FIX: Show subscribed state values
     console.log(`  - Subscribed portfolioValue: ${localPortfolioValue}`);
     console.log(`  - Subscribed cashBalance: ${localCashBalance}`);
@@ -582,7 +582,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
   };
 
   console.log('🔍 HomeScreen component returning JSX');
-  
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView
@@ -600,35 +600,35 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
               {user?.email?.split('@')[0] || 'Trader'}
             </Text>
           </View>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[
               styles.notificationButton,
               isConnected ? { backgroundColor: theme.colors.accent.avocado + '20' } : {}
             ]}
-                      onPress={() => {
-            console.log('🔍 Notification button pressed');
-            
-            // CRITICAL FIX: Show debug info first
-            debugCurrentState();
-            
-            if (isConnected && user?.id) {
-              console.log('🔍 Connected and authenticated, using force refresh...');
-              // CRITICAL FIX: Use force refresh to get latest data
-              handleForceRefresh();
-              showToast({
-                type: 'info',
-                message: 'Force refreshing all data...',
-                durationMs: 2000,
-              });
-            } else {
-              console.log('🔍 Not connected or not authenticated, showing status...');
-              showToast({
-                type: isConnected ? 'success' : 'warning',
-                message: isConnected ? 'Connected to real-time updates' : 'Not connected to real-time updates',
-                durationMs: 2000,
-              });
-            }
-          }}
+            onPress={() => {
+              console.log('🔍 Notification button pressed');
+
+              // CRITICAL FIX: Show debug info first
+              debugCurrentState();
+
+              if (isConnected && user?.id) {
+                console.log('🔍 Connected and authenticated, using force refresh...');
+                // CRITICAL FIX: Use force refresh to get latest data
+                handleForceRefresh();
+                showToast({
+                  type: 'info',
+                  message: 'Force refreshing all data...',
+                  durationMs: 2000,
+                });
+              } else {
+                console.log('🔍 Not connected or not authenticated, showing status...');
+                showToast({
+                  type: isConnected ? 'success' : 'warning',
+                  message: isConnected ? 'Connected to real-time updates' : 'Not connected to real-time updates',
+                  durationMs: 2000,
+                });
+              }
+            }}
           >
             <Ionicons
               name={isConnected ? "wifi" : "wifi-outline"}
@@ -639,19 +639,20 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
         </View>
 
         {/* Portfolio Summary Card */}
-         <Animated.View style={[
-           styles.portfolioCard,
-           { backgroundColor: portfolioPulse.interpolate({
-               inputRange: [0, 1],
-               outputRange: [theme.colors.primary, theme.colors.primary]
-             }),
-             opacity: portfolioPulse.interpolate({ inputRange: [0,1], outputRange: [1, 0.92] })
-           }
-         ]}>
+        <Animated.View style={[
+          styles.portfolioCard,
+          {
+            backgroundColor: portfolioPulse.interpolate({
+              inputRange: [0, 1],
+              outputRange: [theme.colors.primary, theme.colors.primary]
+            }),
+            opacity: portfolioPulse.interpolate({ inputRange: [0, 1], outputRange: [1, 0.92] })
+          }
+        ]}>
           <Text style={styles.portfolioLabel}>Total Portfolio Value</Text>
-          
+
           {/* CRITICAL FIX: Show data freshness indicator */}
-          {isSocketUpdate && (
+          {/* {isSocketUpdate && (
             <Text style={[styles.freshDataIndicator, { color: theme.colors.accent.avocado }]}>
               🔄 Fresh Real-time Data (Socket Update)
             </Text>
@@ -660,8 +661,8 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
             <Text style={[styles.freshDataIndicator, { color: theme.colors.text.secondary }]}>
               📊 GraphQL Data (Last Refresh)
             </Text>
-          )}
-          
+          )} */}
+
           <Text style={styles.portfolioValue}>
             {(() => {
               // CRITICAL FIX: Never show 0 portfolio when we have valid socket data
@@ -715,12 +716,12 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
         {/* Balance Card */}
         <Animated.View style={[
           styles.balanceCard,
-          { opacity: balancePulse.interpolate({ inputRange: [0,1], outputRange: [1, 0.92] }) }
+          { opacity: balancePulse.interpolate({ inputRange: [0, 1], outputRange: [1, 0.92] }) }
         ]}>
           <Text style={styles.balanceLabel}>Available Cash</Text>
-          
+
           {/* CRITICAL FIX: Show data freshness indicator */}
-          {isSocketUpdate && (
+          {/* {isSocketUpdate && (
             <Text style={[styles.freshDataIndicator, { color: theme.colors.accent.avocado }]}>
               🔄 Fresh Real-time Data (Socket Update)
             </Text>
@@ -729,8 +730,8 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
             <Text style={[styles.freshDataIndicator, { color: theme.colors.text.secondary }]}>
               📊 GraphQL Data (Last Refresh)
             </Text>
-          )}
-          
+          )} */}
+
           <Text style={styles.balanceValue}>
             {(() => {
               // CRITICAL FIX: Never show 0 balance when we have valid socket data
@@ -766,7 +767,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
                     navigation.navigate('StockPicker', {
                       navigateAfterSelect: false, // Don't go back, let onSelect handle navigation
                       onSelect: (ticker: string) => {
-                        navigation.navigate('OrderBook', { 
+                        navigation.navigate('OrderBook', {
                           ticker,
                           companyName: `${ticker} Company`
                         });
@@ -824,41 +825,41 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
 
             {dashboard.stockPositions.slice(0, 3).map((position) => (
               <TouchableOpacity
-                  key={position.ticker}
-                  style={styles.positionCard}
-                  onPress={() =>
-                    navigation.navigate('StockDetail', {
-                      ticker: position.ticker,
-                    })
-                  }
-                >
-                  <Avatar 
-                    source={position.avatar} 
-                    fallback={position.companyName} 
-                    size={40} 
-                    style={styles.positionAvatar}
-                  />
-                  <View style={styles.positionInfo}>
-                    <Text style={styles.positionTicker}>{position.ticker}</Text>
-                    <Text style={styles.positionShares}>
-                      {position.quantity} shares
-                    </Text>
-                  </View>
-                  <View style={styles.positionValues}>
-                    <Text style={styles.positionValue}>
-                      {formatCurrency(position.marketValue)}
-                    </Text>
-                    <Text
-                      style={[
-                        styles.positionPnL,
-                        { color: getPercentColor(position.unrealizedPnLPercent) },
-                      ]}
-                    >
-                      {formatPercent(position.unrealizedPnLPercent)}
-                    </Text>
-                 </View>
-               </TouchableOpacity>
-             ))}
+                key={position.ticker}
+                style={styles.positionCard}
+                onPress={() =>
+                  navigation.navigate('StockDetail', {
+                    ticker: position.ticker,
+                  })
+                }
+              >
+                <Avatar
+                  source={position.avatar}
+                  fallback={position.companyName}
+                  size={40}
+                  style={styles.positionAvatar}
+                />
+                <View style={styles.positionInfo}>
+                  <Text style={styles.positionTicker}>{position.ticker}</Text>
+                  <Text style={styles.positionShares}>
+                    {position.quantity} shares
+                  </Text>
+                </View>
+                <View style={styles.positionValues}>
+                  <Text style={styles.positionValue}>
+                    {formatCurrency(position.marketValue)}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.positionPnL,
+                      { color: getPercentColor(position.unrealizedPnLPercent) },
+                    ]}
+                  >
+                    {formatPercent(position.unrealizedPnLPercent)}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            ))}
           </View>
         )}
 
