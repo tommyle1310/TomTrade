@@ -13,6 +13,7 @@ import {
   Minus,
   ArrowUpRight,
   ArrowDownRight,
+  Loader2,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,7 @@ import { useAuthStore } from "@/lib/authStore";
 import { useTranslation } from "@/lib/translations";
 import { staggerContainer, staggerItem, cardHover } from "@/lib/motionVariants";
 import { cn } from "@/lib/utils";
+import { useUserMetricCards } from "@/lib/hooks/useUserMetricCards";
 
 type PortfolioItem = {
   ticker: string;
@@ -47,10 +49,13 @@ export default function UserDashboard() {
   const { user, getUserDisplayName } = useAuthStore();
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<'portfolio' | 'watchlist'>('portfolio');
+  const { data: metricCards, loading: metricsLoading, error: metricsError } = useUserMetricCards();
 
-  const totalPortfolioValue = mockPortfolio.reduce((sum, item) => sum + (item.quantity * item.currentPrice), 0);
-  const totalPnL = mockPortfolio.reduce((sum, item) => sum + item.pnl, 0);
-  const totalPnLPercent = (totalPnL / (totalPortfolioValue - totalPnL)) * 100;
+  // Find specific metric cards by title
+  const portfolioValueCard = metricCards?.find(card => card.title === 'Portfolio Value');
+  const totalPnLCard = metricCards?.find(card => card.title === 'Total P&L');
+  const openPositionsCard = metricCards?.find(card => card.title === 'Open Position');
+  const accountStatusCard = metricCards?.find(card => card.title === 'Account Status');
 
   return (
     <div className="space-y-6">
@@ -75,12 +80,13 @@ export default function UserDashboard() {
       </div>
 
       {/* Portfolio Summary Cards */}
-      <motion.div 
+      <motion.div
         className="grid grid-cols-1 md:grid-cols-4 gap-4"
         variants={staggerContainer}
         initial="hidden"
         animate="visible"
       >
+        {/* Portfolio Value Card */}
         <motion.div variants={staggerItem}>
           <Card className="gap-0 py-4 card-interactive border-0 shadow-sm hover:shadow-md">
             <CardHeader className="flex flex-row px-4 items-center justify-between space-y-0">
@@ -90,26 +96,40 @@ export default function UserDashboard() {
               </div>
             </CardHeader>
             <CardContent className="px-4">
-              <div className="text-2xl font-bold">${totalPortfolioValue.toLocaleString()}</div>
-              <p className={cn(
-                "text-xs font-medium",
-                totalPnL >= 0 ? "text-success" : "text-danger"
-              )}>
-                {totalPnL >= 0 ? '+' : ''}${totalPnL.toFixed(2)} ({totalPnLPercent >= 0 ? '+' : ''}{totalPnLPercent.toFixed(2)}%)
-              </p>
+              {metricsLoading ? (
+                <div className="flex items-center space-x-2">
+                  <Loader2 className="size-4 animate-spin" />
+                  <span className="text-sm text-muted-foreground">Loading...</span>
+                </div>
+              ) : metricsError ? (
+                <p className="text-sm text-danger">Error loading data</p>
+              ) : portfolioValueCard ? (
+                <>
+                  <div className="text-2xl font-bold">${parseFloat(portfolioValueCard.value).toLocaleString()}</div>
+                  <p className={cn(
+                    "text-xs font-medium",
+                    (portfolioValueCard.change ?? 0) >= 0 ? "text-success" : "text-danger"
+                  )}>
+                    {(portfolioValueCard.change ?? 0) >= 0 ? '+' : ''}${portfolioValueCard.change?.toFixed(2)} ({portfolioValueCard.changeExtraData || '0%'})
+                  </p>
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground">No data</p>
+              )}
             </CardContent>
           </Card>
         </motion.div>
 
+        {/* Total P&L Card */}
         <motion.div variants={staggerItem}>
           <Card className="gap-0 py-4 card-interactive border-0 shadow-sm hover:shadow-md">
             <CardHeader className="flex flex-row px-4 items-center justify-between space-y-0">
               <CardTitle className="text-sm font-medium text-muted-foreground">{t('dashboard.totalPnL')}</CardTitle>
               <div className={cn(
                 "p-2 rounded-full",
-                totalPnL >= 0 ? "bg-success/10" : "bg-danger/10"
+                (totalPnLCard?.change ?? 0) >= 0 ? "bg-success/10" : "bg-danger/10"
               )}>
-                {totalPnL >= 0 ? (
+                {(totalPnLCard?.change ?? 0) >= 0 ? (
                   <TrendingUp className="size-4 text-success" />
                 ) : (
                   <TrendingDown className="size-4 text-danger" />
@@ -117,19 +137,33 @@ export default function UserDashboard() {
               </div>
             </CardHeader>
             <CardContent className="px-4">
-              <div className={cn(
-                "text-2xl font-bold",
-                totalPnL >= 0 ? "text-success" : "text-danger"
-              )}>
-                {totalPnL >= 0 ? '+' : ''}${totalPnL.toFixed(2)}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {totalPnLPercent >= 0 ? '+' : ''}{totalPnLPercent.toFixed(2)}% {t('time.today').toLowerCase()}
-              </p>
+              {metricsLoading ? (
+                <div className="flex items-center space-x-2">
+                  <Loader2 className="size-4 animate-spin" />
+                  <span className="text-sm text-muted-foreground">Loading...</span>
+                </div>
+              ) : metricsError ? (
+                <p className="text-sm text-danger">Error loading data</p>
+              ) : totalPnLCard ? (
+                <>
+                  <div className={cn(
+                    "text-2xl font-bold",
+                    parseFloat(totalPnLCard.value) >= 0 ? "text-success" : "text-danger"
+                  )}>
+                    {parseFloat(totalPnLCard.value) >= 0 ? '+' : ''}${parseFloat(totalPnLCard.value).toFixed(2)}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {(totalPnLCard.change ?? 0) >= 0 ? '+' : ''}{totalPnLCard.change?.toFixed(2)}% {totalPnLCard.changeExtraData || ''}
+                  </p>
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground">No data</p>
+              )}
             </CardContent>
           </Card>
         </motion.div>
 
+        {/* Open Positions Card */}
         <motion.div variants={staggerItem}>
           <Card className="gap-0 py-4 card-interactive border-0 shadow-sm hover:shadow-md">
             <CardHeader className="flex flex-row px-4 items-center justify-between space-y-0">
@@ -139,27 +173,65 @@ export default function UserDashboard() {
               </div>
             </CardHeader>
             <CardContent className="px-4">
-              <div className="text-2xl font-bold">{mockPortfolio.length}</div>
-              <p className="text-xs text-muted-foreground">
-                {mockPortfolio.filter(item => item.pnl > 0).length} profitable
-              </p>
+              {metricsLoading ? (
+                <div className="flex items-center space-x-2">
+                  <Loader2 className="size-4 animate-spin" />
+                  <span className="text-sm text-muted-foreground">Loading...</span>
+                </div>
+              ) : metricsError ? (
+                <p className="text-sm text-danger">Error loading data</p>
+              ) : openPositionsCard ? (
+                <>
+                  <div className="text-2xl font-bold">{openPositionsCard.value}</div>
+                  <p className="text-xs text-muted-foreground">
+                    {openPositionsCard.change || 0} {openPositionsCard.changeExtraData || ''}
+                  </p>
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground">No data</p>
+              )}
             </CardContent>
           </Card>
         </motion.div>
 
+        {/* Account Status Card */}
         <motion.div variants={staggerItem}>
           <Card className="gap-0 py-4 card-interactive border-0 shadow-sm hover:shadow-md">
             <CardHeader className="flex flex-row px-4 items-center justify-between space-y-0">
               <CardTitle className="text-sm font-medium text-muted-foreground">Account Status</CardTitle>
-              <div className="p-2 rounded-full bg-success/10">
-                <Activity className="size-4 text-success" />
+              <div className={cn(
+                "p-2 rounded-full",
+                accountStatusCard?.value === 'Active' ? "bg-success/10" : "bg-danger/10"
+              )}>
+                <Activity className={cn(
+                  "size-4",
+                  accountStatusCard?.value === 'Active' ? "text-success" : "text-danger"
+                )} />
               </div>
             </CardHeader>
             <CardContent className="px-4">
-              <div className="text-2xl font-bold text-success">Active</div>
-              <p className="text-xs text-muted-foreground">
-                {t('user.joinedOn')} {user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}
-              </p>
+              {metricsLoading ? (
+                <div className="flex items-center space-x-2">
+                  <Loader2 className="size-4 animate-spin" />
+                  <span className="text-sm text-muted-foreground">Loading...</span>
+                </div>
+              ) : metricsError ? (
+                <p className="text-sm text-danger">Error loading data</p>
+              ) : accountStatusCard ? (
+                <>
+                  <div className={cn(
+                    "text-2xl font-bold",
+                    accountStatusCard.value === 'Active' ? "text-success" : "text-danger"
+                  )}>
+                    {accountStatusCard.value}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {accountStatusCard.extraData || `${t('user.joinedOn')} ${user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}`}
+                  </p>
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground">No data</p>
+              )}
             </CardContent>
           </Card>
         </motion.div>
@@ -197,8 +269,8 @@ export default function UserDashboard() {
                 <CardContent>
                   <div className="space-y-3">
                     {mockPortfolio.map((item) => (
-                      <motion.div 
-                        key={item.ticker} 
+                      <motion.div
+                        key={item.ticker}
                         className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/50 transition-colors"
                         whileHover={{ scale: 1.01 }}
                         transition={{ duration: 0.15 }}
@@ -241,8 +313,8 @@ export default function UserDashboard() {
                 <CardContent>
                   <div className="space-y-3">
                     {mockWatchlist.map((item) => (
-                      <motion.div 
-                        key={item.ticker} 
+                      <motion.div
+                        key={item.ticker}
                         className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/50 transition-colors"
                         whileHover={{ scale: 1.01 }}
                         transition={{ duration: 0.15 }}
@@ -293,7 +365,7 @@ export default function UserDashboard() {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                <motion.div 
+                <motion.div
                   className="flex items-center justify-between"
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
@@ -311,7 +383,7 @@ export default function UserDashboard() {
                     <div className="text-xs text-muted-foreground">@ $165.00</div>
                   </div>
                 </motion.div>
-                <motion.div 
+                <motion.div
                   className="flex items-center justify-between"
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
@@ -329,7 +401,7 @@ export default function UserDashboard() {
                     <div className="text-xs text-muted-foreground">@ $185.00</div>
                   </div>
                 </motion.div>
-                <motion.div 
+                <motion.div
                   className="flex items-center justify-between"
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}

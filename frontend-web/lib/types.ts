@@ -74,3 +74,15 @@ export interface DashboardResult {
   cashBalance: number;
   stockPositions: StockPosition[];
 }
+
+// User Metric Card Types
+export interface MetricCard {
+  title: string;
+  value: string;
+  valueUnit?: string | null;
+  valueType?: string | null;
+  change?: number | null;
+  changeType?: string | null;
+  changeExtraData?: string | null;
+  extraData?: string | null;
+}

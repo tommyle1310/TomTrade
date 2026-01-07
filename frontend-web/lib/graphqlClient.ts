@@ -175,3 +175,32 @@ export async function signUpMutation(input: {
     };
   }>(query, { input });
 }
+
+export async function getUserMetricCards(token?: string) {
+  const query = `
+    query GetUserMetricCards {
+      getUserMetricCards {
+        title
+        value
+        valueUnit
+        valueType
+        change
+        changeType
+        changeExtraData
+        extraData
+      }
+    }
+  `;
+  return gqlRequest<{
+    getUserMetricCards: {
+      title: string;
+      value: string;
+      valueUnit?: string | null;
+      valueType?: string | null;
+      change?: number | null;
+      changeType?: string | null;
+      changeExtraData?: string | null;
+      extraData?: string | null;
+    }[];
+  }>(query, {}, token);
+}
