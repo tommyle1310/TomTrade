@@ -5,7 +5,6 @@ import { Label, Pie, PieChart, Sector } from "recharts";
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import type { PieSectorDataItem } from "recharts/types/polar/Pie";
 import { MostTradedStock } from "@/lib/types";
-import { CHART_COLORS } from "@/lib/theme";
 
 interface MostTradedPieProps {
   data: MostTradedStock[];
@@ -13,23 +12,23 @@ interface MostTradedPieProps {
 
 const chartConfig: ChartConfig = {
   volume: { label: "Volume" },
-  aapl: { label: "AAPL", color: CHART_COLORS[0] },
-  tsla: { label: "TSLA", color: CHART_COLORS[2] },
-  msft: { label: "MSFT", color: CHART_COLORS[1] },
-  googl: { label: "GOOGL", color: CHART_COLORS[3] },
-  amzn: { label: "AMZN", color: CHART_COLORS[4] },
+  aapl: { label: "AAPL", color: "#3b82f6" },
+  tsla: { label: "TSLA", color: "#ef4444" },
+  msft: { label: "MSFT", color: "#10b981" },
+  googl: { label: "GOOGL", color: "#f59e0b" },
+  amzn: { label: "AMZN", color: "#8b5cf6" },
   nvda: { label: "NVDA", color: "#06b6d4" },
   meta: { label: "META", color: "#84cc16" },
   other: { label: "Other", color: "#6b7280" },
 };
 
-// Color palette for different stocks
+// Color palette for different stocks - using hex colors for SVG fill compatibility
 const stockColors = [
-  CHART_COLORS[0], // blue
-  CHART_COLORS[2], // red
-  CHART_COLORS[1], // green
-  CHART_COLORS[3], // amber
-  CHART_COLORS[4], // purple
+  "#3b82f6", // blue
+  "#10b981", // green  
+  "#ef4444", // red
+  "#f59e0b", // amber
+  "#8b5cf6", // purple
   "#06b6d4", // cyan
   "#84cc16", // lime
   "#f97316", // orange

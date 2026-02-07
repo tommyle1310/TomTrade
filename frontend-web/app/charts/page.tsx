@@ -765,7 +765,7 @@ export default function ChartsPage() {
                   <div className="flex items-center gap-3">
                     <Badge
                       variant={trade.side === 'BUY' ? 'default' : 'secondary'}
-                      className={trade.side === 'BUY' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600 text-white'}
+                      className={trade.side === 'BUY' ? 'bg-green-500 hover:bg-green-600 text-white' : 'bg-red-500 hover:bg-red-600 text-white'}
                     >
                       {trade.side}
                     </Badge>

@@ -262,7 +262,27 @@ export default function Topbar({
       </div>
 
       <Dialog open={authOpen} onOpenChange={setAuthOpen}>
-        <DialogContent className="sm:max-w-2xl p-0 overflow-hidden border-0 shadow-xl">
+        <DialogContent
+          className="sm:max-w-2xl p-0 overflow-hidden border-0 shadow-xl"
+          onPointerDownOutside={(e) => {
+            // Prevent dialog from closing when clicking on popover content
+            const target = e.target as HTMLElement;
+            if (target.closest('[data-radix-popper-content-wrapper]') ||
+              target.closest('[data-radix-popover-content]') ||
+              target.closest('[role="dialog"]')) {
+              e.preventDefault();
+            }
+          }}
+          onInteractOutside={(e) => {
+            // Prevent dialog from closing when interacting with popover content
+            const target = e.target as HTMLElement;
+            if (target.closest('[data-radix-popper-content-wrapper]') ||
+              target.closest('[data-radix-popover-content]') ||
+              target.closest('[role="dialog"]')) {
+              e.preventDefault();
+            }
+          }}
+        >
           <motion.div
             className="grid md:grid-cols-2"
             initial="hidden"
@@ -489,13 +509,13 @@ export default function Topbar({
                     <FacebookIcon />
                     {t('auth.facebook')}
                   </Button>
-                  <Popover>
+                  <Popover modal={true}>
                     <PopoverTrigger asChild>
                       <Button variant="outline" className="col-span-2">Demo Account</Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-80 flex justify-between gap-2">
-                      <Button className='w-[48%]' onClick={() => handleDemoAccount('admin')}>{t('user.admin')}</Button>
-                      <Button className='w-[48%]' onClick={() => handleDemoAccount('buyer')}>{t('user.regularUser')}</Button>
+                    <PopoverContent className="w-80 flex justify-between gap-2 z-[100]">
+                      <Button className='w-[48%]' onClick={(e) => { e.stopPropagation(); handleDemoAccount('admin'); }}>{t('user.admin')}</Button>
+                      <Button className='w-[48%]' onClick={(e) => { e.stopPropagation(); handleDemoAccount('buyer'); }}>{t('user.regularUser')}</Button>
                     </PopoverContent>
                   </Popover>
                 </div>
